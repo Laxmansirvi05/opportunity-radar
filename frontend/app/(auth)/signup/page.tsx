@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { AuthExperience } from '@/features/auth/components/auth-experience'
 
 export const metadata = {
@@ -5,5 +6,9 @@ export const metadata = {
 }
 
 export default function SignupPage() {
-  return <AuthExperience />
+  return (
+    <Suspense fallback={null}>
+      <AuthExperience />
+    </Suspense>
+  )
 }

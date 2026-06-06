@@ -1,12 +1,25 @@
+'use client'
+
 import { logoutAction } from '@/features/auth/actions/auth-actions'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 
 interface DashboardSidebarProps {
   user: User
 }
 
+// Navigation items matching the Stitch design
+const NAV_ITEMS = [
+  { href: '/hub', icon: 'explore', label: 'Hub' },
+  { href: '/search', icon: 'search', label: 'Search' },
+  { href: '/tracker', icon: 'assignment_turned_in', label: 'Tracker' },
+  { href: '/dashboard', icon: 'dashboard', label: 'Command Center' },
+  { href: '/profile', icon: 'person', label: 'Profile' },
+]
+
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
+  const pathname = usePathname()
   const initial = user.email ? user.email.charAt(0).toUpperCase() : 'U'
   const displayName = user.user_metadata?.full_name ?? user.email ?? 'Student'
 
@@ -25,32 +38,45 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-sm">
-        <Link
-          href="/"
-          className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
-        >
-          <span className="material-symbols-outlined">explore</span>
-          <span className="font-label-md text-label-md">Hub</span>
-        </Link>
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-md px-md py-sm rounded-xl bg-primary-container text-on-primary-container transition-all shadow-sm font-medium"
-        >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
-          <span className="font-label-md text-label-md font-semibold">Command Center</span>
-        </Link>
-        <Link
-          href="/profile"
-          className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
-        >
-          <span className="material-symbols-outlined">person</span>
-          <span className="font-label-md text-label-md">Profile</span>
-        </Link>
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={
+                isActive
+                  ? 'flex items-center gap-md px-md py-sm rounded-xl bg-primary-container text-on-primary-container transition-all shadow-sm font-medium'
+                  : 'flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all'
+              }
+            >
+              <span
+                className="material-symbols-outlined"
+                style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              >
+                {item.icon}
+              </span>
+              <span className={`font-label-md text-label-md ${isActive ? 'font-semibold' : ''}`}>
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
       </nav>
 
       {/* Bottom section */}
       <div className="mt-auto pt-lg border-t border-outline-variant">
+        <button className="w-full bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold py-sm rounded-xl hover:opacity-90 transition-opacity mb-md shadow-sm cursor-pointer">
+          Find Internships
+        </button>
         <div className="flex flex-col gap-xs">
+          <Link
+            href="#"
+            className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
+          >
+            <span className="material-symbols-outlined">settings</span>
+            <span className="font-label-md text-label-md">Settings</span>
+          </Link>
           <Link
             href="#"
             className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"

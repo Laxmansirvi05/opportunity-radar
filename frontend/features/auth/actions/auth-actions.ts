@@ -36,6 +36,7 @@ export async function signupAction(formData: FormData) {
   }
 
   const supabase = await createClient()
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -43,6 +44,7 @@ export async function signupAction(formData: FormData) {
       data: {
         full_name: name,
       },
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   })
 
@@ -64,7 +66,7 @@ export async function oauthLoginAction(provider: 'google' | 'github', nextUrl: s
   
   // We need to construct the callback URL to include the next URL
   // so the user is redirected back to the correct page after login
-  const callbackUrl = new URL('/api/auth/callback', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+  const callbackUrl = new URL('/auth/callback', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
   callbackUrl.searchParams.set('next', nextUrl)
 
   const { data, error } = await supabase.auth.signInWithOAuth({

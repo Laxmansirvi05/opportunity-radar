@@ -1,0 +1,51 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+export function MobileBottomNav() {
+  const pathname = usePathname()
+
+  return (
+    <nav className="md:hidden bg-surface border-t border-outline-variant fixed bottom-0 left-0 w-full z-50 pb-safe premium-shadow">
+      <ul className="flex justify-around items-center h-16 px-md">
+        <li>
+          <Link
+            href="/hub"
+            className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/hub' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
+          >
+            <span className={`material-symbols-outlined mb-1 ${pathname === '/hub' ? 'filled' : ''}`}>explore</span>
+            <span className={`font-label-sm ${pathname === '/hub' ? 'font-bold' : ''}`}>Hub</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/search"
+            className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/search' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
+          >
+            <span className={`material-symbols-outlined mb-1 ${pathname === '/search' ? 'filled' : ''}`}>search</span>
+            <span className={`font-label-sm ${pathname === '/search' ? 'font-bold' : ''}`}>Search</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/tracker"
+            className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/tracker' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
+          >
+            <span className={`material-symbols-outlined mb-1 ${pathname === '/tracker' ? 'filled' : ''}`}>assignment_turned_in</span>
+            <span className={`font-label-sm ${pathname === '/tracker' ? 'font-bold' : ''}`}>Tracker</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/dashboard"
+            className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/dashboard' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
+          >
+            <span className={`material-symbols-outlined mb-1 ${pathname === '/dashboard' ? 'filled' : ''}`}>dashboard</span>
+            <span className={`font-label-sm ${pathname === '/dashboard' ? 'font-bold' : ''}`}>Command</span>
+          </Link>
+        </li>
+      </ul>
+    </nav>
+  )
+}

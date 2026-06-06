@@ -1,6 +1,42 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/**
+ * Protected route prefixes — any route starting with these paths
+ * requires an authenticated session. Matches the (protected) route group
+ * from the TRD routing structure.
+ */
+const PROTECTED_ROUTES = [
+  '/dashboard',
+  '/profile',
+  '/tracker',
+  '/notifications',
+  '/submit',
+  '/hub',
+  '/search',
+]
+
+/**
+ * Auth route prefixes — authenticated users should be redirected
+ * to /dashboard instead of seeing login/signup pages.
+ */
+const AUTH_ROUTES = [
+  '/login',
+  '/signup',
+]
+
+function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  )
+}
+
+function isAuthRoute(pathname: string): boolean {
+  return AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  )
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -41,34 +77,32 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const url = request.nextUrl.clone()
-  
-  // Protect /dashboard, /profile, and any other protected routes
-  const isProtectedRoute = url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/profile')
-  
-  // Auth routes
-  const isAuthRoute = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')
 
-  if (isProtectedRoute && !user) {
+  // Redirect unauthenticated users away from protected routes
+  if (isProtectedRoute(url.pathname) && !user) {
     url.pathname = '/login'
     url.searchParams.set('next', request.nextUrl.pathname)
     const redirectResponse = NextResponse.redirect(url)
-    
+
     // Copy cookies from supabaseResponse to redirectResponse to persist session updates
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value)
     })
-    
+
     return redirectResponse
   }
 
-  if (isAuthRoute && user) {
+  // Redirect authenticated users away from auth routes to dashboard
+  if (isAuthRoute(url.pathname) && user) {
     url.pathname = '/dashboard'
+    url.searchParams.delete('next')
+    url.searchParams.delete('error')
     const redirectResponse = NextResponse.redirect(url)
-    
+
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value)
     })
-    
+
     return redirectResponse
   }
 
