@@ -84,7 +84,7 @@ All Moderator capabilities, plus:
 | Landing / Opportunity Hub | `/` | Main listing of published opportunities with search, filters, and Fresh Feed |
 | Opportunity Detail | `/opportunities/[id]` | Full details of a single opportunity |
 | Company Profile | `/companies/[id]` | Company info and all their active opportunities |
-| Login | `/login` | Email/password and Google OAuth login |
+| Login | `/login` | Email/password, Google, and GitHub OAuth login |
 | Signup | `/signup` | New account creation |
 | Terms of Service | `/terms` | Legal terms page |
 | Privacy Policy | `/privacy` | Privacy policy page |
@@ -236,7 +236,12 @@ Sees opportunity cards with category badge, deadline, mode tag
    │                           "Welcome! Start by exploring opportunities."
    │                           CTA button: "Browse Opportunities" → /
    │
-   └── "Continue with Google" → Supabase OAuth flow
+   ├── "Continue with Google" → Supabase OAuth flow
+   │       │
+   │       └── On OAuth callback → redirect to ?next param value, or /dashboard if no ?next
+   │           (The ?next param must be passed through the OAuth state parameter)
+   │
+   └── "Continue with GitHub" → Supabase OAuth flow
            │
            └── On OAuth callback → redirect to ?next param value, or /dashboard if no ?next
                (The ?next param must be passed through the OAuth state parameter)
@@ -259,6 +264,10 @@ Sees opportunity cards with category badge, deadline, mode tag
    │               └── Do NOT clear the email field on failure
    │
    ├── "Continue with Google" → Supabase OAuth flow
+   │       └── On OAuth callback → redirect to ?next param value, or /dashboard if no ?next
+   │           (The ?next param must be passed through the OAuth state parameter)
+   │
+   ├── "Continue with GitHub" → Supabase OAuth flow
    │       └── On OAuth callback → redirect to ?next param value, or /dashboard if no ?next
    │           (The ?next param must be passed through the OAuth state parameter)
    │
