@@ -76,6 +76,13 @@ The MVP focuses purely on aggregation, tracking, and organization for the studen
 - **Resume Integration:** The app must render the existing Resume Toolkit components seamlessly, ideally sharing the same user session and authentication state.
 - **Filtering Engine:** Queries must efficiently filter opportunities across multiple dimensions simultaneously without lag.
 
+### Authentication Methods
+
+Supported methods:
+* Email and Password
+* Google OAuth
+* GitHub OAuth
+
 ## 12. Non-Functional Requirements
 - **Performance:** All pages must achieve a Time-to-Interactive (TTI) of under 2 seconds on a standard 4G connection. The Fresh Opportunities Feed must reflect newly published opportunities within 5 minutes of an Admin or Moderator clicking Publish.
 - **Responsiveness:** The UI must be fully functional on screens as small as 375px wide (iPhone SE). Students predominantly browse on mobile devices; all core actions (browse, bookmark, track) must be one-thumb-reachable.
@@ -100,6 +107,17 @@ The following targets are set for the first 3 months post public launch. Targets
 | D30 Retention | 15% | Students who complete one application cycle are the most likely to return |
 | Operational: Approval Time | 100% of submissions reviewed within 24 hours | Requires at least one active Moderator |
 | Operational: Broken Link Rate | < 2% of active listings | Crowd-sourced reports + daily spot-checks |
+
+### MVP Release Success Criteria
+
+Minimum requirements:
+* Application deploys successfully
+* Authentication works
+* Search works
+* Opportunity tracking works
+* Notification system works
+* Submission and moderation workflows work
+* Core routes are operational
 
 ## 14. Risks and Mitigation
 - **Data Sourcing & Freshness**
@@ -170,6 +188,18 @@ This is the definitive scope boundary document. All other sections defer to this
 - Employer-facing dashboards or posting tools.
 - Automated web scraping bots (all ingestion is human-verified for MVP).
 - Paid subscriptions, payment gateways, or premium tiers.
+
+### Out of Scope for MVP
+
+* Premium plans
+* Paid subscriptions
+* Employer dashboards
+* Recruiter portals
+* AI recommendations
+* Messaging systems
+* Community forums
+* Social networking features
+* Public student profiles
 
 ## 18. Competitive Positioning
 Unlike generic job boards (LinkedIn, Indeed) which cater to all professionals, Opportunity Radar is hyper-focused on the student lifecycle. Unlike niche platforms (Unstop for competitions, Wellfound for startups), this platform aggregates *everything* a student needs—jobs, internships, hackathons, and scholarships—into one place, while providing a dedicated application pipeline tracker that standard job boards lack.
@@ -430,3 +460,8 @@ The following minimum field sets are required for the database schema and must b
 | **Cron job fails to run** | System must log the failure and alert the Admin dashboard with a banner: "Scheduled cleanup job failed. Manual review required." | No user-facing impact until the next successful cron run. |
 | **User tries to submit after hitting 5/day rate limit** | API returns HTTP 429. No submission is created. | UI shows: "You've reached the daily submission limit (5 per day). Try again tomorrow." |
 
+---
+
+PRD Version: v1.0
+
+Status: Frozen

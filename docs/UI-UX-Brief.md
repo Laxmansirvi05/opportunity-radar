@@ -53,7 +53,7 @@ Introduce Opportunity Radar and communicate platform value.
 ### Authentication
 
 Purpose:
-Simple onboarding using Google Sign-In.
+Simple onboarding using Google and GitHub OAuth sign-in.
 
 ### Student Dashboard
 

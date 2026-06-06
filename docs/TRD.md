@@ -260,7 +260,7 @@ CREATE INDEX idx_audit_log_actor ON audit_log(actor_id);
 | Property | Implementation |
 |---|---|
 | Email/Password signup | Supabase Auth built-in |
-| OAuth (Google) | Supabase Auth built-in — recommended as primary method for students |
+| OAuth (Google & GitHub) | Supabase Auth built-in — primary methods for a student-friendly sign-in flow |
 | Session management | JWT issued by Supabase, stored in `httpOnly` cookies by the Supabase SSR helper |
 | Session duration | 7 days; refreshed automatically on activity |
 | Password reset | Supabase Auth magic link flow (email) — this is the ONE place email is used, handled entirely by Supabase |
@@ -1073,7 +1073,7 @@ Each Edge Function cron job catches its own errors and:
 - [ ] Initialize Next.js 14 project with TypeScript + Tailwind + shadcn/ui
 - [ ] Set up Supabase project (cloud) and local development environment
 - [ ] Write and apply all migration files (001 through 011)
-- [ ] Set up Supabase Auth with email/password + Google OAuth
+- [ ] Set up Supabase Auth with email/password + Google OAuth + GitHub OAuth
 - [ ] Implement `middleware.ts` for auth guards
 - [ ] Configure all environment variables (local + Vercel)
 - [ ] Deploy skeleton app to Vercel — confirm deployment pipeline works
