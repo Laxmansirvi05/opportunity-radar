@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Node.js
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Next.js
+.next/
+
+# Build Files
+dist/
+build/
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+
+# VS Code
+.vscode/
+
+# Misc
+*.tmp
+*.cache
