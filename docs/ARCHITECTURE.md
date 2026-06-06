@@ -6,6 +6,7 @@ Opportunity Radar utilizes a modular, feature-based architecture built on the Ne
 ## Frontend Architecture (`frontend/`)
 
 - **`app/`**: Next.js App Router definitions. Handles all routing, layouts, and page-level server/client rendering boundaries.
+- **`proxy.ts`**: Handles Next.js edge middleware (e.g., Supabase session refresh). Note: Replaces `middleware.ts` per Next.js 16.2+ conventions.
 - **`components/`**: UI components categorized by responsibility.
   - `ui/`: shadcn/ui primitive components.
   - `shared/`: Generic components used across features (e.g., Headers, Footers).
