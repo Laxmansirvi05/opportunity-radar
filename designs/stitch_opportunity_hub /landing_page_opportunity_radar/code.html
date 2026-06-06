@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opportunity Radar | Precision Career Advancement</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-container-high": "#e7e7f3",
+                        "surface-variant": "#e1e2ed",
+                        "on-tertiary-fixed": "#360f00",
+                        "primary": "#004ac6",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary": "#006b5f",
+                        "inverse-surface": "#2e3039",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "surface": "#faf8ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#006f64",
+                        "surface-tint": "#0053db",
+                        "surface-container": "#ededf9",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f0f0fb",
+                        "tertiary": "#943700",
+                        "on-background": "#191b23",
+                        "on-tertiary-container": "#ffede6",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e1e2ed",
+                        "tertiary-container": "#bc4800",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-primary-container": "#eeefff",
+                        "inverse-primary": "#b4c5ff",
+                        "on-surface": "#191b23",
+                        "on-primary-fixed": "#00174b",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f3f3fe",
+                        "outline": "#737686",
+                        "error-container": "#ffdad6",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "error": "#ba1a1a",
+                        "primary-container": "#2563eb",
+                        "secondary-container": "#6df5e1",
+                        "on-secondary-fixed": "#00201c",
+                        "outline-variant": "#c3c6d7",
+                        "surface-bright": "#faf8ff",
+                        "primary-fixed": "#dbe1ff",
+                        "background": "#faf8ff",
+                        "on-surface-variant": "#434655",
+                        "on-secondary-fixed-variant": "#005048",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-dim": "#d9d9e5",
+                        "secondary-fixed": "#71f8e4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "container-max": "1200px",
+                        "base": "4px",
+                        "sm": "8px",
+                        "gutter": "24px",
+                        "lg": "24px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", {"lineHeight": "1.4", "letterSpacing": "0", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "label-sm": ["11px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E2E8F0;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<nav class="bg-surface dark:bg-background w-full top-0 sticky z-50 border-b border-outline-variant dark:border-outline flat no shadows">
+<div class="flex justify-between items-center h-16 px-gutter max-w-container-max mx-auto">
+<div class="flex items-center gap-xl">
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">Opportunity Radar</span>
+<div class="hidden md:flex items-center gap-lg">
+<a class="text-primary dark:text-primary-fixed-dim font-bold border-b-2 border-primary font-body-md text-body-md py-xs" href="#">Discover</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary font-body-md text-body-md py-xs hover:bg-surface-container-low transition-colors duration-100" href="#">Features</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary font-body-md text-body-md py-xs hover:bg-surface-container-low transition-colors duration-100" href="#">Verification</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 transition-transform" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 transition-transform" data-icon="settings">settings</span>
+</div>
+<button class="px-md py-sm font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-all cursor-pointer active:scale-95">Log In</button>
+<button class="px-md py-sm font-label-md text-label-md bg-primary-container text-on-primary-container rounded-lg font-semibold hover:opacity-90 transition-all cursor-pointer active:scale-95">Sign Up</button>
+</div>
+</div>
+</nav>
+<main>
+<!-- Hero Section -->
+<section class="max-w-container-max mx-auto px-gutter py-xl md:py-[80px] flex flex-col md:flex-row items-center gap-xl">
+<div class="w-full md:w-1/2 space-y-lg">
+<div class="inline-flex items-center px-sm py-xs bg-secondary-container text-on-secondary-container rounded-full gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-label-sm text-label-sm">Community Verified Opportunities</span>
+</div>
+<h1 class="font-display text-display leading-tight">Precision detection for your <span class="text-primary">next career leap.</span></h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[540px]">Radar-grade intelligence for students. We scrape, verify, and track the best internships, fellowships, and scholarships in real-time.</p>
+<div class="flex flex-wrap gap-md pt-md">
+<button class="bg-primary-container text-on-primary-container px-xl py-md font-headline-sm text-headline-sm rounded-xl hover:opacity-90 active:scale-95 transition-all">Get Started Free</button>
+<button class="border border-outline-variant bg-white text-on-surface px-xl py-md font-headline-sm text-headline-sm rounded-xl hover:bg-surface-container transition-all active:scale-95">Watch Demo</button>
+</div>
+</div>
+<div class="w-full md:w-1/2 relative">
+<div class="glass-card rounded-xl overflow-hidden shadow-sm aspect-square md:aspect-video flex items-center justify-center">
+<img alt="Dashboard Preview" class="w-[90%] h-[90%] object-cover rounded-lg shadow-xl" data-alt="A clean, high-fidelity user interface of a career dashboard showing real-time data visualizations and opportunity lists. The UI uses a sophisticated blue and white palette with sharp lines and mathematical precision. Soft, high-key studio lighting emphasizes the professional and technological nature of the platform, creating a modern minimalist atmosphere focused on productivity and institutional trust." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYp0ALGpmm5VHKLAJSOuVEicV93UVdNBRp-SdSqHqfqt_6zWnntWJueIv4xtMD5zVe9HgDIGNFLFSg1tD_V6kc5fV2ZrbvxRgJfgmCywPhzzEKYgAv4Y5n_mprUXfoebmkui9c4NhkzdnhJL7c_v4gQ0bBogw6bFL1rEJnxyrFOd-xDg7ajsrGxmuGG2Dupa8HGLEM-z-5hlQzVn0PQz3p60qTCRG-2_-qaWT3X7rm2_E4Va66Yl6Oeqsboimvd2_SEI3a0601Liqm"/>
+</div>
+<!-- Floating Card -->
+<div class="absolute -bottom-xl -left-xl hidden md:block">
+<div class="glass-card p-md rounded-xl shadow-lg border-l-4 border-primary">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="bolt">bolt</span>
+<div>
+<p class="font-label-md text-label-md font-bold">New Discovery</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Google SWE Internship '25</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Banner -->
+<section class="bg-surface-container-low py-xl border-y border-outline-variant">
+<div class="max-w-container-max mx-auto px-gutter grid grid-cols-2 md:grid-cols-4 gap-lg">
+<div class="text-center md:text-left">
+<p class="font-display text-headline-lg text-primary">12,402</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Live Opportunities</p>
+</div>
+<div class="text-center md:text-left">
+<p class="font-display text-headline-lg text-primary">85k+</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Active Students</p>
+</div>
+<div class="text-center md:text-left">
+<p class="font-display text-headline-lg text-primary">420</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Partner Companies</p>
+</div>
+<div class="text-center md:text-left">
+<p class="font-display text-headline-lg text-primary">100%</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Verified Listings</p>
+</div>
+</div>
+</section>
+<!-- Features Bento Grid -->
+<section class="max-w-container-max mx-auto px-gutter py-xl">
+<div class="mb-xl text-center space-y-sm">
+<h2 class="font-headline-lg text-headline-lg">Engineered for Accuracy</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">The tools you need to move from "searching" to "securing."</p>
+</div>
+<div class="bento-grid">
+<!-- Large Feature -->
+<div class="col-span-12 md:col-span-8 bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between overflow-hidden relative group">
+<div class="relative z-10 space-y-sm">
+<span class="material-symbols-outlined text-primary text-[32px]" data-icon="search_insights">search_insights</span>
+<h3 class="font-headline-md text-headline-md">Advanced Search Radar</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[400px]">Filter by tech stack, funding, visa sponsorship, and relocation stipends. Our radar skips the fluff to find what matters.</p>
+</div>
+<div class="mt-xl relative h-[200px] w-full bg-surface-container rounded-lg p-md overflow-hidden">
+<!-- Mock Search UI -->
+<div class="space-y-sm">
+<div class="h-8 bg-white rounded border border-outline-variant w-1/2"></div>
+<div class="h-8 bg-white rounded border border-outline-variant w-3/4"></div>
+<div class="h-8 bg-white rounded border border-outline-variant w-full"></div>
+</div>
+</div>
+</div>
+<!-- Small Feature -->
+<div class="col-span-12 md:col-span-4 bg-primary-container text-on-primary-container rounded-xl p-lg space-y-md">
+<span class="material-symbols-outlined text-[32px]" data-icon="tracker">analytics</span>
+<h3 class="font-headline-sm text-headline-sm">Application Tracker</h3>
+<p class="font-body-md text-body-md opacity-90">Manage deadlines, interview rounds, and follow-ups in a unified, professional Kanban workspace.</p>
+</div>
+<!-- Square Feature 1 -->
+<div class="col-span-12 md:col-span-4 bg-white border border-outline-variant rounded-xl p-lg space-y-md hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-secondary text-[32px]" data-icon="verified_user">verified_user</span>
+<h3 class="font-headline-sm text-headline-sm">Company Intelligence</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Deep-dive into verified intern reviews, culture data, and real compensation reports from the community.</p>
+</div>
+<!-- Horizontal Feature -->
+<div class="col-span-12 md:col-span-8 bg-surface-container-high rounded-xl p-lg flex flex-col md:flex-row gap-lg items-center">
+<div class="space-y-sm flex-1">
+<h3 class="font-headline-sm text-headline-sm">Community Verification</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Every listing is verified by students for students. No ghost jobs. No expired links. No spam.</p>
+<button class="text-primary font-label-md text-label-md flex items-center gap-xs">Learn about our pipeline <span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span></button>
+</div>
+<div class="flex -space-x-4">
+<img alt="Student" class="w-12 h-12 rounded-full border-2 border-white" data-alt="A portrait of a young professional student in a modern workspace, lit with soft natural light, smiling confidently. The image has a clean, high-key professional look consistent with a high-end career platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCN1iHZA_JvlS1YijGJ3gbfiAcjdLQ9FcLn9kE-UIRsvACBB-niV1USXRY9dFrOWIKWgrUO4oFzufahCZ7a-kIW-eSHsxPk-oXeTgOxhZv-QTsbSmmJVDHUBTa8YbGfAYK4BJF9es6Ftw0GelDbCkq93MMAE8BmDfn56Mi4FwMpmUuAbCWWt8Ids9DCr36ihirEmYaLG3kuPx9POjY0VgT_NvONvhPHdsEfXLrmMqtVRrGZWTkmcuI_A8TKMMFUwFSwmWkCEdbAA19_"/>
+<img alt="Student" class="w-12 h-12 rounded-full border-2 border-white" data-alt="A bright portrait of a diverse female student in a minimalist office setting, wearing professional attire. The lighting is crisp and modern, reflecting a sense of reliability and institutional trust." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAG3yjo0t4GQ9pRBMPueXZ8-B4U32KEZ3WXT85B3rjIN77cERUvTa5l28YnvS9_cfEkRxiSsDFKwqZdSo-Mm1UVs7y3l5Y3XwbuIxXc8hEHB8YiIVkvoqt2M7V3qRYDI6wRiqtnJjMRsPJjaWzoaIzFEU5X7MxPFB9WKHIDYEH70T-CTSDZqdhZvKae_B_IacqgOlpequbfC-k7q21l1qkHjnc5gyerMwAupV-hlqCesr3lfr52WDUZySXzvVESNtmgGpblE9XoATxC"/>
+<img alt="Student" class="w-12 h-12 rounded-full border-2 border-white" data-alt="A professional headshot of a young male student in a collaborative workspace, featuring soft bokeh and clean aesthetics. The overall mood is focused and career-oriented." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMskioGkDDqnsRammLKL3amb0VL3JMBMVAnhrbD9Gza7LXtsJvYK7q5v5SWj_Ev3KHyW70c6MGff-M4SJsUmIW-NrABzZSmUC299a4vbPDkamuhmmOgoyXY0J2g7fTcVT5685pPdpmBBwzIjYp95NSXjAw0P5G_J5AIGrlMyJuMk8nUuHTRdKWuhK_unVsL1Wvh_g-aT3VdJtbHYrhmXHqUjtvVA1TWZNFE6WqFOfA_08yYvdnjZX0fCi0ndeJAW0XOXqsk7OM23qd"/>
+<div class="w-12 h-12 rounded-full border-2 border-white bg-primary text-white flex items-center justify-center font-label-sm">+8k</div>
+</div>
+</div>
+</div>
+</section>
+<!-- How It Works -->
+<section class="max-w-container-max mx-auto px-gutter py-xl bg-white border border-outline-variant rounded-xl my-xl">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-xl">
+<div class="space-y-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-primary">1</div>
+<h4 class="font-headline-sm text-headline-sm">Discover</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time radar pings for new opportunities based on your profile.</p>
+</div>
+<div class="space-y-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-primary">2</div>
+<h4 class="font-headline-sm text-headline-sm">Evaluate</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Access company intelligence and community verification scores.</p>
+</div>
+<div class="space-y-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-primary">3</div>
+<h4 class="font-headline-sm text-headline-sm">Apply</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Direct links to official applications. No middle-man hurdles.</p>
+</div>
+<div class="space-y-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-primary">4</div>
+<h4 class="font-headline-sm text-headline-sm">Track</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Organize your funnel and get alerts on interview windows.</p>
+</div>
+</div>
+</section>
+<!-- Verification Pipeline -->
+<section class="max-w-container-max mx-auto px-gutter py-xl text-center">
+<div class="max-w-2xl mx-auto space-y-md">
+<span class="px-sm py-xs border border-secondary text-secondary rounded-full font-label-sm text-label-sm uppercase tracking-wider">The Trust Pipeline</span>
+<h2 class="font-headline-lg text-headline-lg">Zero Ghost Jobs. Guaranteed.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Our verification pipeline uses a hybrid AI and community reporting system to ensure every listing on your radar is active, genuine, and professional-grade.</p>
+<div class="pt-md">
+<button class="bg-primary text-white px-lg py-md rounded-lg font-semibold hover:opacity-90 active:scale-95 transition-all">Start Discovering Today</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface dark:bg-background border-t border-outline-variant dark:border-outline py-xl w-full">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto gap-lg">
+<div class="space-y-xs text-center md:text-left">
+<span class="font-label-md text-label-md font-bold text-primary">Opportunity Radar</span>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-80">© 2024 Opportunity Radar. All rights reserved.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-lg">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Documentation</a>
+</div>
+<div class="flex gap-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="public">public</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="chat_bubble">chat_bubble</span>
+</div>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for the discovery card
+        document.addEventListener('DOMContentLoaded', () => {
+            const button = document.querySelector('button');
+            button.addEventListener('mouseover', () => {
+                // Subtle feedback handled by Tailwind classes mostly
+            });
+        });
+    </script>
+</body></html>

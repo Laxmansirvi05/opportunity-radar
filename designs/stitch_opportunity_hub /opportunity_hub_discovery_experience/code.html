@@ -1,0 +1,502 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Opportunity Radar - Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e7e7f3",
+                        "on-primary-container": "#eeefff",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "on-error": "#ffffff",
+                        "background": "#faf8ff",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "secondary-container": "#6df5e1",
+                        "surface-bright": "#faf8ff",
+                        "on-surface-variant": "#434655",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "tertiary-container": "#bc4800",
+                        "primary-fixed": "#dbe1ff",
+                        "on-secondary-fixed": "#00201c",
+                        "on-tertiary-fixed": "#360f00",
+                        "secondary-fixed": "#71f8e4",
+                        "tertiary": "#943700",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-variant": "#e1e2ed",
+                        "primary-container": "#2563eb",
+                        "surface-container": "#ededf9",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "surface-container-low": "#f3f3fe",
+                        "on-secondary-container": "#006f64",
+                        "inverse-surface": "#2e3039",
+                        "outline": "#737686",
+                        "surface": "#faf8ff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "inverse-on-surface": "#f0f0fb",
+                        "on-primary-fixed": "#00174b",
+                        "primary": "#004ac6",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary": "#006b5f",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191b23",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#005048",
+                        "surface-tint": "#0053db",
+                        "surface-container-highest": "#e1e2ed",
+                        "surface-dim": "#d9d9e5",
+                        "on-surface": "#191b23",
+                        "outline-variant": "#c3c6d7",
+                        "on-tertiary-container": "#ffede6"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "2xl": "1rem"
+                    },
+                    spacing: {
+                        "base": "4px",
+                        "xl": "40px",
+                        "xs": "4px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "container-max": "1200px",
+                        "2xl": "64px"
+                    },
+                    fontFamily: {
+                        "headline-lg-mobile": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display": ["Inter"],
+                        "headline-sm": ["Inter"]
+                    },
+                    fontSize: {
+                        "headline-lg-mobile": ["24px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "label-sm": ["11px", { lineHeight: "1", letterSpacing: "0.01em", fontWeight: "600" }],
+                        "headline-md": ["24px", { lineHeight: "1.3", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "600" }],
+                        "body-md": ["14px", { lineHeight: "1.5", letterSpacing: "0", fontWeight: "400" }],
+                        "label-md": ["12px", { lineHeight: "1.2", letterSpacing: "0.02em", fontWeight: "500" }],
+                        "body-lg": ["16px", { lineHeight: "1.6", letterSpacing: "0", fontWeight: "400" }],
+                        "display": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "headline-sm": ["18px", { lineHeight: "1.4", letterSpacing: "0", fontWeight: "600" }]
+                    },
+                    animation: {
+                        'radar-spin': 'spin 4s linear infinite',
+                        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+                    },
+                    boxShadow: {
+                        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03)',
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #FAFAFA; color: #111827; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+        .radar-sweep {
+            background: conic-gradient(from 0deg, transparent 70%, rgba(37, 99, 235, 0.2) 100%);
+            border-radius: 50%;
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e5e7eb;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d1d5db;
+        }
+    </style>
+</head>
+<body class="bg-[#FAFAFA] flex h-screen overflow-hidden text-gray-900 antialiased selection:bg-blue-100 selection:text-blue-900">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden lg:flex flex-col h-screen p-md overflow-y-auto bg-white border-r border-gray-200 w-64 flex-shrink-0 z-20">
+<div class="mb-xl px-sm pt-sm">
+<div class="flex items-center gap-2 mb-1">
+<div class="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" style="font-size: 16px;">radar</span>
+</div>
+<h1 class="text-[16px] font-semibold tracking-tight text-gray-900">Student Portal</h1>
+</div>
+<p class="text-[13px] text-gray-500 font-medium ml-8">Opportunity Radar</p>
+</div>
+<button class="bg-gray-900 text-white text-[13px] font-medium rounded-lg py-2.5 px-4 mb-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm w-full mx-auto max-w-[220px]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            Find Internships
+        </button>
+<ul class="flex flex-col gap-1 flex-grow px-2">
+<!-- Hub (Active) -->
+<li class="">
+<a class="flex items-center gap-3 p-2 bg-gray-100 text-gray-900 rounded-lg text-[14px] font-medium transition-all" href="#">
+<span class="material-symbols-outlined text-[20px] text-gray-700">explore</span>
+                    Hub
+                </a>
+</li>
+<!-- Search -->
+<li class="">
+<a class="flex items-center gap-3 p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all rounded-lg text-[14px] font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">search</span>
+                    Search
+                </a>
+</li>
+<!-- Tracker -->
+<li class="">
+<a class="flex items-center gap-3 p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all rounded-lg text-[14px] font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+                    Tracker
+                </a>
+</li>
+<!-- Dashboard -->
+<li class="">
+<a class="flex items-center gap-3 p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all rounded-lg text-[14px] font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+</ul>
+<div class="mt-auto pt-4 px-2 mb-4">
+<ul class="flex flex-col gap-1">
+<li class="">
+<a class="flex items-center gap-3 p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all rounded-lg text-[13px] font-medium" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                        Settings
+                    </a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all rounded-lg text-[13px] font-medium" href="#">
+<span class="material-symbols-outlined text-[18px]">help</span>
+                        Support
+                    </a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<div class="flex-grow flex flex-col overflow-y-auto relative">
+<!-- TopNavBar (Mobile / Responsive) -->
+<header class="lg:hidden bg-white/80 backdrop-blur-md border-b border-gray-200 flex justify-between items-center px-4 h-14 w-full sticky top-0 z-30">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" style="font-size: 16px;">radar</span>
+</div>
+<div class="text-[15px] font-semibold text-gray-900 tracking-tight">Opportunity Radar</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-gray-500 hover:text-gray-900 cursor-pointer text-[20px]">search</span>
+<span class="material-symbols-outlined text-gray-500 hover:text-gray-900 cursor-pointer text-[20px]">notifications</span>
+<div class="w-7 h-7 rounded-full bg-gray-200 overflow-hidden ring-2 ring-white">
+<img alt="Student profile picture" class="w-full h-full object-cover" data-alt="A close-up portrait of a young professional student with a neutral, confident expression, set against a bright, modern minimalist background with high-key lighting. The color palette is crisp, featuring soft whites and cool subtle tones, perfectly complementing the sleek, professional aesthetic of a cutting-edge digital platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrWywgb6VDFrwiB2u9E2Jpam11TfhdSZuaiHL5LHXDlRmVNZUK1f4pGI_OFzXNXjKnZT2u3a5hIWvBT5ATA1wMO7ct4u3H6x4auGzlX9hPmlEj3oTF9TXGAX4aawNJ-rWlp-4UEQFoc7BXlimmTic8BcOpPFHJSCFYKPLQM0_9gkPlSOhbzBkPOjboWhEfUsPfzfcu7IYtVlsPDcSFI5KFtidJl2RNloAlhd26CFHmZT0JuzJbUqJ-247pvKRJCtJCWxtYIHvtsH5P">
+</div>
+</div>
+</header>
+<!-- Hub Content -->
+<main class="flex-grow p-4 md:p-8 max-w-[1100px] mx-auto w-full pb-20 space-y-6">
+<!-- Hero Section with Radar -->
+<section class="relative bg-white border border-gray-200 rounded-2xl p-6 overflow-hidden flex flex-col md:flex-row items-center justify-between gap-10 shadow-sm md:p-6">
+<div class="z-10 max-w-lg w-full">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[12px] font-medium mb-4 border border-blue-100">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+    New Opportunities Available
+</div>
+<h2 class="text-[40px] md:text-[48px] leading-[1.1] font-bold tracking-[-0.03em] text-gray-900 mb-4">Never miss an<br>opportunity again.</h2>
+<p class="text-[16px] text-gray-500 max-w-md leading-relaxed mb-4">Precision career advancement tailored for your trajectory. Discover, track, and secure your next big move.</p>
+<div class="w-full relative group">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-gray-400 text-[20px] group-focus-within:text-blue-500 transition-colors">search</span>
+</div>
+<input class="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-[15px] transition-all shadow-sm placeholder:text-gray-400" placeholder="Search roles, companies, or skills..." type="text">
+<div class="absolute inset-y-0 right-0 pr-2 flex items-center">
+<button class="bg-gray-900 text-white text-[13px] font-medium px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">Search</button>
+</div>
+</div>
+<div class="mt-4 space-y-3"><div class="flex flex-col gap-4"><div class="flex items-center gap-3"><span class="text-[12px] font-semibold text-gray-400 uppercase tracking-wider">Fresh Feed</span><div class="flex bg-gray-100 p-1 rounded-lg"><button class="px-3 py-1 text-[12px] font-medium rounded-md bg-white shadow-sm text-gray-900">Last 1h</button><button class="px-3 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-900">Last 6h</button><button class="px-3 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-900">Last 24h</button><button class="px-3 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-900">Last 7 Days</button></div></div><div class="flex flex-wrap gap-2"><span class="px-3 py-1 bg-gray-900 text-white rounded-lg text-[13px] font-medium cursor-pointer">Internships</span><span class="px-3 py-1 bg-white text-gray-500 border border-gray-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-gray-50">Jobs</span><span class="px-3 py-1 bg-white text-gray-500 border border-gray-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-gray-50">Hackathons</span><span class="px-3 py-1 bg-white text-gray-500 border border-gray-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-gray-50">Scholarships</span><span class="px-3 py-1 bg-white text-gray-500 border border-gray-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-gray-50">Competitions</span><span class="px-3 py-1 bg-white text-gray-500 border border-gray-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-gray-50">Workshops</span></div></div><div class="flex items-center gap-6 py-3 border-t border-gray-100"><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-blue-500 text-[16px]">new_releases</span><span class="text-[12px] font-medium text-gray-600">New Today: <span class="text-gray-900 font-bold">24</span></span></div><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-red-500 text-[16px]">alarm</span><span class="text-[12px] font-medium text-gray-600">Closing Soon: <span class="text-gray-900 font-bold">12</span></span></div><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-[16px]">bookmark</span><span class="text-[12px] font-medium text-gray-600">Saved: <span class="text-gray-900 font-bold">8</span></span></div><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-gray-400 text-[16px]">analytics</span><span class="text-[12px] font-medium text-gray-600">Tracked: <span class="text-gray-900 font-bold">5</span></span></div><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-emerald-600 text-[16px]">work</span><span class="text-[12px] font-medium text-gray-600">Jobs Today: <span class="text-gray-900 font-bold">156</span></span></div><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-purple-600 text-[16px]">terminal</span><span class="text-[12px] font-medium text-gray-600">Hackathons: <span class="text-gray-900 font-bold">8</span></span></div><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-orange-600 text-[16px]">school</span><span class="text-[12px] font-medium text-gray-600">Scholarships: <span class="text-gray-900 font-bold">12</span></span></div></div><div class="pt-3 border-t border-gray-100"><div class="flex items-center gap-4 overflow-x-auto pb-1"><span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">Trending</span><div class="flex items-center gap-6 opacity-60 grayscale hover:grayscale-0 transition-all"><span class="text-[13px] font-bold text-gray-900">Google</span><span class="text-[13px] font-bold text-gray-900">Microsoft</span><span class="text-[13px] font-bold text-gray-900">OpenAI</span><span class="text-[13px] font-bold text-gray-900">Stripe</span><span class="text-[13px] font-bold text-gray-900">Atlassian</span><span class="text-[13px] font-bold text-gray-900">Amazon</span></div></div></div></div>
+</div>
+<div class="relative w-56 h-56 md:w-72 md:h-72 flex-shrink-0 flex items-center justify-center opacity-80 mix-blend-multiply">
+<!-- Radar Visualization -->
+<div class="absolute inset-0 border border-gray-100 rounded-full"></div>
+<div class="absolute inset-6 border border-gray-100 rounded-full"></div>
+<div class="absolute inset-12 border border-gray-100 rounded-full"></div>
+<div class="absolute inset-16 border border-gray-100 rounded-full"></div>
+<div class="absolute inset-24 border border-blue-100 rounded-full bg-blue-50/30"></div>
+<div class="absolute inset-0 radar-sweep animate-radar-spin origin-center"></div>
+<!-- Crosshairs -->
+<div class="absolute inset-x-0 top-1/2 h-px bg-gray-100"></div>
+<div class="absolute inset-y-0 left-1/2 w-px bg-gray-100"></div>
+<!-- Radar Blips -->
+<div class="absolute top-[30%] left-[25%] w-2.5 h-2.5 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]">
+<div class="absolute inset-0 rounded-full border border-blue-400 animate-ping-slow"></div>
+</div>
+<div class="absolute bottom-[35%] right-[20%] w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+<div class="absolute inset-0 rounded-full border border-emerald-300 animate-ping-slow" style="animation-delay: 1s;"></div>
+</div>
+<div class="absolute top-[45%] right-[35%] w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+<div class="absolute bg-white rounded-full p-2 border border-gray-200 z-10 shadow-sm flex items-center justify-center">
+<div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+</div>
+</div>
+</section>
+<!-- Grid Layout for Content -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Main Column (Live Now & Internships) -->
+<div class="lg:col-span-8 space-y-10">
+<!-- Live Now Section -->
+<section class="mb-10"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><div class="relative flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></div><h3 class="text-[18px] font-semibold text-gray-900 tracking-tight">Fresh Today</h3></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="bg-white border border-gray-200 rounded-xl flex flex-col hover:border-gray-300 hover:shadow-md transition-all group cursor-pointer relative p-4"><div class="flex justify-between items-start mb-4"><div class="flex gap-2"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Internship</span><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Remote</span></div><span class="material-symbols-outlined text-gray-400 hover:text-blue-600">bookmark</span></div><h4 class="text-[15px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600">Backend Engineer</h4><p class="text-[13px] text-gray-500 mb-3">Supabase</p><div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-50"><div class="flex items-center gap-1.5 text-[11px] font-medium text-red-600"><span class="material-symbols-outlined text-[14px]">timer</span> Closes in 2h</div><div class="flex items-center gap-1 text-[11px] text-blue-500 font-medium"><span class="material-symbols-outlined text-[14px]">verified</span> Verified</div></div></div><div class="bg-white border border-gray-200 rounded-xl flex flex-col hover:border-gray-300 hover:shadow-md transition-all group cursor-pointer relative p-4"><div class="flex justify-between items-start mb-4"><div class="flex gap-2"><span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Job</span><span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Hybrid</span></div><span class="material-symbols-outlined text-gray-400 hover:text-blue-600">bookmark</span></div><h4 class="text-[15px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600">Product Manager</h4><p class="text-[13px] text-gray-500 mb-3">Linear</p><div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-50"><div class="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><span class="material-symbols-outlined text-[14px]">calendar_today</span> 2 days left</div><div class="flex items-center gap-1 text-[11px] text-blue-500 font-medium"><span class="material-symbols-outlined text-[14px]">verified</span> Verified</div></div></div><div class="bg-white border border-gray-200 rounded-xl flex flex-col hover:border-gray-300 hover:shadow-md transition-all group cursor-pointer relative p-4"><div class="flex justify-between items-start mb-4"><div class="flex gap-2"><span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Hackathon</span><span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Free</span></div><span class="material-symbols-outlined text-gray-400 hover:text-blue-600">bookmark</span></div><h4 class="text-[15px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600">Build with AI 2024</h4><p class="text-[13px] text-gray-500 mb-3">Google Cloud</p><div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-50"><div class="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><span class="material-symbols-outlined text-[14px]">event</span> Oct 20</div><div class="flex items-center gap-1 text-[11px] text-gray-400 font-medium">Community Sourced</div></div></div><div class="bg-white border border-gray-200 rounded-xl flex flex-col hover:border-gray-300 hover:shadow-md transition-all group cursor-pointer relative p-4"><div class="flex justify-between items-start mb-4"><div class="flex gap-2"><span class="bg-orange-50 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Scholarship</span><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Paid</span></div><span class="material-symbols-outlined text-gray-400 hover:text-blue-600">bookmark</span></div><h4 class="text-[15px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600">Future Leaders Grant</h4><p class="text-[13px] text-gray-500 mb-3">Tech Foundation</p><div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-50"><div class="flex items-center gap-1.5 text-[11px] font-medium text-gray-500"><span class="material-symbols-outlined text-[14px]">timer</span> Closes Nov 15</div><div class="flex items-center gap-1 text-[11px] text-blue-500 font-medium"><span class="material-symbols-outlined text-[14px]">verified</span> Verified</div></div></div></div></section><section>
+<div class="flex items-center justify-between mb-5">
+<div class="flex items-center gap-2">
+<div class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</div>
+<h3 class="text-[18px] font-semibold text-gray-900 tracking-tight">Closing Soon</h3>
+</div>
+<div class="flex gap-2">
+<button class="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Card 1 -->
+<div class="bg-white border border-gray-200 rounded-xl p-5 flex flex-col hover:border-gray-300 hover:shadow-md transition-all group cursor-pointer relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-black flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-sm">
+                                V
+                            </div>
+<div class="bg-red-50 text-red-600 border border-red-100 px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 uppercase tracking-wide">
+<span class="material-symbols-outlined" style="font-size: 12px;">timer</span> 2h left
+                            </div>
+</div>
+<div class="mb-4">
+<h4 class="text-[16px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">Frontend Software Engineer Intern</h4>
+<p class="text-[14px] text-gray-500 font-medium">Vercel</p>
+</div>
+<div class="flex items-center gap-3 text-[13px] text-gray-500 mb-5">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">location_on</span> Remote</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">calendar_today</span> Summer 2024</span>
+</div>
+<div class="mt-auto flex justify-between items-center pt-4 border-t border-gray-100">
+<div class="flex gap-2">
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[12px] font-medium">React</span>
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[12px] font-medium">Next.js</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white border border-gray-200 rounded-xl p-5 flex flex-col hover:border-gray-300 hover:shadow-md transition-all group cursor-pointer relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-[#635BFF] flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-sm">
+                                S
+                            </div>
+<div class="bg-orange-50 text-orange-600 border border-orange-100 px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 uppercase tracking-wide">
+<span class="material-symbols-outlined" style="font-size: 12px;">timer</span> 5h left
+                            </div>
+</div>
+<div class="mb-4">
+<h4 class="text-[16px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">Software Engineering Intern</h4>
+<p class="text-[14px] text-gray-500 font-medium">Stripe</p>
+</div>
+<div class="flex items-center gap-3 text-[13px] text-gray-500 mb-5">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">location_on</span> San Francisco, CA</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">calendar_today</span> Summer 2024</span>
+</div>
+<div class="mt-auto flex justify-between items-center pt-4 border-t border-gray-100">
+<div class="flex gap-2">
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[12px] font-medium">Ruby</span>
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[12px] font-medium">Go</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Fresh Internships -->
+<section>
+<div class="flex items-center justify-between mb-5">
+<h3 class="text-[18px] font-semibold text-gray-900 tracking-tight">Just Added</h3>
+<button class="text-[13px] font-medium text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1">
+                    View all <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+<!-- Item 1 -->
+<div class="p-4 sm:p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group border-b border-gray-100 last:border-0 relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-transparent group-hover:bg-blue-500 transition-colors"></div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-sm">
+<span class="material-symbols-outlined">design_services</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-0.5">
+<h4 class="text-[15px] font-semibold text-gray-900">Product Design Intern</h4>
+<span class="material-symbols-outlined text-blue-500 text-[14px]" title="Verified Company">verified</span>
+</div>
+<div class="flex items-center gap-2 text-[13px] text-gray-500">
+<span class="font-medium text-gray-700">Linear</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="">Remote</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="">Portfolio Required</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-gray-400 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[20px]">bookmark_border</span>
+</button>
+<button class="hidden md:block px-4 py-2 bg-white border border-gray-200 rounded-lg text-[13px] font-medium text-gray-700 group-hover:border-gray-300 group-hover:shadow-sm transition-all hover:text-gray-900">Apply</button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="p-4 sm:p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group border-b border-gray-100 last:border-0 relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-transparent group-hover:bg-blue-500 transition-colors"></div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-sm">
+<span class="material-symbols-outlined">smart_toy</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-0.5">
+<h4 class="text-[15px] font-semibold text-gray-900">Research Engineer Intern</h4>
+<span class="material-symbols-outlined text-blue-500 text-[14px]" title="Verified Company">verified</span>
+</div>
+<div class="flex items-center gap-2 text-[13px] text-gray-500">
+<span class="font-medium text-gray-700">OpenAI</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="">San Francisco, CA</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="">ML Focus</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-gray-400 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[20px]">bookmark_border</span>
+</button>
+<button class="hidden md:block px-4 py-2 bg-white border border-gray-200 rounded-lg text-[13px] font-medium text-gray-700 group-hover:border-gray-300 group-hover:shadow-sm transition-all hover:text-gray-900">Apply</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Side Column (Hackathons & Scholarships) -->
+<div class="lg:col-span-4 space-y-8">
+<!-- Hackathons -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[16px] font-semibold text-gray-900 tracking-tight">Upcoming Hackathons</h3>
+</div>
+<div class="grid grid-cols-1 gap-3">
+<div class="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+</div>
+<h4 class="text-[15px] font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Global AI Hack</h4>
+</div>
+<span class="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase">Virtual</span>
+</div>
+<p class="text-[13px] text-gray-500 mb-3 flex items-center gap-1.5 mt-2">
+<span class="material-symbols-outlined text-[14px]">event</span> Oct 12 - 14 <span class="w-1 h-1 rounded-full bg-gray-300 mx-1"></span> $50k Prize Pool
+                        </p>
+<div class="flex gap-1.5 flex-wrap">
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[11px] font-medium">Python</span>
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[11px] font-medium">LLMs</span>
+<span class="bg-gray-50 text-gray-600 border border-gray-100 px-2 py-1 rounded-md text-[11px] font-medium">API</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Scholarships -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[16px] font-semibold text-gray-900 tracking-tight">Featured Scholarships</h3>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+<div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 group relative">
+<div class="absolute left-0 top-0 bottom-0 w-0.5 bg-transparent group-hover:bg-blue-500 transition-colors"></div>
+<h4 class="text-[14px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">Women in Tech Fund</h4>
+<div class="flex items-center gap-2 text-[12px] text-gray-500">
+<span class="font-medium text-gray-700">$5,000</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="">Closes Nov 1</span>
+</div>
+</div>
+<div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer group relative">
+<div class="absolute left-0 top-0 bottom-0 w-0.5 bg-transparent group-hover:bg-blue-500 transition-colors"></div>
+<h4 class="text-[14px] font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">NextGen Builders Grant</h4>
+<div class="flex items-center gap-2 text-[12px] text-gray-500">
+<span class="font-medium text-gray-700">$2,500</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<span class="">Closes Dec 15</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Promo Box -->
+<section class="mt-6">
+</section>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-6 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center bg-white border-t border-gray-200 mt-auto text-[13px]">
+<div class="flex items-center gap-2 mb-4 md:mb-0">
+<div class="w-5 h-5 rounded bg-gray-200 flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-500 text-[12px]">radar</span>
+</div>
+<span class="font-medium text-gray-900">Opportunity Radar</span>
+<span class="text-gray-400 mx-2">|</span>
+<span class="text-gray-500">© 2024</span>
+</div>
+<ul class="flex gap-6">
+<li class=""><a class="text-gray-500 hover:text-gray-900 font-medium transition-colors" href="#">About</a></li>
+<li class=""><a class="text-gray-500 hover:text-gray-900 font-medium transition-colors" href="#">Privacy</a></li>
+<li class=""><a class="text-gray-500 hover:text-gray-900 font-medium transition-colors" href="#">Terms</a></li>
+<li class=""><a class="text-gray-500 hover:text-gray-900 font-medium transition-colors" href="#">Contact</a></li>
+</ul>
+</footer>
+</div>
+
+
+</body></html>

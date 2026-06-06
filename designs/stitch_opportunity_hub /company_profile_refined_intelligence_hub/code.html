@@ -1,0 +1,350 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Vercel Company Profile | Opportunity Radar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-container": "#6df5e1",
+                    "tertiary-container": "#bc4800",
+                    "surface-tint": "#0053db",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#7d2d00",
+                    "on-surface": "#191b23",
+                    "on-secondary-container": "#006f64",
+                    "primary-fixed": "#dbe1ff",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "on-background": "#191b23",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "background": "#faf8ff",
+                    "on-tertiary-container": "#ffede6",
+                    "surface-container-highest": "#e1e2ed",
+                    "surface-bright": "#faf8ff",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "tertiary-fixed": "#ffdbcd",
+                    "surface-container-low": "#f3f3fe",
+                    "on-secondary-fixed": "#00201c",
+                    "on-secondary-fixed-variant": "#005048",
+                    "on-primary-fixed": "#00174b",
+                    "on-primary-container": "#eeefff",
+                    "error-container": "#ffdad6",
+                    "primary": "#004ac6",
+                    "outline-variant": "#c3c6d7",
+                    "surface-container-high": "#e7e7f3",
+                    "inverse-surface": "#2e3039",
+                    "outline": "#737686",
+                    "tertiary": "#943700",
+                    "inverse-primary": "#b4c5ff",
+                    "surface": "#faf8ff",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#f0f0fb",
+                    "secondary-fixed-dim": "#4fdbc8",
+                    "on-surface-variant": "#434655",
+                    "tertiary-fixed-dim": "#ffb596",
+                    "on-error": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "secondary": "#006b5f",
+                    "surface-variant": "#e1e2ed",
+                    "surface-container": "#ededf9",
+                    "on-tertiary-fixed": "#360f00",
+                    "error": "#ba1a1a",
+                    "surface-dim": "#d9d9e5",
+                    "secondary-fixed": "#71f8e4",
+                    "primary-container": "#2563eb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "base": "4px",
+                    "sm": "8px",
+                    "xs": "4px",
+                    "xl": "40px",
+                    "lg": "24px",
+                    "gutter": "24px",
+                    "container-max": "1200px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "label-sm": ["11px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-sm": ["18px", {"lineHeight": "1.4", "letterSpacing": "0", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(8px); }
+        .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center h-16 w-full px-gutter max-w-container-max mx-auto bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-lg">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed-dim">Opportunity Radar</span>
+<nav class="hidden md:flex gap-md">
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-100 text-label-md font-label-md" href="#">Discover</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-100 text-label-md font-label-md" href="#">Scholarships</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-100 text-label-md font-label-md" href="#">Fellowships</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-100 text-label-md font-label-md" href="#">Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-sm">
+<button class="px-md py-sm text-label-md font-label-md text-on-surface-variant hover:text-primary transition-all">Log In</button>
+<button class="px-md py-sm bg-primary text-on-primary rounded-lg text-label-md font-label-md hover:opacity-80 transition-opacity">Sign Up</button>
+</div>
+</header>
+<div class="flex max-w-container-max mx-auto px-gutter min-h-screen">
+<!-- SideNavBar (Company Profile Context) -->
+<aside class="hidden lg:flex flex-col p-md space-y-base h-[calc(100vh-64px)] w-64 border-r border-outline-variant dark:border-outline bg-surface-container-low dark:bg-surface-container-lowest sticky top-16"><div class="flex items-center gap-sm py-md mb-md px-sm"><div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">radar</span></div><span class="text-label-md font-label-md font-bold text-on-surface">Company Intelligence Hub</span></div><a class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined text-[20px]">dashboard</span><span class="text-label-md font-label-md">Dashboard</span></a><a class="flex items-center gap-sm px-sm py-md bg-secondary-container text-on-secondary-container font-semibold rounded-lg" href="#"><span class="material-symbols-outlined text-[20px]">hub</span><span class="text-label-md font-label-md">Hub</span></a><a class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined text-[20px]">search</span><span class="text-label-md font-label-md">Search</span></a><a class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined text-[20px]">assignment_turned_in</span><span class="text-label-md font-label-md">Tracker</span></a><a class="flex items-center gap-sm px-sm py-md text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined text-[20px]">person</span><span class="text-label-md font-label-md">Profile</span></a></aside>
+<!-- Main Content Area -->
+<main class="flex-1 lg:pl-lg py-xl">
+<!-- Header Section -->
+<section class="mb-xl bg-white border border-outline-variant p-lg rounded-xl">
+<div class="flex flex-col md:flex-row md:items-start justify-between gap-lg">
+<div class="flex gap-lg">
+<div class="w-20 h-20 rounded-xl bg-black flex items-center justify-center shrink-0 shadow-sm border border-outline-variant overflow-hidden">
+<img alt="Vercel Logo" class="w-12 h-12" data-alt="A clean, high-contrast company logo for a tech corporation featuring a minimalist white triangle on a solid black background. The style is sharp, modern, and professional, echoing a premium cloud infrastructure brand. The lighting is neutral and even, emphasizing the flat, vector-like precision of the design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj_v3CSFL2FhpzjCyPcJ1lcjJiGApFuxonfEx7cRdfSXa3AbPAKgEtvo8wCg7qdF6JIizWEvitNHa9kRSJSeFV8qOV0n7puvGci-gofsYsEfLpMl9fP5Gf__nkAQbDs_NOyMEUHKnaHykB66ZthfIRtH37J65UVeZ3OSuMg3Z00-sL4CYdFfMKr75v467IRyK72gBEnxMDTDE_Qf9lTOpxppfa-0MsX3xn8_-lDnWZ5qw_F2yyTUqfJFENIzf9LYVRW5RBH4VQJJNS">
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Vercel</h1>
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<p class="text-body-md text-on-surface-variant mt-xs">Cloud Infrastructure • San Francisco, CA • 201-500 employees</p>
+<div class="flex flex-wrap gap-md mt-md items-center">
+<a class="flex items-center gap-xs text-label-md font-label-md text-primary hover:underline" href="https://vercel.com">
+<span class="material-symbols-outlined text-[16px]">language</span>
+                                    vercel.com
+                                </a>
+<div class="w-1 h-1 bg-outline-variant rounded-full"></div>
+<a class="flex items-center gap-xs text-label-md font-label-md text-primary hover:underline" href="https://vercel.com/careers">
+<span class="material-symbols-outlined text-[16px]">work_outline</span>
+                                    Careers
+                                </a>
+<div class="w-1 h-1 bg-outline-variant rounded-full"></div>
+<span class="flex items-center gap-xs text-label-md font-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">category</span>
+                                    Information Technology
+                                </span>
+</div>
+</div>
+</div>
+<div class="flex gap-sm shrink-0"><div class="flex flex-col items-end gap-xs"><div class="flex gap-sm"><button class="px-lg py-sm border border-outline text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-container-low hover:border-primary transition-all active:scale-95">Follow Company</button><a class="px-lg py-sm bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:opacity-90 transition-opacity" href="#opportunities">View All Opportunities</a></div><span class="text-label-sm text-outline">12.4k followers</span></div></div>
+</div>
+</section>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-lg">
+<!-- Left Column -->
+<div class="xl:col-span-8 space-y-lg">
+<!-- Overview Card -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg"><div class="flex items-center justify-between mb-md"><h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Overview</h2><div class="flex items-center gap-sm bg-secondary-container/10 px-sm py-xs rounded-full"><span class="material-symbols-outlined text-secondary text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span><span class="text-label-sm font-label-sm text-secondary">Verified: Oct 2024</span></div></div><div class="space-y-lg"><div><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-xs">Mission</h3><p class="text-body-lg font-body-lg text-on-surface leading-relaxed">To enable the world's creators to build the best on the web. We build tools that make it easy for frontend developers to create and deploy world-class user experiences.</p></div><div><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-xs">About</h3><p class="text-body-lg font-body-lg text-on-surface leading-relaxed">Vercel is the platform for frontend developers, providing the speed and reliability innovators need to create at the moment of inspiration. We are the creators of Next.js, the leading React framework, and Turbo, the high-performance build system.</p></div></div></div>
+<!-- Tech Stack -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg">
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-md">Technology Stack</h2>
+<div class="flex flex-wrap gap-sm">
+<span class="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-md font-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">javascript</span> React
+                            </span>
+<span class="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-md font-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">frame_source</span> Next.js
+                            </span>
+<span class="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-md font-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">code</span> TypeScript
+                            </span>
+<span class="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-md font-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">terminal</span> Rust
+                            </span>
+<span class="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-md font-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">css</span> Tailwind CSS
+                            </span>
+<span class="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-md font-label-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">cloud</span> AWS
+                            </span>
+</div>
+</div>
+<!-- Opportunities -->
+<div class="space-y-md" id="opportunities">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Open Roles at Vercel</h2>
+<button class="text-label-md font-label-md text-primary flex items-center gap-xs">
+                                View 12 more <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Job Card 1 -->
+<div class="bg-white border border-outline-variant p-md rounded-xl hover:border-primary transition-colors group">
+<div class="flex justify-between items-start mb-sm">
+<span class="px-sm py-[2px] bg-primary-fixed text-on-primary-fixed-variant rounded text-[10px] font-bold tracking-wider uppercase">Internship</span>
+<button class="text-outline group-hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]">bookmark</span></button>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-xs">Frontend Engineer Intern</h3>
+<p class="text-body-md text-on-surface-variant mb-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">location_on</span> Remote (US/Canada)
+                                </p>
+<button class="w-full py-sm bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg group-hover:bg-primary group-hover:text-on-primary transition-all">View Detail</button>
+</div>
+<!-- Job Card 2 -->
+<div class="bg-white border border-outline-variant p-md rounded-xl hover:border-primary transition-colors group">
+<div class="flex justify-between items-start mb-sm">
+<span class="px-sm py-[2px] bg-secondary-container text-on-secondary-container rounded text-[10px] font-bold tracking-wider uppercase">Full-Time</span>
+<button class="text-outline group-hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]">bookmark</span></button>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-xs">Developer Advocate</h3>
+<p class="text-body-md text-on-surface-variant mb-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">location_on</span> San Francisco / Remote
+                                </p>
+<button class="w-full py-sm bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg group-hover:bg-primary group-hover:text-on-primary transition-all">View Detail</button>
+</div>
+<!-- Job Card 3 -->
+<div class="bg-white border border-outline-variant p-md rounded-xl hover:border-primary transition-colors group">
+<div class="flex justify-between items-start mb-sm">
+<span class="px-sm py-[2px] bg-primary-fixed text-on-primary-fixed-variant rounded text-[10px] font-bold tracking-wider uppercase">Internship</span>
+<button class="text-outline group-hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]">bookmark</span></button>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-xs">Product Design Intern</h3>
+<p class="text-body-md text-on-surface-variant mb-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">location_on</span> Remote (Europe)
+                                </p>
+<button class="w-full py-sm bg-surface-container-high text-on-surface font-label-md text-label-md rounded-lg group-hover:bg-primary group-hover:text-on-primary transition-all">View Detail</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column (Sidebar/Insights) -->
+<div class="xl:col-span-4 space-y-lg">
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 gap-sm"><div class="bg-white border border-outline-variant p-md rounded-xl"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Active Opportunities</p><p class="text-headline-lg font-headline-lg text-primary">12</p></div><div class="bg-white border border-outline-variant p-md rounded-xl"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Internship Openings</p><p class="text-headline-lg font-headline-lg text-secondary">4</p></div><div class="bg-white border border-outline-variant p-md rounded-xl"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Full-Time Roles</p><p class="text-headline-lg font-headline-lg text-on-surface">8</p></div><div class="bg-white border border-outline-variant p-md rounded-xl"><p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Remote Opportunities</p><p class="text-headline-lg font-headline-lg text-on-surface">5</p></div></div>
+<!-- Hiring Chart -->
+<div class="bg-white border border-outline-variant rounded-xl p-md"><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-md">Company Facts</h3><div class="space-y-sm"><div class="flex justify-between"><span class="text-body-md text-outline">Founded</span><span class="text-body-md font-semibold text-on-surface">2015</span></div><div class="flex justify-between"><span class="text-body-md text-outline">Headquarters</span><span class="text-body-md font-semibold text-on-surface">San Francisco, CA</span></div><div class="flex justify-between"><span class="text-body-md text-outline">Employees</span><span class="text-body-md font-semibold text-on-surface">501-1,000</span></div><div class="flex justify-between"><span class="text-body-md text-outline">Industry</span><span class="text-body-md font-semibold text-on-surface">Cloud Infrastructure</span></div></div></div><div class="bg-white border border-outline-variant rounded-xl p-md">
+<h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-md">Hiring Momentum</h3>
+<div class="flex items-end gap-base h-24 mb-sm">
+<div class="bg-primary-fixed w-full h-[40%] rounded-t-sm"></div>
+<div class="bg-primary-fixed w-full h-[60%] rounded-t-sm"></div>
+<div class="bg-primary-fixed w-full h-[55%] rounded-t-sm"></div>
+<div class="bg-primary-fixed w-full h-[80%] rounded-t-sm"></div>
+<div class="bg-primary w-full h-[95%] rounded-t-sm"></div>
+<div class="bg-primary-fixed w-full h-[70%] rounded-t-sm"></div>
+</div>
+<div class="flex justify-between text-label-sm text-outline">
+<span class="">May</span>
+<span class="">Today</span>
+</div>
+</div>
+<!-- Common Skills -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl p-md"><div class="space-y-md"><div><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-sm">Most Common Skills Hired</h3><ul class="space-y-xs"><li class="flex items-center gap-sm text-body-md text-on-surface"><div class="w-1.5 h-1.5 bg-primary rounded-full"></div> React</li><li class="flex items-center gap-sm text-body-md text-on-surface"><div class="w-1.5 h-1.5 bg-primary rounded-full"></div> Next.js</li><li class="flex items-center gap-sm text-body-md text-on-surface"><div class="w-1.5 h-1.5 bg-primary rounded-full"></div> System Design</li></ul></div><div><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-sm">Hiring Categories</h3><div class="flex flex-wrap gap-xs"><span class="px-sm py-xs bg-surface-container-lowest rounded text-label-sm text-on-surface-variant border border-outline-variant">Engineering</span><span class="px-sm py-xs bg-surface-container-lowest rounded text-label-sm text-on-surface-variant border border-outline-variant">Design</span><span class="px-sm py-xs bg-surface-container-lowest rounded text-label-sm text-on-surface-variant border border-outline-variant">Product</span></div></div><div><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-sm">Opportunity Types</h3><div class="flex flex-wrap gap-xs"><span class="px-sm py-xs bg-surface-container-lowest rounded text-label-sm text-on-surface-variant border border-outline-variant">Summer Internship</span><span class="px-sm py-xs bg-surface-container-lowest rounded text-label-sm text-on-surface-variant border border-outline-variant">Co-op</span><span class="px-sm py-xs bg-surface-container-lowest rounded text-label-sm text-on-surface-variant border border-outline-variant">Full-time</span></div></div></div></div>
+<!-- Related Companies -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl p-md mb-lg"><h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-md">Why Students Apply Here</h3><ul class="space-y-sm"><li class="flex items-start gap-sm"><span class="material-symbols-outlined text-primary text-[18px] shrink-0">bolt</span><span class="text-body-md text-on-surface">Cutting-edge Stack: Heavy focus on Next.js, React, and TypeScript.</span></li><li class="flex items-start gap-sm"><span class="material-symbols-outlined text-primary text-[18px] shrink-0">public</span><span class="text-body-md text-on-surface">Remote-First Culture: High percentage of distributed-friendly roles.</span></li><li class="flex items-start gap-sm"><span class="material-symbols-outlined text-primary text-[18px] shrink-0">trending_up</span><span class="text-body-md text-on-surface">Rapid Growth: 12 active opportunities across multiple categories.</span></li><li class="flex items-start gap-sm"><span class="material-symbols-outlined text-primary text-[18px] shrink-0">verified</span><span class="text-body-md text-on-surface">Verified Credibility: Consistently high response times and verified data.</span></li></ul></div><div class="bg-white border border-outline-variant rounded-xl p-md">
+<h3 class="text-label-md font-label-md font-bold text-on-surface-variant mb-md">Similar Organizations</h3>
+<div class="space-y-md">
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="Supabase Logo" data-alt="A professional tech logo for an open-source database company, featuring a vibrant green lightning bolt symbol on a dark, minimalist background. The aesthetic is clean, energetic, and modern, suited for a high-growth developer tools startup. The design is rendered in a high-resolution, vector style with soft ambient lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5eJGrUSfVj1lkP2xChul9mFwvTeI0G9MBFPRpYGKJLTkODYqTwUYM5LE8wzz51VYINBZXI_RWHW_tuHrSOmCPAbkSNiV9IaGif9DFd19uD4eyju6PDfDrcZ4Gs-khuvksXFCAzaYRSMVTX5Sb9B12U_GYHH6AfxTzVLqfOXRFL3Sarjxr4aaw0_p6cnxl9aCUILQComHtOg9UxCqnozln3-XJsrzqwl0k2nFYPmcVXmhNsie9f1vJW7wCupzM7PFfGhum14lPdHdB">
+</div>
+<span class="text-label-md font-label-md text-on-surface">Supabase</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="Stripe Logo" data-alt="A sleek corporate logo for a financial technology company, showcasing a bold, stylized 'S' in a vibrant purple-to-blue gradient palette. The visual style is premium and corporate-modern, set against a pristine white background. The image evokes global reach, security, and technological sophistication with smooth, clean lines." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDptDkDM3X8vLjUL7GrDuL14nkr5J7j85KBW6Mdu3JMo-bJ-ELXC56PAWbZRmVVd8lFjzHmMr6kdWVgnp0amhocft50E1A89Qxz_do0EU1IyADlWKRAEEueA-m2w9M5lbNulxW2NxRIb4zFWqFD7h-nZu71CEmXoYo5U55CLlIFsIS1kqdlMV76l_ri_T45KtGaKKdHPKksUgZOlzjO2LEdNLua4moeZd6vrGh5HQ0A4xzsl_5hVsefBzJx1B_1NUumhb4Dhv7NolsH">
+</div>
+<span class="text-label-md font-label-md text-on-surface">Stripe</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="Netlify Logo" data-alt="A minimalist tech logo for a modern web deployment platform, featuring a geometric cyan-colored abstract icon. The design is displayed on a clean, light-grey surface, emphasizing clarity and functional simplicity. The lighting is soft and airy, creating a professional and approachable brand image for cloud services." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKAEhIQoSH00cme49EHISscl3aRlod-VoPqQKETclhdNMJbQnXpQuUze1I6gPP4kz9sO-nlbR8Lea2WCaAOdm70tssMprRP9SEjpeEMKUs2Kt8B722tsO_RyLTipLWT2G_jMRWhCS4vuQtwprAjc6EUAREtS-t3LsHNES3eFVVuOpcMmEFcHVBayTmtGMp8gE6HSGb8SiH3izrfnm-PTDrU_DIQS9RncvDNYT70qGdagx3rMocp6y82KYihLCm0SqnXaK83JV6rarS">
+</div>
+<span class="text-label-md font-label-md text-on-surface">Netlify</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-outline py-lg mt-xl">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-gutter max-w-container-max mx-auto gap-md">
+<div class="flex flex-col gap-xs items-center md:items-start">
+<span class="text-label-md font-label-md font-bold text-on-surface-variant">Opportunity Radar</span>
+<p class="text-label-sm font-label-sm text-outline dark:text-outline-variant">© 2024 Opportunity Radar. Professional Intelligence for Students.</p>
+</div>
+<nav class="flex gap-lg">
+<a class="text-label-sm font-label-sm text-outline dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all" href="#">Privacy</a>
+<a class="text-label-sm font-label-sm text-outline dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all" href="#">Terms</a>
+<a class="text-label-sm font-label-sm text-outline dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all" href="#">API</a>
+<a class="text-label-sm font-label-sm text-outline dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim underline transition-all" href="#">Support</a>
+</nav>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for follow button
+        const followBtn = document.querySelector('button.border-outline');
+        if(followBtn) {
+            followBtn.addEventListener('click', () => {
+                const isFollowing = followBtn.innerText === 'Following';
+                followBtn.innerText = isFollowing ? 'Follow Company' : 'Following';
+                followBtn.classList.toggle('bg-primary-container');
+                followBtn.classList.toggle('text-on-primary-container');
+                followBtn.classList.toggle('border-primary');
+            });
+        }
+
+        // Smooth scroll for anchors
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if(target) {
+                    window.scrollTo({
+                        top: target.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+
+
+</body></html>

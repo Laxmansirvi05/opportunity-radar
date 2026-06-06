@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Opportunity Verification Center | Opportunity Radar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e1e2ed",
+                        "surface-container-high": "#e7e7f3",
+                        "tertiary-fixed": "#ffdbcd",
+                        "inverse-surface": "#2e3039",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary": "#006b5f",
+                        "primary": "#004ac6",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#006f64",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "surface": "#faf8ff",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f0f0fb",
+                        "surface-tint": "#0053db",
+                        "surface-container": "#ededf9",
+                        "inverse-primary": "#b4c5ff",
+                        "tertiary-container": "#bc4800",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-primary-container": "#eeefff",
+                        "on-tertiary-container": "#ffede6",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e1e2ed",
+                        "tertiary": "#943700",
+                        "on-background": "#191b23",
+                        "primary-container": "#2563eb",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f3f3fe",
+                        "outline": "#737686",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#191b23",
+                        "on-primary-fixed": "#00174b",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#faf8ff",
+                        "primary-fixed": "#dbe1ff",
+                        "background": "#faf8ff",
+                        "on-surface-variant": "#434655",
+                        "on-secondary-fixed-variant": "#005048",
+                        "outline-variant": "#c3c6d7",
+                        "secondary-container": "#6df5e1",
+                        "on-secondary-fixed": "#00201c",
+                        "secondary-fixed": "#71f8e4",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-dim": "#d9d9e5",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xl": "40px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "gutter": "24px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "container-max": "1200px",
+                        "base": "4px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-sm": ["18px", {"lineHeight": "1.4", "letterSpacing": "0", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "label-sm": ["11px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-6 h-14 bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-4">
+<span class="text-headline-sm font-headline-sm font-bold text-primary">Opportunity Radar</span>
+<div class="relative flex items-center bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-[20px] text-outline mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-64 outline-none" placeholder="Global search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-surface-container-low p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-surface-container-low p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-xs border border-outline-variant overflow-hidden">
+<img alt="Admin profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbBk7DSpvF1RoWOGh_spT0ItdfvUq3knTqTWA_6KatCN0iY_6uzinxo2r14seLBKNR8s3wzjqiQiGhnCxbCRwlNzlPwf-QkBqttf3EhJ5BKG20z92LRDZiNC2Fk9RB1V0_N6FqM58FH_YRD24H_pSd84ElvwmYcd6AyoRQU7Qn2hJyJMXY6AGJAQRpnQKQJHpY8Mr45amk8CGuwj0O8WBXv-vkdYD9iLp_8c2sW47TO_7k2OTAOOapVlITWirWZKKm9h-HSV1zGyy8"/>
+</div>
+</div>
+</header>
+<div class="flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-64 flex flex-col p-4 gap-6 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant dark:border-outline">
+<div class="flex flex-col gap-1">
+<div class="px-3 py-2">
+<span class="text-label-md font-label-md text-outline uppercase tracking-wider">Main Dashboard</span>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-xl font-semibold" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_late">assignment_late</span>
+<span class="text-label-md font-label-md">Queue</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="text-label-md font-label-md">Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="text-label-md font-label-md">Users</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span class="text-label-md font-label-md">Audit Log</span>
+</a>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-2.5 rounded-xl font-semibold active:scale-95 transition-transform duration-75">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+<span>New Entry</span>
+</button>
+<div class="mt-auto flex flex-col gap-1 pt-4 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="text-label-md font-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-variant rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="text-label-md font-label-md">Documentation</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-64 w-full p-6 flex flex-col gap-6">
+<!-- Analytics Row -->
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-surface border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="pending_actions">pending_actions</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-outline">Total Pending</p>
+<p class="text-headline-sm font-headline-sm">12</p>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-secondary-container/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-outline">Avg. Review Time</p>
+<p class="text-headline-sm font-headline-sm">14m</p>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-tertiary-container/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-outline">Approval Rate</p>
+<p class="text-headline-sm font-headline-sm">82%</p>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant p-4 rounded-xl flex items-center gap-4 border-error/20 bg-error/5">
+<div class="w-10 h-10 rounded-full bg-error-container/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="report_problem">report_problem</span>
+</div>
+<div>
+<p class="text-label-md font-label-md text-error">High-Risk Flags</p>
+<p class="text-headline-sm font-headline-sm text-error">2</p>
+</div>
+</div>
+</div>
+<div class="flex gap-6 flex-1">
+<!-- Moderation Queue (Left 65%) -->
+<section class="w-[65%] flex flex-col bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-4 pt-4 flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm">Moderation Queue</h2>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="filter_list">filter_list</span>
+</button>
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="sort">sort</span>
+</button>
+</div>
+</div>
+<!-- Tabs -->
+<div class="flex gap-1 border-b border-outline-variant">
+<button class="px-4 py-2 text-label-md font-label-md border-b-2 border-primary text-primary">Pending (12)</button>
+<button class="px-4 py-2 text-label-md font-label-md text-outline hover:text-on-surface transition-colors">High Risk (2)</button>
+<button class="px-4 py-2 text-label-md font-label-md text-outline hover:text-on-surface transition-colors">Escalated</button>
+<button class="px-4 py-2 text-label-md font-label-md text-outline hover:text-on-surface transition-colors">Resolved</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-4 py-3 text-label-sm text-outline font-semibold uppercase tracking-wider">Submission Title</th>
+<th class="px-4 py-3 text-label-sm text-outline font-semibold uppercase tracking-wider">Contributor</th>
+<th class="px-4 py-3 text-label-sm text-outline font-semibold uppercase tracking-wider">Quality</th>
+<th class="px-4 py-3 text-label-sm text-outline font-semibold uppercase tracking-wider">AI Conf.</th>
+<th class="px-4 py-3 text-label-sm text-outline font-semibold uppercase tracking-wider">Time</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Selected Row -->
+<tr class="bg-primary-container/5 hover:bg-primary-container/10 transition-colors cursor-pointer border-l-4 border-l-primary">
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface">Summer AI Fellowship 2024</span>
+<span class="text-xs px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary w-fit mt-1">Unique</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">Alex Chen</span>
+<span class="text-[10px] bg-surface-container-high px-1.5 py-0.5 rounded text-outline">T: 98</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[85%]"></div>
+</div>
+<span class="text-xs font-semibold">85/100</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="bg-secondary-container/30 text-secondary-fixed-dim text-[11px] px-2 py-1 rounded-full font-bold">92%</span>
+</td>
+<td class="px-4 py-4 text-xs text-outline">15m ago</td>
+</tr>
+<!-- High Risk Row -->
+<tr class="bg-error/5 hover:bg-error/10 transition-colors cursor-pointer">
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface">Frontend Architect Lead</span>
+<span class="text-xs px-2 py-0.5 rounded-full bg-error-container/20 text-error w-fit mt-1">Potential Duplicate</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">Samantha Lee</span>
+<span class="text-[10px] bg-error-container/20 px-1.5 py-0.5 rounded text-error">T: 45</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error w-[62%]"></div>
+</div>
+<span class="text-xs font-semibold">62/100</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="bg-error-container/30 text-error text-[11px] px-2 py-1 rounded-full font-bold">42%</span>
+</td>
+<td class="px-4 py-4 text-xs text-outline">2h ago</td>
+</tr>
+<!-- Normal Row -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface">Product Design Internship</span>
+<span class="text-xs px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary w-fit mt-1">Unique</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">Raj Patel</span>
+<span class="text-[10px] bg-surface-container-high px-1.5 py-0.5 rounded text-outline">T: 82</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%]"></div>
+</div>
+<span class="text-xs font-semibold">75/100</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="bg-primary-container/10 text-primary text-[11px] px-2 py-1 rounded-full font-bold">81%</span>
+</td>
+<td class="px-4 py-4 text-xs text-outline">4h ago</td>
+</tr>
+<!-- Repeat row for density -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface">Google STEP 2024</span>
+<span class="text-xs px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary w-fit mt-1">Unique</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="font-medium text-on-surface">Emily Wong</span>
+<span class="text-[10px] bg-surface-container-high px-1.5 py-0.5 rounded text-outline">T: 91</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[90%]"></div>
+</div>
+<span class="text-xs font-semibold">90/100</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="bg-secondary-container/30 text-secondary-fixed-dim text-[11px] px-2 py-1 rounded-full font-bold">95%</span>
+</td>
+<td class="px-4 py-4 text-xs text-outline">Yesterday</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-auto p-4 border-t border-outline-variant bg-surface-container-low flex items-center justify-between">
+<span class="text-xs text-outline">Page 1 of 3</span>
+<div class="flex gap-2">
+<button class="p-1.5 border border-outline-variant rounded bg-surface disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-1.5 border border-outline-variant rounded bg-surface">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Submission Review Panel (Right 35%) -->
+<aside class="w-[35%] bg-surface border border-outline-variant rounded-xl flex flex-col relative overflow-hidden shadow-sm">
+<div class="p-4 border-b border-outline-variant bg-surface-container-low flex items-center justify-between">
+<h3 class="font-bold text-on-surface">Submission Review</h3>
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase">ID: RAD-9921</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+<!-- Opportunity Intel -->
+<div>
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="info">info</span>
+<span class="text-label-md font-label-md text-outline font-bold uppercase">Opportunity Intel</span>
+</div>
+<div class="space-y-3">
+<div>
+<label class="text-[10px] text-outline uppercase font-bold">Title</label>
+<p class="font-semibold text-on-surface">Summer AI Fellowship 2024</p>
+</div>
+<div>
+<label class="text-[10px] text-outline uppercase font-bold">URL Source</label>
+<div class="flex items-center gap-2 mt-1">
+<p class="text-body-md text-primary truncate">https://openai.com/fellowships/summer-2024</p>
+<button class="px-2 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-lg uppercase whitespace-nowrap">Verify URL</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="text-[10px] text-outline uppercase font-bold">Category</label>
+<p class="text-body-md">Fellowship</p>
+</div>
+<div>
+<label class="text-[10px] text-outline uppercase font-bold">Deadline</label>
+<p class="text-body-md">March 15, 2024</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Risk Signals -->
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-tertiary text-[20px]" data-icon="shield">shield</span>
+<span class="text-label-md font-label-md text-outline font-bold uppercase">Risk Signals</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] text-outline uppercase font-bold">AI Confidence</span>
+<span class="text-headline-sm font-headline-sm text-secondary">85%</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-[10px] text-outline uppercase font-bold">Fraud Risk</span>
+<span class="text-body-md font-bold text-secondary flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                        Low Risk
+                                    </span>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant">
+<div class="flex items-center justify-between">
+<span class="text-xs text-outline">Duplicate Check</span>
+<span class="text-xs font-bold text-secondary uppercase">None Found</span>
+</div>
+</div>
+</div>
+<!-- Contributor Profile -->
+<div>
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="person">person</span>
+<span class="text-label-md font-label-md text-outline font-bold uppercase">Contributor Profile</span>
+</div>
+<div class="flex items-center gap-3">
+<img alt="Contributor" class="w-10 h-10 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgyteVdErIgPqoXrXcRaIYlIXDA_v3SmcPpqaNTeyYTUUwOesEQg3q4pLCBJa5YMHq62XsLnG8TXm6qwlPPjabwdVcFo1H32S5FhGZgTDY4ZwfrXkxzAFFs-o6Gy5bfKxcxAYFGgk2vQkGeWYg0NAo4ES6RXukTTLkewO_uqn8DLehKdf2Ge5tPRR_MHA2ULQoEhrMy8lHsSk81Dd831p-f88Sg5ss5tM6ohN8Nkw9l_R8tqeW6msl3q_lw-4yctce_k9obxl5WSSi"/>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Alex Chen</p>
+<div class="flex items-center gap-3 mt-0.5">
+<span class="text-xs text-outline">Score: <strong class="text-secondary">850</strong></span>
+<span class="text-xs text-outline">Submissions: <strong class="text-on-surface">124</strong></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Verification Checklist -->
+<div class="space-y-3">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="fact_check">fact_check</span>
+<span class="text-label-md font-label-md text-outline font-bold uppercase">Verification Checklist</span>
+</div>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors group">
+<input class="rounded-sm border-outline text-primary focus:ring-primary h-5 w-5" type="checkbox"/>
+<span class="text-body-md flex-1">Valid URL &amp; Landing Page</span>
+<span class="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity text-outline" data-icon="open_in_new">open_in_new</span>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors group">
+<input class="rounded-sm border-outline text-primary focus:ring-primary h-5 w-5" type="checkbox"/>
+<span class="text-body-md flex-1">Official Organization Source</span>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors group">
+<input class="rounded-sm border-outline text-primary focus:ring-primary h-5 w-5" type="checkbox"/>
+<span class="text-body-md flex-1">Active Deadline &amp; Future Dates</span>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors group">
+<input checked="" class="rounded-sm border-outline text-primary focus:ring-primary h-5 w-5" type="checkbox"/>
+<span class="text-body-md flex-1">Paid/Free Status Verified</span>
+</label>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="p-4 bg-surface-container border-t border-outline-variant space-y-3">
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-primary text-on-primary font-bold py-2.5 rounded-xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="check">check</span>
+                                Approve
+                            </button>
+<button class="bg-surface border border-error text-error font-bold py-2.5 rounded-xl hover:bg-error/5 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
+                                Reject
+                            </button>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-surface border border-outline-variant text-on-surface-variant font-bold py-2 rounded-xl text-[12px] uppercase hover:bg-surface-container-low transition-all">
+                                Request Changes
+                            </button>
+<button class="bg-surface border border-outline-variant text-on-surface-variant font-bold py-2 rounded-xl text-[12px] uppercase hover:bg-surface-container-low transition-all">
+                                Escalate Review
+                            </button>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</div>
+<!-- Background Decoration -->
+<div class="fixed inset-0 pointer-events-none z-[-1] opacity-20 overflow-hidden">
+<div class="absolute -top-24 -left-24 w-96 h-96 bg-primary-container blur-[120px] rounded-full"></div>
+<div class="absolute -bottom-24 -right-24 w-96 h-96 bg-secondary-container blur-[120px] rounded-full"></div>
+</div>
+<script>
+        // Micro-interactions and row selection simulation
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('click', () => {
+                document.querySelectorAll('tbody tr').forEach(r => {
+                    r.classList.remove('bg-primary-container/5', 'border-l-4', 'border-l-primary');
+                });
+                row.classList.add('bg-primary-container/5', 'border-l-4', 'border-l-primary');
+                
+                // Simulate data change in side panel (would normally be dynamic)
+                const title = row.querySelector('.font-semibold').innerText;
+                document.querySelector('aside h3').innerText = "Reviewing: " + (title.length > 20 ? title.substring(0, 20) + '...' : title);
+            });
+        });
+    </script>
+</body></html>

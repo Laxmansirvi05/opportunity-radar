@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Report Issue - Opportunity Radar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-low": "#f3f3fe",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#2e3039",
+                      "secondary": "#006b5f",
+                      "surface": "#faf8ff",
+                      "primary": "#004ac6",
+                      "on-surface-variant": "#434655",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "surface-variant": "#e1e2ed",
+                      "error-container": "#ffdad6",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e7e7f3",
+                      "on-error": "#ffffff",
+                      "secondary-container": "#6df5e1",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "on-surface": "#191b23",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#191b23",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed": "#00201c",
+                      "surface-tint": "#0053db",
+                      "surface-bright": "#faf8ff",
+                      "inverse-on-surface": "#f0f0fb",
+                      "background": "#faf8ff",
+                      "on-secondary-fixed-variant": "#005048",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "on-primary-container": "#eeefff",
+                      "outline": "#737686",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed": "#360f00",
+                      "inverse-primary": "#b4c5ff",
+                      "on-tertiary": "#ffffff",
+                      "tertiary": "#943700",
+                      "tertiary-fixed": "#ffdbcd",
+                      "tertiary-fixed-dim": "#ffb596",
+                      "tertiary-container": "#bc4800",
+                      "surface-container": "#ededf9",
+                      "on-primary-fixed": "#00174b",
+                      "surface-dim": "#d9d9e5",
+                      "on-tertiary-container": "#ffede6",
+                      "secondary-fixed": "#71f8e4",
+                      "outline-variant": "#c3c6d7",
+                      "primary-fixed": "#dbe1ff",
+                      "secondary-fixed-dim": "#4fdbc8",
+                      "on-secondary-container": "#006f64",
+                      "primary-container": "#2563eb",
+                      "surface-container-highest": "#e1e2ed"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "gutter": "24px",
+                      "xs": "4px",
+                      "base": "4px",
+                      "margin-mobile": "16px",
+                      "xl": "40px",
+                      "lg": "24px",
+                      "container-max": "1200px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "display": ["Inter"],
+                      "label-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "body-lg": ["Inter"]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<div class="flex flex-col md:flex-row min-h-screen">
+<!-- SideNavBar Anchor -->
+<aside class="hidden md:flex flex-col h-screen p-md gap-base border-r border-outline-variant bg-surface-container-lowest w-64 sticky top-0">
+<div class="px-sm py-md">
+<span class="text-headline-sm font-display font-black text-primary">Opportunity Radar</span>
+<p class="text-label-md text-on-surface-variant mt-1 font-display">Student Workspace</p>
+</div>
+<nav class="flex-grow flex flex-col gap-1 mt-6">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all duration-150 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-display text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span class="font-display text-label-md">Hub</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">search</span>
+<span class="font-display text-label-md">Search</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">ads_click</span>
+<span class="font-display text-label-md">Tracker</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span class="font-display text-label-md">Profile</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-1 pb-md">
+<button class="bg-primary text-on-primary font-semibold text-label-md px-4 py-2 rounded-lg mb-6 hover:opacity-90 transition-opacity">
+                    Post Opportunity
+                </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">business_center</span>
+<span class="font-display text-label-md">Company Intelligence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+<span class="font-display text-label-md">Admin Center</span>
+</a>
+</div>
+</aside>
+<main class="flex-grow">
+<!-- TopNavBar Anchor -->
+<header class="flex justify-between items-center h-14 px-gutter w-full sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<span class="md:hidden text-headline-sm font-bold text-on-surface">Opportunity Radar</span>
+<div class="hidden md:flex items-center bg-surface-container-low px-3 py-1.5 rounded-xl border border-outline-variant w-64">
+<span class="material-symbols-outlined text-[18px] text-outline">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full" placeholder="Search report ID..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">help</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant cursor-pointer">
+<img alt="Student profile avatar" data-alt="A professional headshot of a college student with a friendly expression, set against a blurred academic background with soft natural lighting. The image is clean, high-resolution, and perfectly suited for a high-trust professional networking profile in a modern light-mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHyCtStJqCStnBRpQoY1hCjX8rpndBLc0OVoFT5rsi5TDHE4K_U64FLWnE-vjRPyniDTjcXnSdVPK8Z1jyBqeoVyTNI6QA0X7rykDKcABKvoyZSIuCzvfzm3dMsNsKEqttjwtfR2jGiC0vLZh01nXrgY-vFdoxl1XeTas2hxeT8AqwmWOZmU5sjkFxho5Kg3tg7jsSeTmtJxw5ZALlyQ3tX-_-xF37ynRyo6-Z03qD6iKMzx_nObr8cQN21t8GstuvEc8w0ocSSmml"/>
+</div>
+</div>
+</header>
+<div class="max-w-[1200px] mx-auto p-gutter">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Left Column: Reporting Center Content -->
+<div class="lg:col-span-8 space-y-lg">
+<div class="mb-xl">
+<h1 class="font-display text-headline-lg text-on-surface">Report an Issue</h1>
+<p class="font-display text-body-lg text-on-surface-variant">Help us maintain the highest data quality for the community.</p>
+</div>
+<!-- Opportunity Preview Card -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[28px]">business</span>
+</div>
+<div class="flex-grow">
+<h3 class="font-display text-headline-sm text-on-surface">Software Engineering Intern</h3>
+<div class="flex items-center gap-sm text-on-surface-variant text-body-md">
+<span>Stripe</span>
+<span class="w-1 h-1 bg-outline-variant rounded-full"></span>
+<span>San Francisco, CA (Hybrid)</span>
+</div>
+</div>
+<div class="px-3 py-1 bg-surface-container text-label-md text-on-surface-variant rounded-full">
+                                ID: #OPP-29341
+                            </div>
+</section>
+<!-- Reporting Form -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg space-y-lg">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div class="space-y-sm">
+<label class="font-display text-label-sm uppercase tracking-wider text-outline">Issue Category</label>
+<select class="w-full bg-surface border border-outline-variant rounded-xl px-md py-3 focus:ring-2 focus:ring-primary focus:border-transparent text-body-md">
+<option>Select a category</option>
+<option>Broken Link</option>
+<option>Expired Opportunity</option>
+<option>Incorrect Information</option>
+<option>Scam Risk</option>
+<option>Duplicate Listing</option>
+<option>Missing Details</option>
+<option>Other</option>
+</select>
+</div>
+<div class="space-y-sm">
+<label class="font-display text-label-sm uppercase tracking-wider text-outline">Urgency Level</label>
+<div class="flex gap-2">
+<button class="flex-grow py-2.5 px-md rounded-xl border border-outline-variant text-label-md hover:bg-surface-container transition-colors">Low</button>
+<button class="flex-grow py-2.5 px-md rounded-xl border border-outline-variant bg-surface-container-low text-label-md ring-1 ring-primary font-semibold text-primary">Medium</button>
+<button class="flex-grow py-2.5 px-md rounded-xl border border-outline-variant text-label-md hover:bg-surface-container transition-colors">High</button>
+</div>
+</div>
+</div>
+<div class="space-y-sm">
+<label class="font-display text-label-sm uppercase tracking-wider text-outline">Detailed Description</label>
+<textarea class="w-full bg-surface border border-outline-variant rounded-xl px-md py-3 focus:ring-2 focus:ring-primary focus:border-transparent text-body-md" placeholder="Please provide specific details about what is wrong..." rows="4"></textarea>
+</div>
+<div class="space-y-sm">
+<label class="font-display text-label-sm uppercase tracking-wider text-outline">Evidence Upload</label>
+<div class="border-2 border-dashed border-outline-variant rounded-xl p-xl text-center hover:bg-surface-container-low transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-[32px] text-outline group-hover:text-primary transition-colors">cloud_upload</span>
+<p class="mt-2 text-body-md text-on-surface-variant">Drop screenshots here or <span class="text-primary font-semibold">browse files</span></p>
+<p class="text-label-md text-outline mt-1">Supports PNG, JPG, PDF (max 5MB)</p>
+</div>
+</div>
+<div class="flex items-center justify-end gap-md pt-md">
+<button class="px-6 py-2.5 rounded-xl text-label-md font-semibold text-on-surface-variant hover:bg-surface-container-low transition-colors">Cancel</button>
+<button class="px-8 py-2.5 rounded-xl text-label-md font-semibold bg-primary text-on-primary shadow-sm hover:opacity-90 active:scale-95 transition-all">Submit Report</button>
+</div>
+</section>
+</div>
+<!-- Right Column: Sidebar Panels -->
+<div class="lg:col-span-4 space-y-lg">
+<!-- Trust & Safety Panel -->
+<div class="bg-primary-container/10 border border-primary/20 rounded-xl p-md">
+<div class="flex items-center gap-sm mb-2 text-primary">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill">verified</span>
+<span class="font-display text-label-md font-bold uppercase tracking-tight">Trust &amp; Safety</span>
+</div>
+<p class="text-body-md text-on-primary-fixed-variant leading-snug">
+                                Every report is reviewed by our community integrity team within 24 hours. Your contributions directly impact the accuracy of our global internship database.
+                            </p>
+</div>
+<!-- Contributor Context -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md">
+<h4 class="font-display text-label-sm uppercase text-outline mb-md">Contributor Reputation</h4>
+<div class="flex items-center justify-between mb-sm">
+<span class="text-body-md font-semibold">Tier 3 Contributor</span>
+<span class="text-primary font-bold text-headline-sm">98.2</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mb-md">
+<div class="bg-primary h-full" style="width: 85%"></div>
+</div>
+<p class="text-label-md text-on-surface-variant italic">"Your high reputation score ensures your reports are prioritized for review."</p>
+</div>
+<!-- Platform Health Metrics -->
+<div class="grid grid-cols-2 gap-md">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md">
+<span class="text-label-sm text-outline block mb-1">Data Accuracy</span>
+<span class="text-headline-sm font-bold text-secondary">99.4%</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md">
+<span class="text-label-sm text-outline block mb-1">Avg Resolution</span>
+<span class="text-headline-sm font-bold text-on-surface">1.2h</span>
+</div>
+</div>
+<!-- Report Status Tracker -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-md border-b border-outline-variant">
+<h4 class="font-display text-label-sm uppercase text-outline">Your Recent Reports</h4>
+</div>
+<div class="divide-y divide-outline-variant">
+<!-- Item 1 -->
+<div class="p-md hover:bg-surface-container-low transition-colors group cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="text-label-md font-semibold text-on-surface">Backend Dev - Meta</span>
+<span class="px-2 py-0.5 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded uppercase">Resolved</span>
+</div>
+<p class="text-label-md text-on-surface-variant truncate">Link was updated correctly.</p>
+<span class="text-[10px] text-outline mt-2 block">2 days ago • #REP-8821</span>
+</div>
+<!-- Item 2 -->
+<div class="p-md hover:bg-surface-container-low transition-colors group cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="text-label-md font-semibold text-on-surface">ML Fellow - OpenAI</span>
+<span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded uppercase">Under Review</span>
+</div>
+<p class="text-label-md text-on-surface-variant truncate">Suspected duplicate listing found.</p>
+<span class="text-[10px] text-outline mt-2 block">4 hours ago • #REP-9104</span>
+</div>
+</div>
+<button class="w-full py-3 text-label-md font-semibold text-primary hover:bg-surface-container-low transition-all">
+                                View Full History
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile BottomNavBar Anchor -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface border-t border-outline-variant flex items-center justify-around px-md z-50">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-[24px]">dashboard</span>
+<span class="text-[10px] font-bold">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-outline" href="#">
+<span class="material-symbols-outlined text-[24px]">search</span>
+<span class="text-[10px]">Search</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-outline" href="#">
+<span class="material-symbols-outlined text-[24px]">ads_click</span>
+<span class="text-[10px]">Tracker</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-outline" href="#">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="text-[10px]">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if(!this.classList.contains('bg-primary')) return;
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const ripple = document.createElement('span');
+                ripple.style.position = 'absolute';
+                ripple.style.width = '2px';
+                ripple.style.height = '2px';
+                ripple.style.background = 'rgba(255,255,255,0.3)';
+                ripple.style.borderRadius = '50%';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.transition = 'transform 0.5s ease-out, opacity 0.5s';
+                
+                this.style.position = 'relative';
+                this.style.overflow = 'hidden';
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.style.transform = 'scale(100)';
+                    ripple.style.opacity = '0';
+                }, 10);
+                
+                setTimeout(() => { ripple.remove(); }, 600);
+            });
+        });
+
+        // Simulating form urgency selection
+        const urgencyButtons = document.querySelectorAll('.flex.gap-2 button');
+        urgencyButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                urgencyButtons.forEach(b => {
+                    b.classList.remove('bg-surface-container-low', 'ring-1', 'ring-primary', 'font-semibold', 'text-primary');
+                    b.classList.add('hover:bg-surface-container');
+                });
+                btn.classList.add('bg-surface-container-low', 'ring-1', 'ring-primary', 'font-semibold', 'text-primary');
+                btn.classList.remove('hover:bg-surface-container');
+            });
+        });
+    </script>
+</body></html>
