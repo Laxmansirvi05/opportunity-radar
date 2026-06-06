@@ -36,7 +36,7 @@ export async function signupAction(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -51,6 +51,11 @@ export async function signupAction(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
+  
+  if (!data.session) {
+    return { success: true, needsEmailConfirmation: true }
+  }
+
   return { success: true }
 }
 

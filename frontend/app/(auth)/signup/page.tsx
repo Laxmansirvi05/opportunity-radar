@@ -1,12 +1,9 @@
-import { Suspense } from 'react'
-import { SignupForm } from '@/features/auth/components/signup-form'
+import { AuthExperience } from '@/features/auth/components/auth-experience'
+
+export const metadata = {
+  title: 'Sign Up | Opportunity Radar',
+}
 
 export default function SignupPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50">
-      <Suspense fallback={<div>Loading...</div>}>
-        <SignupForm />
-      </Suspense>
-    </div>
-  )
+  return <AuthExperience />
 }
