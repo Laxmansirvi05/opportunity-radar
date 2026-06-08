@@ -66,19 +66,22 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
 
       {/* Bottom section */}
       <div className="mt-auto pt-lg border-t border-outline-variant">
-        <button className="w-full bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold py-sm rounded-xl hover:opacity-90 transition-opacity mb-md shadow-sm cursor-pointer">
+        <Link
+          href="/search?category=Internship"
+          className="block text-center w-full bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold py-sm rounded-xl hover:opacity-90 transition-opacity mb-md shadow-sm cursor-pointer"
+        >
           Find Internships
-        </button>
+        </Link>
         <div className="flex flex-col gap-xs">
           <Link
-            href="#"
+            href="/settings"
             className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
           >
             <span className="material-symbols-outlined">settings</span>
             <span className="font-label-md text-label-md">Settings</span>
           </Link>
           <Link
-            href="#"
+            href="/support"
             className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
           >
             <span className="material-symbols-outlined">help</span>

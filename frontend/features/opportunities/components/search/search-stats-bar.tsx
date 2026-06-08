@@ -1,0 +1,36 @@
+'use client'
+
+/**
+ * Blue-tinted stats bar showing result counts.
+ * Matches the Stitch design row: "{count} Jobs · {companies} Companies · {newToday} New Today"
+ */
+interface SearchStatsBarProps {
+  totalJobs: number
+  totalCompanies: number
+  newToday: number
+}
+
+export function SearchStatsBar({ totalJobs, totalCompanies, newToday }: SearchStatsBarProps) {
+  return (
+    <div className="flex items-center gap-6 py-3 px-4 bg-surface-container-low rounded-xl border border-outline-variant/50">
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary text-[20px]">work</span>
+        <span className="text-xs font-medium tracking-wide text-on-surface">
+          <span className="font-bold">{totalJobs.toLocaleString()}</span> Jobs
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary text-[20px]">business</span>
+        <span className="text-xs font-medium tracking-wide text-on-surface">
+          <span className="font-bold">{totalCompanies.toLocaleString()}</span> Companies
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-secondary text-[20px]">new_releases</span>
+        <span className="text-xs font-medium tracking-wide text-on-surface">
+          <span className="font-bold text-secondary">{newToday.toLocaleString()}</span> New Today
+        </span>
+      </div>
+    </div>
+  )
+}

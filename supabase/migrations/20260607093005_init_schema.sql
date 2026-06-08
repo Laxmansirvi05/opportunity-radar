@@ -53,8 +53,16 @@ CREATE TABLE opportunities (
     source_type TEXT CHECK (source_type IN ('Verified','Community Sourced')),
     submitted_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     report_count INTEGER NOT NULL DEFAULT 0,
+    skills TEXT[] DEFAULT '{}',
+    responsibilities TEXT[] DEFAULT '{}',
+    recruiter_name TEXT,
+    recruiter_role TEXT,
+    recruiter_avatar_url TEXT,
+    trust_score INTEGER DEFAULT 100,
+    last_verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fts tsvector GENERATED ALWAYS AS (to_tsvector('english', title || ' ' || coalesce(description, ''))) STORED
 );
 
 -- Opportunity Tags
@@ -129,7 +137,7 @@ CREATE INDEX idx_opportunities_posted_at ON opportunities(posted_at DESC);
 CREATE INDEX idx_opportunities_company_id ON opportunities(company_id);
 CREATE INDEX idx_opportunities_mode ON opportunities(mode);
 CREATE INDEX idx_opportunities_is_paid ON opportunities(is_paid);
-CREATE INDEX idx_opportunities_fts ON opportunities USING gin(to_tsvector('english', title || ' ' || coalesce(description, '')));
+CREATE INDEX idx_opportunities_fts ON opportunities USING gin(fts);
 CREATE INDEX idx_opportunities_fresh ON opportunities(posted_at DESC, status) WHERE status = 'Published';
 CREATE INDEX idx_opportunities_closing ON opportunities(deadline, status) WHERE status IN ('Published', 'Closing Soon');
 CREATE INDEX idx_opportunity_tags_name ON opportunity_tags(tag_name);
@@ -297,3 +305,12 @@ CREATE POLICY "Admins can manage company logos" ON storage.objects FOR ALL USING
 -- Report Evidence RLS
 CREATE POLICY "Mods and Admins can view report evidence" ON storage.objects FOR SELECT USING (bucket_id = 'report-evidence' AND public.get_user_role() IN ('admin', 'moderator'));
 CREATE POLICY "Authenticated users can upload report evidence" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'report-evidence' AND auth.uid() = owner);
+
+-- ==========================================
+-- 6. API GRANTS
+-- ==========================================
+-- Minimum required grants for Supabase PostgREST read access
+GRANT SELECT ON public.opportunities TO anon, authenticated;
+GRANT SELECT ON public.companies TO anon, authenticated;
+GRANT SELECT ON public.opportunity_tags TO anon, authenticated;
+GRANT SELECT ON public.profiles TO anon, authenticated;

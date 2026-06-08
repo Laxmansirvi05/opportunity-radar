@@ -256,14 +256,21 @@ export type Database = {
           experience_level: string | null
           id: string
           is_paid: boolean | null
+          last_verified_at: string | null
           location: string | null
           mode: string | null
           posted_at: string
+          recruiter_avatar_url: string | null
+          recruiter_name: string | null
+          recruiter_role: string | null
           report_count: number
+          responsibilities: string[] | null
+          skills: string[] | null
           source_type: string | null
           status: string
           submitted_by: string | null
           title: string
+          trust_score: number | null
           updated_at: string
         }
         Insert: {
@@ -276,14 +283,21 @@ export type Database = {
           experience_level?: string | null
           id?: string
           is_paid?: boolean | null
+          last_verified_at?: string | null
           location?: string | null
           mode?: string | null
           posted_at?: string
+          recruiter_avatar_url?: string | null
+          recruiter_name?: string | null
+          recruiter_role?: string | null
           report_count?: number
+          responsibilities?: string[] | null
+          skills?: string[] | null
           source_type?: string | null
           status?: string
           submitted_by?: string | null
           title: string
+          trust_score?: number | null
           updated_at?: string
         }
         Update: {
@@ -296,14 +310,21 @@ export type Database = {
           experience_level?: string | null
           id?: string
           is_paid?: boolean | null
+          last_verified_at?: string | null
           location?: string | null
           mode?: string | null
           posted_at?: string
+          recruiter_avatar_url?: string | null
+          recruiter_name?: string | null
+          recruiter_role?: string | null
           report_count?: number
+          responsibilities?: string[] | null
+          skills?: string[] | null
           source_type?: string | null
           status?: string
           submitted_by?: string | null
           title?: string
+          trust_score?: number | null
           updated_at?: string
         }
         Relationships: [
