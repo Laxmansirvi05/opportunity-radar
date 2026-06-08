@@ -64,6 +64,16 @@ export default function TermsOfServicePage() {
                   </div>
                 </div>
               </section>
+
+              <section id="data-and-termination">
+                <h2 className="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-xs mb-md">4. Data Ownership & Termination</h2>
+                <p>You retain full ownership of your data. You may terminate your account at any time using the self-service deletion option in your Account Settings. Upon deletion, your profile, resumes, and tracked opportunities are permanently and immediately removed from our active databases.</p>
+              </section>
+
+              <section id="notifications">
+                <h2 className="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-xs mb-md">5. Notifications</h2>
+                <p>By opting into Email Alerts, you consent to receive platform updates and opportunity matches. You may opt out at any time via your Account Settings.</p>
+              </section>
             </article>
           </div>
         </div>
@@ -73,7 +83,7 @@ export default function TermsOfServicePage() {
         <div className="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto">
           <div className="mb-md md:mb-0">
             <span className="font-label-md text-label-md font-bold text-primary">Opportunity Radar</span>
-            <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">© 2024 Opportunity Radar. All rights reserved.</p>
+            <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">© 2026 Opportunity Radar. All rights reserved.</p>
           </div>
         </div>
       </footer>

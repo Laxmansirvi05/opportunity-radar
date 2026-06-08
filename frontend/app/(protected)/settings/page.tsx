@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { DeleteAccountButton } from '@/features/settings/components/delete-account-button'
+import { SettingsToggles } from '@/features/settings/components/settings-toggles'
 
 export const metadata = {
   title: 'Settings | Opportunity Radar'
@@ -8,6 +10,22 @@ export const metadata = {
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  let emailAlerts = false
+  let publicProfile = false
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email_alerts, public_profile')
+      .eq('id', user.id)
+      .single()
+      
+    if (profile) {
+      emailAlerts = profile.email_alerts
+      publicProfile = profile.public_profile
+    }
+  }
 
   return (
     <div className="flex flex-col gap-xl max-w-3xl mx-auto w-full pb-16">
@@ -48,9 +66,7 @@ export default async function SettingsPage() {
           <div>
             <span className="block text-sm font-bold text-on-surface-variant uppercase tracking-wide mb-1">Delete Account</span>
             <p className="text-sm text-on-surface-variant mb-3">Permanently delete your account and all associated data. This action cannot be undone.</p>
-            <a href="mailto:support@opportunityradar.com?subject=Account%20Deletion%20Request" className="inline-block text-sm px-4 py-2 bg-error/10 border border-error/20 text-error font-bold rounded-lg hover:bg-error/20 transition-colors">
-              Request Account Deletion
-            </a>
+            <DeleteAccountButton />
           </div>
         </div>
       </div>
@@ -61,26 +77,7 @@ export default async function SettingsPage() {
           <p className="text-sm text-on-surface-variant">Control what you share and when you are alerted.</p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/50 rounded-xl">
-            <div>
-              <h4 className="font-bold text-on-background">Email Alerts</h4>
-              <p className="text-sm text-on-surface-variant">Receive weekly opportunity matches.</p>
-            </div>
-            <div className="w-12 h-6 bg-primary rounded-full relative opacity-50 cursor-not-allowed" title="Coming soon">
-              <div className="w-4 h-4 bg-white rounded-full absolute right-1 top-1"></div>
-            </div>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/50 rounded-xl">
-            <div>
-              <h4 className="font-bold text-on-background">Public Profile</h4>
-              <p className="text-sm text-on-surface-variant">Allow recruiters to view your resume.</p>
-            </div>
-            <div className="w-12 h-6 bg-surface-container-high rounded-full relative opacity-50 cursor-not-allowed" title="Coming soon">
-              <div className="w-4 h-4 bg-on-surface-variant rounded-full absolute left-1 top-1"></div>
-            </div>
-          </div>
-        </div>
+        <SettingsToggles initialEmailAlerts={emailAlerts} initialPublicProfile={publicProfile} />
       </div>
     </div>
   )

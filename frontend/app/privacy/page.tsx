@@ -27,9 +27,9 @@ export default function PrivacyPolicyPage() {
             <header className="mb-xl border-b border-outline-variant pb-lg">
               <h1 className="font-display text-display mb-sm">Privacy Policy</h1>
               <div className="flex items-center gap-md">
-                <p className="font-body-md text-body-md text-on-surface-variant">Last Updated: October 24, 2024</p>
+                <p className="font-body-md text-body-md text-on-surface-variant">Last Updated: October 24, 2026</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
-                <p className="font-body-md text-body-md text-on-surface-variant">Version 2.1.0</p>
+                <p className="font-body-md text-body-md text-on-surface-variant">Version 1.0.0</p>
               </div>
             </header>
 
@@ -53,6 +53,10 @@ export default function PrivacyPolicyPage() {
                   <div className="p-md bg-surface border border-outline-variant rounded-lg">
                     <h4 className="font-headline-sm text-headline-sm mb-xs">Automated Data</h4>
                     <p className="font-body-md text-body-md text-on-surface-variant">Technical information like IP addresses, browser types, and platform interaction logs collected via automated systems.</p>
+                  </div>
+                  <div className="p-md bg-surface border border-outline-variant rounded-lg">
+                    <h4 className="font-headline-sm text-headline-sm mb-xs">Resume Storage</h4>
+                    <p className="font-body-md text-body-md text-on-surface-variant">We securely host any uploaded PDF resumes exclusively for your personal use and job applications.</p>
                   </div>
                 </div>
               </section>
@@ -93,6 +97,16 @@ export default function PrivacyPolicyPage() {
                   <p className="font-body-lg text-body-lg">We employ industry-standard encryption protocols (TLS 1.3) for all data in transit and AES-256 for data at rest. Our systems are regularly audited for vulnerabilities to ensure your professional data remains private and protected.</p>
                 </div>
               </section>
+
+              <section className="scroll-mt-24" id="data-deletion">
+                <div className="flex items-center gap-sm mb-md">
+                  <span className="material-symbols-outlined text-primary">delete_forever</span>
+                  <h2 className="font-headline-md text-headline-md">Self-Service Account Deletion</h2>
+                </div>
+                <div className="p-lg bg-surface border border-outline-variant rounded-lg space-y-md">
+                  <p className="font-body-lg text-body-lg">You have full control over your data. You may permanently delete your account at any time from the Settings page. This will immediately and permanently erase your profile, saved opportunities, trackers, resumes, and notification settings from our database.</p>
+                </div>
+              </section>
             </div>
           </article>
         </div>
@@ -102,7 +116,7 @@ export default function PrivacyPolicyPage() {
         <div className="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto gap-lg">
           <div className="flex flex-col items-center md:items-start gap-xs">
             <span className="font-label-md text-label-md font-bold text-primary">Opportunity Radar</span>
-            <p className="font-label-sm text-label-sm text-on-surface-variant opacity-80">© 2024 Opportunity Radar. All rights reserved.</p>
+            <p className="font-label-sm text-label-sm text-on-surface-variant opacity-80">© 2026 Opportunity Radar. All rights reserved.</p>
           </div>
         </div>
       </footer>

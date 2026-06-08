@@ -78,9 +78,6 @@ export function LoginForm() {
             <Button type="button" variant="outline" className="w-full" onClick={() => oauthLoginAction('google', nextUrl)}>
               Google
             </Button>
-            <Button type="button" variant="outline" className="w-full" onClick={() => oauthLoginAction('github', nextUrl)}>
-              GitHub
-            </Button>
           </div>
           <div className="text-sm text-center text-gray-500">
             Don&apos;t have an account?{' '}

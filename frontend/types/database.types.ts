@@ -382,6 +382,8 @@ export type Database = {
           skills: string[] | null
           suspended_at: string | null
           university: string | null
+          email_alerts: boolean
+          public_profile: boolean
         }
         Insert: {
           created_at?: string
@@ -397,6 +399,8 @@ export type Database = {
           skills?: string[] | null
           suspended_at?: string | null
           university?: string | null
+          email_alerts?: boolean
+          public_profile?: boolean
         }
         Update: {
           created_at?: string
@@ -412,6 +416,8 @@ export type Database = {
           skills?: string[] | null
           suspended_at?: string | null
           university?: string | null
+          email_alerts?: boolean
+          public_profile?: boolean
         }
         Relationships: []
       }
@@ -445,6 +451,42 @@ export type Database = {
           {
             foreignKeyName: "reports_reported_by_fkey"
             columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recently_viewed: {
+        Row: {
+          id: string
+          opportunity_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          opportunity_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          opportunity_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recently_viewed_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recently_viewed_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

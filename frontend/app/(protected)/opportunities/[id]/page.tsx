@@ -4,16 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { OpportunitySearchCard } from '@/features/opportunities/components/search/opportunity-search-card'
 import { SaveForLaterButton } from '@/features/opportunities/components/opportunity-detail/save-for-later-button'
 import { ReportBrokenLinkButton } from '@/features/opportunities/components/opportunity-detail/report-broken-link-button'
-
-function getDeadlineText(deadline: string | null): string | null {
-  if (!deadline) return null
-  const now = new Date()
-  const deadlineDate = new Date(deadline)
-  const diffMs = deadlineDate.getTime() - now.getTime()
-  if (diffMs < 0) return 'Closed'
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-  return `${diffDays} Days Left`
-}
+import { ApplyWorkflowButton } from '@/features/opportunities/components/opportunity-detail/apply-workflow-button'
+import { ShareOpportunityButton } from '@/features/opportunities/components/opportunity-detail/share-opportunity-button'
+import { getDeadlineInfo } from '@/features/opportunities/utils/deadline'
 
 function getDeterministicNumber(str: string, max: number): number {
   let hash = 0;
@@ -37,6 +30,20 @@ export default async function OpportunityDetailsPage({
   const { id } = await params
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Upsert Recently Viewed
+  if (user) {
+    // Fire and forget, suppress error
+    supabase.from('recently_viewed').upsert({
+      user_id: user.id,
+      opportunity_id: id,
+      viewed_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,opportunity_id'
+    }).then(() => {})
+  }
+
   // 1. Fetch main opportunity
   const { data: opp, error } = await supabase
     .from('opportunities')
@@ -54,8 +61,9 @@ export default async function OpportunityDetailsPage({
 
   const company = opp.companies as any
   const tags = opp.opportunity_tags || []
-  const deadlineText = getDeadlineText(opp.deadline)
-  const isClosingSoon = opp.status === 'Closing Soon'
+  
+  const deadlineInfo = getDeadlineInfo(opp.deadline)
+  const isExpired = deadlineInfo?.expired ?? false
 
   // 2. Fetch similar opportunities
   const { data: similarOpps } = await supabase
@@ -73,7 +81,7 @@ export default async function OpportunityDetailsPage({
     .neq('id', opp.id)
     .limit(3)
 
-  // 4. Fetch "People also viewed" (fallback to some random or latest)
+  // 4. Fetch "People also viewed"
   const { data: peopleAlsoViewed } = await supabase
     .from('opportunities')
     .select('id, title, companies(name)')
@@ -216,7 +224,7 @@ export default async function OpportunityDetailsPage({
           <section className="flex flex-col gap-4 mt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-on-background">More from {company?.name || 'Company'}</h2>
-              <a href="#" className="text-sm font-semibold text-primary hover:underline">View all 12 roles</a>
+              <a href="#" className="text-sm font-semibold text-primary hover:underline">View all roles</a>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {(moreFromCompany && moreFromCompany.length > 0 ? moreFromCompany : [1,2,3]).map((item: any, idx) => (
@@ -253,23 +261,22 @@ export default async function OpportunityDetailsPage({
                 <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Application Deadline</span>
                 <span className="font-bold text-on-surface">{opp.deadline ? new Date(opp.deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Rolling'}</span>
               </div>
-              {deadlineText && (
+              {deadlineInfo && (
                 <div className="flex flex-col items-end gap-1">
-                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1 ${isClosingSoon ? 'bg-[#FCE8E6] text-[#D93025]' : 'bg-surface-container text-on-surface-variant border border-outline-variant/50'}`}>
+                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1 ${deadlineInfo.colorClass}`}>
                     <span className="material-symbols-outlined text-[14px]">schedule</span>
-                    {deadlineText}
+                    {deadlineInfo.label}
                   </span>
-                  {isClosingSoon && <span className="text-[10px] font-bold text-[#D93025] uppercase mr-1">Closing Soon</span>}
                 </div>
               )}
             </div>
 
             <div className="flex flex-col gap-3 mt-2">
-              <a href={opp.apply_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-on-primary font-bold hover:bg-primary/90 transition-colors shadow-sm w-full">
-                Apply Now
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </a>
-              <SaveForLaterButton opportunityId={opp.id} />
+              <ApplyWorkflowButton opportunityId={opp.id} applyUrl={opp.apply_url} expired={isExpired} />
+              <div className="grid grid-cols-2 gap-3">
+                <SaveForLaterButton opportunityId={opp.id} expired={isExpired} />
+                <ShareOpportunityButton title={opp.title} />
+              </div>
             </div>
             <p className="text-xs text-center text-on-surface-variant/80 font-medium">
               You will be redirected to the company's portal.
@@ -290,7 +297,7 @@ export default async function OpportunityDetailsPage({
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-on-surface-variant">Trust Score</span>
-                <span className="font-bold text-green-600">{opp.trust_score ? `${opp.trust_score}/100` : '90/100'}</span>
+                <span className="font-bold text-green-600">{opp.trust_score ? `${opp.trust_score}/100` : 'Verified Source'}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-on-surface-variant">Official Link</span>
@@ -396,11 +403,9 @@ export default async function OpportunityDetailsPage({
       </footer>
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant p-4 flex gap-3 z-[60] shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-        <a href={opp.apply_url} target="_blank" rel="noopener noreferrer" className="flex-grow bg-primary text-on-primary h-12 rounded-xl font-semibold flex items-center justify-center gap-2">
-          Apply Now <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-        </a>
-        <div className="w-12 h-12 flex items-center justify-center">
-          <SaveForLaterButton opportunityId={opp.id} />
+        <ApplyWorkflowButton opportunityId={opp.id} applyUrl={opp.apply_url} expired={isExpired} />
+        <div className="w-12 h-12 flex items-center justify-center shrink-0">
+          <SaveForLaterButton opportunityId={opp.id} expired={isExpired} />
         </div>
       </div>
     </div>

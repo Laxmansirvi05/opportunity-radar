@@ -51,6 +51,16 @@ export default async function DashboardPage() {
     .order('posted_at', { ascending: false })
     .limit(4)
 
+  // Fetch Recently Viewed
+  const { data: recentViews } = await supabase
+    .from('recently_viewed')
+    .select('viewed_at, opportunities(*, companies(*), opportunity_tags(tag_name))')
+    .eq('user_id', user.id)
+    .order('viewed_at', { ascending: false })
+    .limit(10)
+  
+  const recentlyViewed = recentViews?.map((v: any) => v.opportunities).filter(Boolean) || []
+
   // 3. Compute Intelligence
   const isProfileComplete = profile && profile.university && profile.skills && profile.skills.length > 0
   const hasResume = profile && profile.resume_name
@@ -230,6 +240,25 @@ export default async function DashboardPage() {
               )}
             </div>
           </section>
+
+          {/* Recently Viewed */}
+          {recentlyViewed.length > 0 && (
+            <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md">
+              <div className="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
+                <h3 className="font-headline-sm text-on-background flex items-center gap-2 font-bold">
+                  <span className="material-symbols-outlined text-secondary">history</span>
+                  Recently Viewed
+                </h3>
+              </div>
+              <div className="flex overflow-x-auto pb-4 gap-4 snap-x">
+                {recentlyViewed.map((opp: any) => (
+                  <div key={opp.id} className="min-w-[300px] w-[300px] snap-start shrink-0">
+                    <OpportunitySearchCard opportunity={opp} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Right Column */}
