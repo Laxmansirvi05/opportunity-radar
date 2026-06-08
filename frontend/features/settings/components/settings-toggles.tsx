@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface SettingsTogglesProps {
@@ -13,6 +14,7 @@ export function SettingsToggles({ initialEmailAlerts, initialPublicProfile }: Se
   const [publicProfile, setPublicProfile] = useState(initialPublicProfile)
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
+  const router = useRouter()
 
   const handleToggle = async (type: 'email' | 'public', currentValue: boolean) => {
     setIsLoading(true)
@@ -35,6 +37,8 @@ export function SettingsToggles({ initialEmailAlerts, initialPublicProfile }: Se
 
       if (type === 'email') setEmailAlerts(newValue)
       if (type === 'public') setPublicProfile(newValue)
+      
+      router.refresh()
       
     } catch (err) {
       console.error('Failed to update settings:', err)

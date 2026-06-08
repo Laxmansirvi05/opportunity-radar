@@ -7,7 +7,7 @@ export default function OpportunityNotFound() {
         search_off
       </span>
       <h2 className="text-2xl font-bold text-on-background mb-2">Opportunity Not Found</h2>
-      <p className="text-on-surface-variant mb-8 max-w-md">
+      <p className="text-on-surface-variant mb-8 max-w-[448px]">
         The opportunity you are looking for does not exist, has been removed, or you do not have permission to view it.
       </p>
       <Link

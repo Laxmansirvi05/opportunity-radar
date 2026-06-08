@@ -53,7 +53,7 @@ export default async function SavedOpportunitiesPage() {
         <div className="bg-surface-container-lowest border border-dashed border-outline-variant rounded-2xl p-12 flex flex-col items-center justify-center text-center">
           <span className="material-symbols-outlined text-outline text-[48px] mb-4">bookmark_border</span>
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-2">No saved opportunities</h2>
-          <p className="font-body-md text-on-surface-variant max-w-md">
+          <p className="font-body-md text-on-surface-variant max-w-[448px]">
             You haven't saved any opportunities yet. When you see something interesting, click the bookmark icon to save it here for later.
           </p>
           <Link

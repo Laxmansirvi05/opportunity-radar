@@ -21,7 +21,7 @@ export function SearchEmptyState({ query, onClearSearch, onResetAll }: SearchEmp
       <h3 className="text-2xl font-bold text-on-background mb-3 tracking-tight">
         {query ? `No results for "${query}"` : 'No opportunities found'}
       </h3>
-      <p className="text-base text-on-surface-variant w-full max-w-md mx-auto mb-8 leading-relaxed">
+      <p className="text-base text-on-surface-variant w-full max-w-[448px] mx-auto mb-8 leading-relaxed">
         Try changing your search or filters
       </p>
       <div className="flex items-center gap-4">

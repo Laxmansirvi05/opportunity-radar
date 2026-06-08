@@ -145,8 +145,11 @@ export function AuthExperience() {
           {/* Social Auth Container */}
           <div className="space-y-sm mb-lg">
             <button 
-              onClick={() => oauthLoginAction('google', '/dashboard')}
-              className="w-full h-12 flex items-center justify-center gap-sm px-md bg-surface-container-lowest border border-outline-variant rounded-xl font-label-md text-label-md text-on-surface hover:bg-surface-container hover:border-outline focus:ring-2 focus:ring-primary focus:border-transparent transition-all active:scale-[0.98] cursor-pointer"
+              onClick={async () => {
+                const result = await oauthLoginAction('google', '/dashboard')
+                if (result?.url) window.location.href = result.url
+              }}
+              className="w-full h-12 flex items-center justify-center gap-sm px-md bg-white border border-outline-variant text-on-surface rounded-xl font-label-md text-label-md hover:bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all active:scale-[0.98] cursor-pointer"
               aria-label="Continue with Google"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

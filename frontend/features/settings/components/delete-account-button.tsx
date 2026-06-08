@@ -40,7 +40,7 @@ export function DeleteAccountButton() {
 
       {showDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-lg flex flex-col gap-4 animate-in fade-in zoom-in-95 border border-error/20">
+          <div className="bg-surface rounded-2xl p-8 w-full max-w-[512px] shadow-lg flex flex-col gap-6 animate-in fade-in zoom-in-95 border border-error/20">
             <div className="flex items-center gap-2 text-error mb-2">
               <span className="material-symbols-outlined">warning</span>
               <h3 className="text-xl font-bold">Delete Account</h3>
@@ -74,7 +74,7 @@ export function DeleteAccountButton() {
               />
             </div>
 
-            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-outline-variant">
+            <div className="flex justify-end gap-4 mt-4 pt-6 border-t border-outline-variant">
               <button 
                 onClick={() => {
                   setShowDialog(false)
@@ -82,14 +82,14 @@ export function DeleteAccountButton() {
                   setError(null)
                 }}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-lg font-bold text-on-surface-variant hover:bg-surface-variant transition-colors cursor-pointer"
+                className="px-6 py-2 rounded-lg font-bold text-on-surface hover:bg-surface-variant transition-colors cursor-pointer border border-outline-variant"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleConfirm}
                 disabled={isDeleting || confirmation !== 'DELETE'}
-                className="px-4 py-2 rounded-lg font-bold bg-error text-white hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 rounded-lg font-bold bg-error text-white hover:bg-error/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isDeleting ? (
                   <>

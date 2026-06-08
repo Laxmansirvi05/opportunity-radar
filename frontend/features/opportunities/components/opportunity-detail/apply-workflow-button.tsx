@@ -59,7 +59,7 @@ export function ApplyWorkflowButton({ opportunityId, applyUrl, expired }: ApplyW
 
       {showDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-sm shadow-lg flex flex-col gap-4 animate-in fade-in zoom-in-95">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-[384px] shadow-lg flex flex-col gap-4 animate-in fade-in zoom-in-95">
             <h3 className="text-xl font-bold text-on-background">Application Tracker</h3>
             <p className="text-sm text-on-surface-variant">
               Have you applied for this opportunity?

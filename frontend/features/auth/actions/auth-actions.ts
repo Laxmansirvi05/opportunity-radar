@@ -81,7 +81,7 @@ export async function oauthLoginAction(provider: 'google' | 'github', nextUrl: s
   }
 
   if (data.url) {
-    redirect(data.url)
+    return { url: data.url }
   }
 }
 

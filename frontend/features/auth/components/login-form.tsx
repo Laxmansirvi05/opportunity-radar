@@ -34,7 +34,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto mt-10">
+    <Card className="w-full max-w-[448px] mx-auto mt-10">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Log in to your account</CardTitle>
         <CardDescription>
@@ -75,7 +75,15 @@ export function LoginForm() {
             </div>
           </div>
           <div className="flex flex-col space-y-2">
-            <Button type="button" variant="outline" className="w-full" onClick={() => oauthLoginAction('google', nextUrl)}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full cursor-pointer" 
+              onClick={async () => {
+                const result = await oauthLoginAction('google', nextUrl)
+                if (result?.url) window.location.href = result.url
+              }}
+            >
               Google
             </Button>
           </div>
