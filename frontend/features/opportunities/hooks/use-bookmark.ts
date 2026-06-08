@@ -76,7 +76,10 @@ export function useBookmark(opportunityId: string) {
     } else {
       const { error } = await supabase
         .from('bookmarks')
-        .insert({ user_id: user.id, opportunity_id: opportunityId })
+        .upsert(
+          { user_id: user.id, opportunity_id: opportunityId },
+          { onConflict: 'user_id,opportunity_id', ignoreDuplicates: true }
+        )
 
       const { error: trackerError } = await supabase
         .from('application_tracker')

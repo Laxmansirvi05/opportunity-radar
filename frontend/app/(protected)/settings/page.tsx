@@ -31,9 +31,26 @@ export default async function SettingsPage() {
           </div>
           <div>
             <span className="block text-sm font-bold text-on-surface-variant uppercase tracking-wide mb-1">Password</span>
-            <button disabled className="text-sm px-4 py-2 bg-surface-container border border-outline-variant text-on-surface-variant font-medium rounded-lg opacity-50 cursor-not-allowed">
-              Change Password (Coming Soon)
-            </button>
+            <Link href="/forgot-password" className="inline-block text-sm px-4 py-2 bg-surface-container border border-outline-variant text-on-surface font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+              Reset Password
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-6">
+        <div className="border-b border-outline-variant pb-4">
+          <h3 className="font-headline-sm text-error font-bold mb-1">Danger Zone</h3>
+          <p className="text-sm text-on-surface-variant">Permanent account actions.</p>
+        </div>
+        
+        <div className="flex flex-col gap-4">
+          <div>
+            <span className="block text-sm font-bold text-on-surface-variant uppercase tracking-wide mb-1">Delete Account</span>
+            <p className="text-sm text-on-surface-variant mb-3">Permanently delete your account and all associated data. This action cannot be undone.</p>
+            <a href="mailto:support@opportunityradar.com?subject=Account%20Deletion%20Request" className="inline-block text-sm px-4 py-2 bg-error/10 border border-error/20 text-error font-bold rounded-lg hover:bg-error/20 transition-colors">
+              Request Account Deletion
+            </a>
           </div>
         </div>
       </div>

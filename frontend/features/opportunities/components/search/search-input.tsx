@@ -13,8 +13,14 @@ export function SearchInput() {
   const [localValue, setLocalValue] = useState(filters.q ?? '')
 
   // Sync local value when URL changes externally (e.g. back button)
+  // We only sync if the local value is empty and the URL has a value,
+  // or if the URL is cleared. We avoid syncing during active typing.
   useEffect(() => {
-    setLocalValue(filters.q ?? '')
+    if (!filters.q && localValue !== '') {
+      setLocalValue('')
+    } else if (filters.q && localValue === '') {
+      setLocalValue(filters.q)
+    }
   }, [filters.q])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -22,9 +22,7 @@ export function SearchEmptyState({ query, onClearSearch, onResetAll }: SearchEmp
         {query ? `No results for "${query}"` : 'No opportunities found'}
       </h3>
       <p className="text-base text-on-surface-variant w-full max-w-md mx-auto mb-8 leading-relaxed">
-        {query
-          ? 'Try adjusting your search terms or removing some filters to see more results.'
-          : 'Try removing some filters to broaden your search.'}
+        Try changing your search or filters
       </p>
       <div className="flex items-center gap-4">
         {query && onClearSearch && (
@@ -40,7 +38,7 @@ export function SearchEmptyState({ query, onClearSearch, onResetAll }: SearchEmp
             onClick={onResetAll}
             className="px-6 py-3 text-sm font-semibold text-on-primary bg-primary rounded-xl hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
           >
-            Reset all
+            Reset Filters
           </button>
         )}
       </div>

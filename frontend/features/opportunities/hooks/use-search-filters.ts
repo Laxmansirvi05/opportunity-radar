@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useCallback, useRef, useEffect, useMemo } from 'react'
+import { useCallback, useRef, useEffect, useMemo, startTransition } from 'react'
 import { SearchFilters } from '@/types/opportunity'
 
 /**
@@ -90,8 +90,12 @@ export function useSearchFilters() {
   // ── Set a single filter value ─────────────────────────────────────
   const setFilter = useCallback(
     <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) => {
-      const params = buildParams({ [key]: value, page: 0 })
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      const updates = { [key]: value } as Partial<SearchFilters>
+      if (key !== 'page') updates.page = 0
+      const params = buildParams(updates)
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      })
     },
     [buildParams, pathname, router]
   )
@@ -107,7 +111,9 @@ export function useSearchFilters() {
           q: query || undefined,
           page: 0,
         })
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+        startTransition(() => {
+          router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+        })
       }, 300)
     },
     [buildParams, pathname, router]
@@ -129,27 +135,33 @@ export function useSearchFilters() {
   const clearFilter = useCallback(
     (key: keyof SearchFilters) => {
       const params = buildParams({ [key]: undefined, page: 0 })
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      })
     },
     [buildParams, pathname, router]
   )
 
   // ── Clear all filters but preserve q (App-Flow Line 347) ──────────
   const clearAllFilters = useCallback(() => {
-    const params = new URLSearchParams()
-    if (filters.q) params.set('q', filters.q)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [filters.q, pathname, router])
+    startTransition(() => {
+      router.replace(pathname, { scroll: false })
+    })
+  }, [pathname, router])
 
   // ── Clear search but preserve filters (App-Flow Line 353) ─────────
   const clearSearch = useCallback(() => {
     const params = buildParams({ q: undefined, page: 0 })
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
   }, [buildParams, pathname, router])
 
   // ── Reset everything (App-Flow Line 359) ──────────────────────────
   const resetAll = useCallback(() => {
-    router.replace(pathname, { scroll: false })
+    startTransition(() => {
+      router.replace(pathname, { scroll: false })
+    })
   }, [pathname, router])
 
   // ── Check if any filters are active ───────────────────────────────

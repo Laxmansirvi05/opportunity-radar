@@ -10,12 +10,6 @@ type SupabaseClientType = SupabaseClient<Database>
 
 /**
  * Builds and executes a search query against the opportunities table.
- *
- * Sort order per App-Flow §5.5.1:
- *   Closing Soon first → newest posted_at DESC
- *
- * Always filters to status IN ('Published', 'Closing Soon').
- * Full-text search uses the idx_opportunities_fts GIN index.
  */
 export async function searchOpportunities(
   supabase: SupabaseClientType,
@@ -25,7 +19,11 @@ export async function searchOpportunities(
   const from = page * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  // Select opportunities with joined company and tags
+  const [compIds, tagOpps] = await Promise.all([
+    getMatchingCompanyIds(supabase, filters.q),
+    getMatchingTagOpps(supabase, filters.q),
+  ])
+
   let query = supabase
     .from('opportunities')
     .select(
@@ -38,63 +36,11 @@ export async function searchOpportunities(
     )
     .in('status', ['Published', 'Closing Soon'])
 
-  // ── Full-text search ──────────────────────────────────────────────
-  const compIds = await getMatchingCompanyIds(supabase, filters.q)
-  query = applySearchModifier(query, filters.q, compIds)
+  query = applyAllFilters(query, filters, compIds, tagOpps)
 
-  // ── Category filter ───────────────────────────────────────────────
-  if (filters.category && filters.category.length > 0) {
-    query = query.in('category', filters.category)
-  }
-
-  // ── Mode filter ───────────────────────────────────────────────────
-  if (filters.mode && filters.mode.length > 0) {
-    query = query.in('mode', filters.mode)
-  }
-
-  // ── Compensation filter ───────────────────────────────────────────
-  if (filters.is_paid !== undefined) {
-    query = query.eq('is_paid', filters.is_paid)
-  }
-
-  // ── Experience level filter ───────────────────────────────────────
-  if (filters.experience_level && filters.experience_level.length > 0) {
-    query = query.in('experience_level', filters.experience_level)
-  }
-
-  // ── Freshness filter (posted_at >= NOW - interval) ────────────────
-  if (filters.fresh) {
-    const interval = getFreshnessInterval(filters.fresh)
-    if (interval) {
-      const cutoff = new Date(Date.now() - interval)
-      query = query.gte('posted_at', cutoff.toISOString())
-    }
-  }
-
-  // ── Deadline filter ───────────────────────────────────────────────
-  if (filters.deadline) {
-    const interval = getDeadlineInterval(filters.deadline)
-    if (interval) {
-      const now = new Date()
-      const cutoff = new Date(now.getTime() + interval)
-      query = query
-        .gte('deadline', now.toISOString())
-        .lte('deadline', cutoff.toISOString())
-    }
-  }
-
-  // ── Location filter (ilike) ───────────────────────────────────────
-  if (filters.location && filters.location.trim().length > 0) {
-    query = query.ilike('location', `%${filters.location.trim()}%`)
-  }
-
-  // ── Sort order ────────────────────────────────────────────────────
-  // App-Flow §5.5.1: Closing Soon first, then newest
-  // Supabase doesn't support CASE-based ordering, so we do a two-level sort:
-  // The 'Closing Soon' status sorts before 'Published' alphabetically,
-  // but we need explicit control — sort by status ASC puts 'Closing Soon' first.
+  // Sort order per App-Flow §5.5.1
   query = query
-    .order('status', { ascending: true })      // 'Closing Soon' < 'Published'
+    .order('status', { ascending: true })
     .order('posted_at', { ascending: false })
     .range(from, to)
 
@@ -113,25 +59,24 @@ export async function searchOpportunities(
 
 /**
  * Fetches aggregate stats for the search results header.
- * Returns total opportunity count, distinct company count, and new-today count.
  */
 export async function getSearchStats(
   supabase: SupabaseClientType,
   filters: SearchFilters
 ): Promise<{ totalJobs: number; totalCompanies: number; newToday: number }> {
-  // Total count comes from the main search query (count: 'exact')
-  // For company count and new-today, we run lightweight queries
-
-  const compIds = await getMatchingCompanyIds(supabase, filters.q)
+  const [compIds, tagOpps] = await Promise.all([
+    getMatchingCompanyIds(supabase, filters.q),
+    getMatchingTagOpps(supabase, filters.q),
+  ])
 
   // Distinct company count
   let companyQuery = supabase
     .from('opportunities')
-    .select('company_id', { count: 'exact', head: true })
+    .select('company_id')
     .in('status', ['Published', 'Closing Soon'])
     .not('company_id', 'is', null)
 
-  companyQuery = applySearchModifier(companyQuery, filters.q, compIds)
+  companyQuery = applyAllFilters(companyQuery, filters, compIds, tagOpps)
 
   // New today count
   const todayStart = new Date()
@@ -143,16 +88,19 @@ export async function getSearchStats(
     .in('status', ['Published', 'Closing Soon'])
     .gte('posted_at', todayStart.toISOString())
 
-  newTodayQuery = applySearchModifier(newTodayQuery, filters.q, compIds)
+  newTodayQuery = applyAllFilters(newTodayQuery, filters, compIds, tagOpps)
 
   const [companyResult, newTodayResult] = await Promise.all([
     companyQuery,
     newTodayQuery,
   ])
 
+  // Count distinct companies manually
+  const distinctCompanies = new Set(companyResult.data?.map((row: any) => row.company_id))
+
   return {
     totalJobs: 0, // Filled by caller from main query count
-    totalCompanies: companyResult.count ?? 0,
+    totalCompanies: distinctCompanies.size,
     newToday: newTodayResult.count ?? 0,
   }
 }
@@ -199,13 +147,83 @@ async function getMatchingCompanyIds(
   return comps?.map((c) => c.id) || []
 }
 
-function applySearchModifier(query: any, q: string | undefined, compIds: string[]) {
-  if (!q || q.trim().length === 0) return query
-  const term = q.trim()
-  if (compIds.length > 0) {
+async function getMatchingTagOpps(
+  supabase: SupabaseClientType,
+  q: string | undefined
+): Promise<string[]> {
+  if (!q || q.trim().length === 0) return []
+  const { data: tags } = await supabase
+    .from('opportunity_tags')
+    .select('opportunity_id')
+    .ilike('tag_name', `%${q.trim()}%`)
+  return tags?.map((t) => t.opportunity_id) || []
+}
+
+function applyAllFilters(
+  query: any,
+  filters: SearchFilters,
+  compIds: string[],
+  tagOpps: string[]
+) {
+  let q = query
+
+  // Search string application
+  if (filters.q && filters.q.trim().length > 0) {
+    const term = filters.q.trim()
     const safeQ = term.replace(/"/g, '""')
-    return query.or(`fts.plfts(english)."${safeQ}",company_id.in.(${compIds.join(',')})`)
-  } else {
-    return query.textSearch('fts', term, { type: 'plain', config: 'english' })
+    const conditions = []
+    
+    conditions.push(`fts.plfts(english)."${safeQ}"`)
+    conditions.push(`location.ilike.%${term}%`)
+    conditions.push(`category.ilike.%${term}%`)
+    
+    if (compIds.length > 0) {
+      conditions.push(`company_id.in.(${compIds.join(',')})`)
+    }
+    if (tagOpps.length > 0) {
+      conditions.push(`id.in.(${tagOpps.join(',')})`)
+    }
+    
+    q = q.or(conditions.join(','))
   }
+
+  // Explicit filters
+  if (filters.category && filters.category.length > 0) {
+    q = q.in('category', filters.category)
+  }
+
+  if (filters.mode && filters.mode.length > 0) {
+    q = q.in('mode', filters.mode)
+  }
+
+  if (filters.is_paid !== undefined) {
+    q = q.eq('is_paid', filters.is_paid)
+  }
+
+  if (filters.experience_level && filters.experience_level.length > 0) {
+    q = q.in('experience_level', filters.experience_level)
+  }
+
+  if (filters.fresh) {
+    const interval = getFreshnessInterval(filters.fresh)
+    if (interval) {
+      const cutoff = new Date(Date.now() - interval)
+      q = q.gte('posted_at', cutoff.toISOString())
+    }
+  }
+
+  if (filters.deadline) {
+    const interval = getDeadlineInterval(filters.deadline)
+    if (interval) {
+      const now = new Date()
+      const cutoff = new Date(now.getTime() + interval)
+      q = q.gte('deadline', now.toISOString()).lte('deadline', cutoff.toISOString())
+    }
+  }
+
+  if (filters.location && filters.location.trim().length > 0) {
+    q = q.ilike('location', `%${filters.location.trim()}%`)
+  }
+
+  return q
 }

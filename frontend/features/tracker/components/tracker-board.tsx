@@ -25,6 +25,16 @@ const STATUS_MAP = [
   { db: 'Rejected', ui: 'Rejected' }
 ]
 
+const formatDate = (isoString: string) => {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  if (isNaN(date.getTime())) return ''
+  const m = date.getUTCMonth() + 1
+  const d = date.getUTCDate()
+  const y = date.getUTCFullYear()
+  return `${m}/${d}/${y}`
+}
+
 export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
   const [data, setData] = useState<TrackerItem[]>(initialData)
   const [isPending, startTransition] = useTransition()
@@ -57,7 +67,7 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full pb-4 overflow-y-auto lg:overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-6 h-full pb-4 overflow-y-auto lg:overflow-x-auto">
       {STATUS_MAP.map(({ db: dbStatus, ui: uiStatus }) => {
         const columnItems = data.filter((item) => item.status === dbStatus)
 
@@ -116,7 +126,7 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
                         <span className="material-symbols-outlined text-[16px]">delete</span>
                       </button>
                       <span className="text-[10px] text-on-surface-variant font-medium">
-                        {new Date(item.saved_at).toLocaleDateString()}
+                        {formatDate(item.saved_at)}
                       </span>
                     </div>
 

@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+ADD COLUMN city TEXT,
+ADD COLUMN gpa TEXT;

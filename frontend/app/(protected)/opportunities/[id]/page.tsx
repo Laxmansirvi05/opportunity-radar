@@ -15,6 +15,20 @@ function getDeadlineText(deadline: string | null): string | null {
   return `${diffDays} Days Left`
 }
 
+function getDeterministicNumber(str: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % max;
+}
+
+const FALLBACK_CITIES = ['San Francisco, CA', 'New York, NY', 'Austin, TX', 'Seattle, WA', 'London, UK', 'Remote', 'Boston, MA'];
+const FALLBACK_NAMES = ['Sarah Jenkins', 'Michael Chen', 'Alex Mercer', 'Jessica Wong', 'David Smith', 'Emily Davis'];
+const FALLBACK_ROLES = ['University Recruiting Lead', 'Talent Acquisition', 'Technical Recruiter', 'HR Partner', 'Engineering Manager'];
+const FALLBACK_EMPLOYEES = ['50-200', '200-500', '500-1000', '1000-5000', '5000+'];
+const FALLBACK_YEARS = ['2010', '2012', '2015', '2018', '2020', '2005', '2021'];
+
 export default async function OpportunityDetailsPage({
   params,
 }: {
@@ -66,15 +80,34 @@ export default async function OpportunityDetailsPage({
     .neq('id', opp.id)
     .limit(3)
 
-  const foundedYear = company?.founded_year || '2015'
-  const headquarters = company?.headquarters || 'San Francisco'
-  const industry = company?.industry || opp.category
+  const seed = opp.id || company?.id || 'default';
+  
+  const foundedYear = company?.founded_year || FALLBACK_YEARS[getDeterministicNumber(seed + 'year', FALLBACK_YEARS.length)]
+  const headquarters = company?.headquarters || FALLBACK_CITIES[getDeterministicNumber(seed + 'hq', FALLBACK_CITIES.length)]
+  const employeesText = FALLBACK_EMPLOYEES[getDeterministicNumber(seed + 'emp', FALLBACK_EMPLOYEES.length)] + ' Employees'
+  const industry = company?.industry || opp.category || 'Technology'
+  
+  const fallbackResponsibilities = [
+    `Develop and maintain features for the core ${industry} platform.`,
+    'Collaborate with cross-functional teams to deliver high-quality solutions.',
+    'Write clean, maintainable, and well-tested code.',
+    'Participate in architecture discussions and code reviews.',
+    'Identify and resolve performance bottlenecks.'
+  ];
   
   const responsibilities = opp.responsibilities && opp.responsibilities.length > 0
     ? opp.responsibilities
-    : []
+    : fallbackResponsibilities.slice(0, 3 + getDeterministicNumber(seed + 'resp', 3))
 
-  const oppSkills = opp.skills && opp.skills.length > 0 ? opp.skills : tags.map((t: any) => t.tag_name)
+  const fallbackSkills = ['Communication', 'Problem Solving', 'Teamwork', 'Agile', 'Git', 'Data Analysis'];
+  let oppSkills = opp.skills && opp.skills.length > 0 ? opp.skills : tags.map((t: any) => t.tag_name)
+  if (oppSkills.length === 0) {
+    oppSkills = fallbackSkills.slice(getDeterministicNumber(seed + 'skill', 3), 3 + getDeterministicNumber(seed + 'skill2', 3));
+  }
+  
+  const recruiterName = opp.recruiter_name || FALLBACK_NAMES[getDeterministicNumber(seed + 'rec_name', FALLBACK_NAMES.length)];
+  const recruiterRole = opp.recruiter_role || FALLBACK_ROLES[getDeterministicNumber(seed + 'rec_role', FALLBACK_ROLES.length)];
+  const recruiterAvatar = opp.recruiter_avatar_url || `https://i.pravatar.cc/150?u=${recruiterName.replace(' ', '')}`;
 
   return (
     <div className="flex flex-col w-full pb-16 bg-surface-container-lowest min-h-screen">
@@ -130,7 +163,7 @@ export default async function OpportunityDetailsPage({
                     <div className="flex items-center gap-1.5 text-sm text-on-surface-variant mt-0.5">
                       <span>{opp.location ?? (opp.mode === 'Remote' ? 'Remote' : 'Location TBD')} {opp.mode && `(${opp.mode})`}</span>
                       <span className="w-1 h-1 rounded-full bg-outline-variant" />
-                      <span>500+ Employees</span>
+                      <span>{employeesText}</span>
                       <span className="w-1 h-1 rounded-full bg-outline-variant" />
                       <span>{industry}</span>
                     </div>
@@ -298,11 +331,11 @@ export default async function OpportunityDetailsPage({
             <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Posted By</h3>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/50">
-                <img src={opp.recruiter_avatar_url || "https://i.pravatar.cc/150?u=sarah"} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={recruiterAvatar} alt="Avatar" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
-                <span className="font-bold text-on-surface text-sm">{opp.recruiter_name || 'Sarah Jenkins'}</span>
-                <span className="text-xs text-on-surface-variant">{opp.recruiter_role || 'University Recruiting Lead'}</span>
+                <span className="font-bold text-on-surface text-sm">{recruiterName}</span>
+                <span className="text-xs text-on-surface-variant">{recruiterRole}</span>
               </div>
             </div>
             <button disabled className="mt-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant border border-outline-variant opacity-50 cursor-not-allowed" title="Available in future version">

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import Link from 'next/link'
-import { updateProfile, ProfileUpdateData } from '../actions/profile-actions'
+import { updateProfile, updateResume, ProfileUpdateData } from '../actions/profile-actions'
+import { createClient } from '@/lib/supabase/client'
 
 type ProfileData = {
   id: string
@@ -18,6 +19,8 @@ type ProfileData = {
   resume_size: number | null
   resume_updated_at: string | null
   resume_url: string | null
+  city: string | null
+  gpa: string | null
 }
 
 type TrackerStats = {
@@ -31,11 +34,24 @@ interface ProfileManagerProps {
   stats: TrackerStats
 }
 
+const formatDate = (isoString: string) => {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  if (isNaN(date.getTime())) return ''
+  const m = date.getUTCMonth() + 1
+  const d = date.getUTCDate()
+  const y = date.getUTCFullYear()
+  return `${m}/${d}/${y}`
+}
+
 export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<ProfileData>(initialProfile)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const supabase = createClient()
 
   // Form State
   const [formData, setFormData] = useState<ProfileUpdateData>({
@@ -45,7 +61,9 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
     graduation_year: initialProfile.graduation_year,
     skills: initialProfile.skills || [],
     interests: initialProfile.interests || [],
-    career_goal: initialProfile.career_goal
+    career_goal: initialProfile.career_goal,
+    city: initialProfile.city,
+    gpa: initialProfile.gpa
   })
 
   const [skillInput, setSkillInput] = useState('')
@@ -89,7 +107,9 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       graduation_year: profile.graduation_year,
       skills: profile.skills || [],
       interests: profile.interests || [],
-      career_goal: profile.career_goal
+      career_goal: profile.career_goal,
+      city: profile.city,
+      gpa: profile.gpa
     })
     setError(null)
     setIsEditing(false)
@@ -119,6 +139,96 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
     setFormData({ ...formData, interests: formData.interests.filter(i => i !== interest) })
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.type !== 'application/pdf') {
+      setError('Only PDF files are allowed.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5 MB.')
+      return
+    }
+
+    setError(null)
+    startTransition(async () => {
+      const filePath = `${profile.id}/resume.pdf`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        setError(uploadError.message)
+        return
+      }
+
+      const updateResult = await updateResume({
+        resume_name: file.name,
+        resume_size: file.size,
+        resume_url: null,
+        resume_updated_at: new Date().toISOString()
+      })
+
+      if (updateResult.success) {
+        setProfile((prev) => ({
+          ...prev,
+          resume_name: file.name,
+          resume_size: file.size,
+          resume_updated_at: new Date().toISOString()
+        }))
+      } else {
+        setError(updateResult.error || 'Failed to update resume metadata')
+      }
+    })
+  }
+
+  const handleViewResume = async () => {
+    const filePath = `${profile.id}/resume.pdf`
+    const { data, error } = await supabase.storage.from('resumes').createSignedUrl(filePath, 60)
+    if (error || !data) {
+      setError('Failed to generate resume link')
+      return
+    }
+    window.open(data.signedUrl, '_blank')
+  }
+
+  const handleDeleteResume = async () => {
+    if (!window.confirm('Are you sure you want to delete your resume?')) return
+
+    startTransition(async () => {
+      const filePath = `${profile.id}/resume.pdf`
+      const { error: deleteError } = await supabase.storage.from('resumes').remove([filePath])
+      
+      if (deleteError) {
+        setError(deleteError.message)
+        return
+      }
+
+      const updateResult = await updateResume({
+        resume_name: null,
+        resume_size: null,
+        resume_url: null,
+        resume_updated_at: null
+      })
+
+      if (updateResult.success) {
+        setProfile((prev) => ({
+          ...prev,
+          resume_name: null,
+          resume_size: null,
+          resume_updated_at: null,
+          resume_url: null
+        }))
+      } else {
+        setError(updateResult.error || 'Failed to update resume metadata')
+      }
+    })
+  }
+
   return (
     <div className="max-w-container-max mx-auto space-y-lg pb-16">
       {/* Profile Header */}
@@ -136,13 +246,17 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
           
           {isEditing ? (
             <div className="flex-1 w-full flex flex-col gap-3">
-              <input 
-                type="text" 
-                value={formData.name} 
-                onChange={e => setFormData({...formData, name: e.target.value})} 
-                placeholder="Full Name"
-                className="font-headline-sm text-headline-sm text-on-surface bg-surface border border-outline-variant rounded-md px-3 py-1 outline-none focus:ring-1 focus:ring-primary w-full max-w-sm"
-              />
+              <div className="flex flex-col gap-1 w-full">
+                <label htmlFor="name" className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">FULL NAME</label>
+                <input 
+                  id="name"
+                  type="text" 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                  placeholder="Enter your full name"
+                  className="font-headline-sm text-headline-sm text-on-surface bg-surface border-2 border-outline-variant rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary focus:border-primary w-full transition-all"
+                />
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
                   type="text" 
@@ -160,7 +274,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   className="font-body-md text-on-surface-variant bg-surface border border-outline-variant rounded-md px-3 py-1 outline-none focus:ring-1 focus:ring-primary min-w-[250px]"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-label-md text-outline">Class of</span>
                 <input 
                   type="number" 
@@ -168,6 +282,22 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   onChange={e => setFormData({...formData, graduation_year: parseInt(e.target.value) || null})} 
                   placeholder="YYYY"
                   className="font-label-md text-on-surface bg-surface border border-outline-variant rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-primary w-24"
+                />
+                <span className="text-outline mx-2">•</span>
+                <input 
+                  type="text" 
+                  value={formData.gpa || ''} 
+                  onChange={e => setFormData({...formData, gpa: e.target.value})} 
+                  placeholder="CGPA/GPA (e.g. 3.8/4.0)"
+                  className="font-label-md text-on-surface bg-surface border border-outline-variant rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-primary w-40"
+                />
+                <span className="text-outline mx-2">•</span>
+                <input 
+                  type="text" 
+                  value={formData.city || ''} 
+                  onChange={e => setFormData({...formData, city: e.target.value})} 
+                  placeholder="City (e.g. San Francisco, CA)"
+                  className="font-label-md text-on-surface bg-surface border border-outline-variant rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-primary min-w-[200px]"
                 />
               </div>
             </div>
@@ -179,9 +309,13 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   {profile.university || 'University not set'} {profile.degree && `• ${profile.degree}`}
                 </p>
               )}
-              {profile.graduation_year && (
-                <p className="font-label-md text-label-md text-outline mt-1">Class of {profile.graduation_year}</p>
-              )}
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-outline font-label-md text-label-md">
+                {profile.graduation_year && <span>Class of {profile.graduation_year}</span>}
+                {profile.graduation_year && profile.gpa && <span>•</span>}
+                {profile.gpa && <span>GPA: {profile.gpa}</span>}
+                {(profile.graduation_year || profile.gpa) && profile.city && <span>•</span>}
+                {profile.city && <span>{profile.city}</span>}
+              </div>
             </div>
           )}
         </div>
@@ -346,35 +480,44 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                 <div className="bg-surface-container-low p-md rounded-lg flex items-center gap-sm mb-md border border-outline-variant/30">
                   <span className="material-symbols-outlined text-primary text-3xl">description</span>
                   <div className="overflow-hidden">
-                    <p className="font-label-md text-label-md text-on-surface truncate">{profile.resume_name}</p>
+                    <p className="font-label-md text-label-md text-on-surface truncate">Resume Uploaded</p>
+                    <p className="font-label-sm text-label-sm text-on-surface-variant truncate">{profile.resume_name}</p>
                     <p className="font-label-sm text-label-sm text-outline">
                       {formatFileSize(profile.resume_size)}
                     </p>
                     <p className="font-label-sm text-label-sm text-primary mt-xs">
-                      Updated: {new Date(profile.resume_updated_at!).toLocaleDateString()}
+                      Updated: {formatDate(profile.resume_updated_at!)}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-sm">
-                  <button disabled={isEditing} className="flex-1 border border-outline-variant py-sm rounded-lg font-label-md text-label-md hover:bg-surface-variant transition-colors cursor-pointer disabled:opacity-50">
+                  <button onClick={handleViewResume} disabled={isEditing || isPending} className="flex-1 bg-primary-container text-on-primary-container py-sm rounded-lg font-label-md text-label-md hover:bg-primary hover:text-on-primary transition-colors cursor-pointer text-center flex items-center justify-center disabled:opacity-50">
+                    View
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} disabled={isEditing || isPending} className="flex-1 border border-outline-variant py-sm rounded-lg font-label-md text-label-md hover:bg-surface-variant transition-colors cursor-pointer disabled:opacity-50">
                     Replace
                   </button>
-                  {profile.resume_url && (
-                    <a href={profile.resume_url} target="_blank" rel="noopener noreferrer" className="flex-1 bg-primary-container text-on-primary-container py-sm rounded-lg font-label-md text-label-md hover:bg-primary hover:text-on-primary transition-colors cursor-pointer text-center flex items-center justify-center disabled:opacity-50">
-                      View
-                    </a>
-                  )}
+                  <button onClick={handleDeleteResume} disabled={isEditing || isPending} className="flex-1 border border-error text-error py-sm rounded-lg font-label-md text-label-md hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50">
+                    Delete
+                  </button>
                 </div>
               </>
             ) : (
               <div className="bg-surface-container-low border border-dashed border-outline-variant rounded-lg p-6 flex flex-col items-center justify-center text-center gap-2">
                 <span className="material-symbols-outlined text-outline text-3xl">upload_file</span>
                 <p className="font-label-md text-on-surface-variant">No resume uploaded</p>
-                <button disabled={isEditing} className="mt-2 text-primary font-label-md font-bold hover:underline disabled:opacity-50 cursor-pointer">
+                <button onClick={() => fileInputRef.current?.click()} disabled={isEditing || isPending} className="mt-2 text-primary font-label-md font-bold hover:underline disabled:opacity-50 cursor-pointer">
                   Upload PDF
                 </button>
               </div>
             )}
+            <input 
+              type="file" 
+              accept="application/pdf" 
+              ref={fileInputRef} 
+              className="hidden" 
+              onChange={handleFileUpload}
+            />
           </div>
 
           {/* Account Settings */}

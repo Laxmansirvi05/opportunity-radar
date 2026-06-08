@@ -11,12 +11,15 @@ export type ProfileUpdateData = {
   skills: string[]
   interests: string[]
   career_goal: string | null
+  city: string | null
+  gpa: string | null
 }
 
 export type ResumeUpdateData = {
   resume_url: string | null
   resume_name: string | null
   resume_size: number | null
+  resume_updated_at?: string | null
 }
 
 export async function updateProfile(data: ProfileUpdateData) {
@@ -44,6 +47,8 @@ export async function updateProfile(data: ProfileUpdateData) {
       skills: data.skills,
       interests: data.interests,
       career_goal: data.career_goal,
+      city: data.city,
+      gpa: data.gpa,
     }, { onConflict: 'id' })
 
   if (error) {
@@ -69,7 +74,7 @@ export async function updateResume(data: ResumeUpdateData) {
       resume_url: data.resume_url,
       resume_name: data.resume_name,
       resume_size: data.resume_size,
-      resume_updated_at: new Date().toISOString()
+      resume_updated_at: data.resume_updated_at !== undefined ? data.resume_updated_at : new Date().toISOString()
     })
     .eq('id', user.id)
 

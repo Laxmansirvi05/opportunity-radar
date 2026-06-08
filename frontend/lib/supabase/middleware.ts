@@ -38,6 +38,12 @@ function isAuthRoute(pathname: string): boolean {
 }
 
 export async function updateSession(request: NextRequest) {
+  // Bypass middleware completely for the auth callback route
+  // to prevent supabase.auth.getUser() from prematurely consuming the PKCE code
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })

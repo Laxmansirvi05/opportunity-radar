@@ -62,6 +62,8 @@ export default async function ProfilePage() {
     skills: profile?.skills || [],
     interests: profile?.interests || [],
     career_goal: profile?.career_goal || null,
+    city: profile?.city || null,
+    gpa: profile?.gpa || null,
     resume_name: profile?.resume_name || null,
     resume_size: profile?.resume_size || null,
     resume_updated_at: profile?.resume_updated_at || null,
