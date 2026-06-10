@@ -19,19 +19,19 @@ export async function GET(request: Request) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Dynamic imports to prevent Turbopack from loading heavy scraping modules into Next.js dev server memory
-    const { OpportunityIngestionService } = await import('@/../src/providers/opportunities/ingestion/OpportunityIngestionService');
-    const { YCProvider } = await import('@/../src/providers/opportunities/providers/YCProvider');
-    const { UnstopProvider } = await import('@/../src/providers/opportunities/providers/UnstopProvider');
-    const { WellfoundProvider } = await import('@/../src/providers/opportunities/providers/WellfoundProvider');
-    const { InternshalaProvider } = await import('@/../src/providers/opportunities/providers/InternshalaProvider');
-    const { DevfolioProvider } = await import('@/../src/providers/opportunities/providers/DevfolioProvider');
-    const { GSoCProvider } = await import('../../../../../src/providers/opportunities/providers/GSoCProvider');
-    const { OutreachyProvider } = await import('../../../../../src/providers/opportunities/providers/OutreachyProvider');
-    const { LFXProvider } = await import('../../../../../src/providers/opportunities/providers/LFXProvider');
-    const { Hack2SkillProvider } = await import('../../../../../src/providers/opportunities/providers/Hack2SkillProvider');
-    const { AmazonProvider } = await import('../../../../../src/providers/opportunities/providers/AmazonProvider');
-    const { GitHubProvider } = await import('../../../../../src/providers/opportunities/providers/GitHubProvider');
-    const { AtlassianProvider } = await import('../../../../../src/providers/opportunities/providers/AtlassianProvider');
+    const { OpportunityIngestionService } = await import('@/src/providers/opportunities/ingestion/OpportunityIngestionService');
+    const { YCProvider } = await import('@/src/providers/opportunities/providers/YCProvider');
+    const { UnstopProvider } = await import('@/src/providers/opportunities/providers/UnstopProvider');
+    const { WellfoundProvider } = await import('@/src/providers/opportunities/providers/WellfoundProvider');
+    const { InternshalaProvider } = await import('@/src/providers/opportunities/providers/InternshalaProvider');
+    const { DevfolioProvider } = await import('@/src/providers/opportunities/providers/DevfolioProvider');
+    const { GSoCProvider } = await import('@/src/providers/opportunities/providers/GSoCProvider');
+    const { OutreachyProvider } = await import('@/src/providers/opportunities/providers/OutreachyProvider');
+    const { LFXProvider } = await import('@/src/providers/opportunities/providers/LFXProvider');
+    const { Hack2SkillProvider } = await import('@/src/providers/opportunities/providers/Hack2SkillProvider');
+    const { AmazonProvider } = await import('@/src/providers/opportunities/providers/AmazonProvider');
+    const { GitHubProvider } = await import('@/src/providers/opportunities/providers/GitHubProvider');
+    const { AtlassianProvider } = await import('@/src/providers/opportunities/providers/AtlassianProvider');
 
     const providers = [
       new YCProvider(),
