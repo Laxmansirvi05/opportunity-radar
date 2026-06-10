@@ -168,12 +168,15 @@ export class OpportunityIngestionService {
         company_name: opportunity.company, // mapped to denormalized company_name
         location: opportunity.location,
         description: opportunity.description,
-        skills: opportunity.skills,
+        requirements: opportunity.skills || [],
         deadline: opportunity.deadline,
         source: opportunity.source,
         source_id: opportunity.source_id,
         apply_url: opportunity.apply_url,
         category: opportunity.category,
+        event_date: opportunity.event_date || null,
+        registration_deadline: opportunity.registration_deadline || null,
+        program_duration: opportunity.program_duration || null,
         updated_at: new Date().toISOString(),
         status: 'Published' // default active state
       };

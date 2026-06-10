@@ -1,5 +1,5 @@
-import { YCProvider } from '../src/providers/opportunities/providers/YCProvider';
-import { OpportunityIngestionService } from '../src/providers/opportunities/ingestion/OpportunityIngestionService';
+import { YCProvider } from '../../../src/providers/opportunities/providers/YCProvider';
+import { OpportunityIngestionService } from '../../../src/providers/opportunities/ingestion/OpportunityIngestionService';
 
 async function runTest() {
   console.log('--- Starting YC Provider Test ---');

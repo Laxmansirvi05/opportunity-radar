@@ -1,4 +1,4 @@
-import { YCProvider } from '../src/providers/opportunities/providers/YCProvider';
+import { YCProvider } from '../../../src/providers/opportunities/providers/YCProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -30,7 +30,7 @@ async function generateSQL() {
 
   sql += values.join(',\n') + ';\n';
 
-  const outputPath = path.join(__dirname, '../supabase/migrations/20260610000004_insert_validation_data.sql');
+  const outputPath = path.join(__dirname, '../../../supabase/migrations/20260610000004_insert_validation_data.sql');
   fs.writeFileSync(outputPath, sql);
   console.log(`Wrote ${jobs.length} records to migration file`);
 }

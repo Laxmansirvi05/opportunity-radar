@@ -9,4 +9,7 @@ export interface NormalizedOpportunity {
   source_id: string;
   apply_url: string;
   category: string;
+  event_date?: string;
+  registration_deadline?: string;
+  program_duration?: string;
 }
