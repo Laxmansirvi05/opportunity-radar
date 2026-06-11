@@ -74,10 +74,10 @@ export function AuthExperience() {
         {/* Feature Highlight */}
         <div className="relative z-10 w-full max-w-[400px]">
           <h2 className="font-display text-display text-on-background mb-md whitespace-pre-line">
-            {'Accelerate your\ncareer trajectory.'}
+            {'One dashboard.\nThousands of opportunities.\nZero clutter.'}
           </h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-[340px] leading-relaxed">
-            The mission-control for students seeking world-class internships, fellowships, and early-career opportunities.
+            Discover internships, jobs, hackathons, fellowships, and open-source programs from the world's leading platforms.
           </p>
           
           <div className="mt-xl space-y-md">
@@ -94,7 +94,7 @@ export function AuthExperience() {
 
         {/* Footer Anchor */}
         <div className="relative z-10 flex flex-wrap gap-x-gutter gap-y-sm w-full max-w-[400px]">
-          <span className="font-label-sm text-label-sm text-outline">© 2024 Opportunity Radar</span>
+          <span className="font-label-sm text-label-sm text-outline">© 2026 Opportunity Radar</span>
           <Link href="#" className="font-label-sm text-label-sm text-outline hover:text-primary transition-colors">Privacy Policy</Link>
           <Link href="#" className="font-label-sm text-label-sm text-outline hover:text-primary transition-colors">Documentation</Link>
         </div>
@@ -222,6 +222,21 @@ export function AuthExperience() {
                 Already have an account? <button onClick={() => { setActiveTab('login'); setError(null); setSuccessMessage(null); }} className="text-primary font-semibold hover:underline cursor-pointer">Log in</button>
               </p>
             )}
+          </div>
+
+          <div className="mt-xl flex flex-wrap justify-center gap-x-md gap-y-sm text-on-surface-variant font-label-sm">
+            <div className="flex items-center gap-xs">
+              <span className="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+              Secure Authentication
+            </div>
+            <div className="flex items-center gap-xs">
+              <span className="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+              Google Sign-In
+            </div>
+            <div className="flex items-center gap-xs">
+              <span className="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+              Privacy First
+            </div>
           </div>
         </div>
 

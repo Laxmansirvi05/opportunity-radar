@@ -45,10 +45,10 @@ function SearchPageContent() {
       <FiltersSidebar isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} />
 
       {/* Search & Results Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-surface-container-lowest">
+      <div className="flex-1 flex flex-col bg-surface-container-lowest min-w-0 h-full overflow-hidden">
         {/* Search Header */}
-        <div className="p-4 md:p-8 border-b border-outline-variant bg-surface z-10">
-          <div className="flex flex-col gap-4 max-w-4xl">
+        <div className="p-4 md:p-8 border-b border-outline-variant bg-surface z-10 shrink-0">
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
             {/* Search Input Row */}
             <div className="flex items-center gap-3">
               {/* Mobile filter toggle */}
@@ -79,8 +79,8 @@ function SearchPageContent() {
         </div>
 
         {/* Results List */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-surface-container-lowest">
-          <div className="max-w-4xl flex flex-col gap-5 pb-24">
+        <div className="flex-1 p-4 md:p-8 bg-surface-container-lowest overflow-y-auto">
+          <div className="max-w-4xl mx-auto w-full flex flex-col gap-5 pb-24">
             {isLoading ? (
               <SearchSkeleton count={3} />
             ) : !hasResults ? (
@@ -138,7 +138,7 @@ function SearchPageContent() {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-surface-container-lowest">
+      <div className="flex-1 flex flex-col bg-surface-container-lowest min-w-0">
         <div className="p-4 md:p-8">
           <SearchSkeleton count={5} />
         </div>

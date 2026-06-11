@@ -7,20 +7,7 @@ import { ReportBrokenLinkButton } from '@/features/opportunities/components/oppo
 import { ApplyWorkflowButton } from '@/features/opportunities/components/opportunity-detail/apply-workflow-button'
 import { ShareOpportunityButton } from '@/features/opportunities/components/opportunity-detail/share-opportunity-button'
 import { getDeadlineInfo } from '@/features/opportunities/utils/deadline'
-
-function getDeterministicNumber(str: string, max: number): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash) % max;
-}
-
-const FALLBACK_CITIES = ['San Francisco, CA', 'New York, NY', 'Austin, TX', 'Seattle, WA', 'London, UK', 'Remote', 'Boston, MA'];
-const FALLBACK_NAMES = ['Sarah Jenkins', 'Michael Chen', 'Alex Mercer', 'Jessica Wong', 'David Smith', 'Emily Davis'];
-const FALLBACK_ROLES = ['University Recruiting Lead', 'Talent Acquisition', 'Technical Recruiter', 'HR Partner', 'Engineering Manager'];
-const FALLBACK_EMPLOYEES = ['50-200', '200-500', '500-1000', '1000-5000', '5000+'];
-const FALLBACK_YEARS = ['2010', '2012', '2015', '2018', '2020', '2005', '2021'];
+import { extractSkillsFromDescription, sanitizeAndFormatDescription } from '@/utils/skills-parser'
 
 export default async function OpportunityDetailsPage({
   params,
@@ -88,40 +75,19 @@ export default async function OpportunityDetailsPage({
     .neq('id', opp.id)
     .limit(3)
 
-  const seed = opp.id || company?.id || 'default';
-  
-  const foundedYear = company?.founded_year || FALLBACK_YEARS[getDeterministicNumber(seed + 'year', FALLBACK_YEARS.length)]
-  const headquarters = company?.headquarters || FALLBACK_CITIES[getDeterministicNumber(seed + 'hq', FALLBACK_CITIES.length)]
-  const employeesText = FALLBACK_EMPLOYEES[getDeterministicNumber(seed + 'emp', FALLBACK_EMPLOYEES.length)] + ' Employees'
   const industry = company?.industry || opp.category || 'Technology'
   
-  const fallbackResponsibilities = [
-    `Develop and maintain features for the core ${industry} platform.`,
-    'Collaborate with cross-functional teams to deliver high-quality solutions.',
-    'Write clean, maintainable, and well-tested code.',
-    'Participate in architecture discussions and code reviews.',
-    'Identify and resolve performance bottlenecks.'
-  ];
+  const responsibilities = opp.responsibilities || []
+  const oppSkills = opp.skills && opp.skills.length > 0 ? opp.skills : tags.map((t: any) => t.tag_name)
   
-  const responsibilities = opp.responsibilities && opp.responsibilities.length > 0
-    ? opp.responsibilities
-    : fallbackResponsibilities.slice(0, 3 + getDeterministicNumber(seed + 'resp', 3))
-
-  const fallbackSkills = ['Communication', 'Problem Solving', 'Teamwork', 'Agile', 'Git', 'Data Analysis'];
-  let oppSkills = opp.skills && opp.skills.length > 0 ? opp.skills : tags.map((t: any) => t.tag_name)
-  if (oppSkills.length === 0) {
-    oppSkills = fallbackSkills.slice(getDeterministicNumber(seed + 'skill', 3), 3 + getDeterministicNumber(seed + 'skill2', 3));
-  }
-  
-  const recruiterName = opp.recruiter_name || FALLBACK_NAMES[getDeterministicNumber(seed + 'rec_name', FALLBACK_NAMES.length)];
-  const recruiterRole = opp.recruiter_role || FALLBACK_ROLES[getDeterministicNumber(seed + 'rec_role', FALLBACK_ROLES.length)];
-  const recruiterAvatar = opp.recruiter_avatar_url || `https://i.pravatar.cc/150?u=${recruiterName.replace(' ', '')}`;
+  const finalSkills = oppSkills.length > 0 ? oppSkills : extractSkillsFromDescription(opp.description)
+  const cleanDescription = sanitizeAndFormatDescription(opp.description)
 
   return (
     <div className="flex flex-col w-full pb-16 bg-surface-container-lowest min-h-screen">
       
       {/* Top Navigation / Breadcrumb */}
-      <div className="py-6 px-4 md:px-8 max-w-[1200px] mx-auto w-full">
+      <div className="py-6 px-4 md:px-8 max-w-[1600px] mx-auto w-full">
         <div className="flex items-center text-sm font-medium text-on-surface-variant gap-2">
           <Link href="/search" className="hover:text-primary transition-colors">Search</Link>
           <span className="material-symbols-outlined text-[16px]">chevron_right</span>
@@ -131,7 +97,7 @@ export default async function OpportunityDetailsPage({
         </div>
       </div>
 
-      <div className="px-4 md:px-8 max-w-[1200px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+      <div className="px-4 md:px-8 max-w-[1600px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
         
         {/* LEFT COLUMN */}
         <div className="flex flex-col gap-10">
@@ -171,8 +137,6 @@ export default async function OpportunityDetailsPage({
                     <div className="flex items-center gap-1.5 text-sm text-on-surface-variant mt-0.5">
                       <span>{opp.location ?? (opp.mode === 'Remote' ? 'Remote' : 'Location TBD')} {opp.mode && `(${opp.mode})`}</span>
                       <span className="w-1 h-1 rounded-full bg-outline-variant" />
-                      <span>{employeesText}</span>
-                      <span className="w-1 h-1 rounded-full bg-outline-variant" />
                       <span>{industry}</span>
                     </div>
                   </div>
@@ -182,19 +146,22 @@ export default async function OpportunityDetailsPage({
           </div>
 
           {/* About the Role */}
-          <section className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold text-on-background">About the Role</h2>
-            <div className="text-on-surface-variant leading-relaxed whitespace-pre-wrap text-[15px]">
-              {opp.description || 'No description provided.'}
-            </div>
-          </section>
+          {cleanDescription && (
+            <section className="flex flex-col gap-4">
+              <h2 className="text-xl font-bold text-on-background">About the Role</h2>
+              <div 
+                className="text-on-surface-variant leading-relaxed text-[15px] whitespace-pre-wrap font-body-md break-words"
+                dangerouslySetInnerHTML={{ __html: cleanDescription }}
+              />
+            </section>
+          )}
 
           {/* Skills Required */}
-          {oppSkills.length > 0 && (
+          {finalSkills.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-xl font-bold text-on-background">Skills Required</h2>
               <div className="flex flex-wrap gap-2">
-                {oppSkills.map((skill: string) => (
+                {finalSkills.map((skill: string) => (
                   <span key={skill} className="px-4 py-1.5 rounded-full border border-outline-variant text-sm font-medium text-primary bg-surface shadow-sm">
                     {skill}
                   </span>
@@ -221,33 +188,38 @@ export default async function OpportunityDetailsPage({
           )}
 
           {/* More from Company */}
-          <section className="flex flex-col gap-4 mt-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-on-background">More from {company?.name || 'Company'}</h2>
-              <a href="#" className="text-sm font-semibold text-primary hover:underline">View all roles</a>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {(moreFromCompany && moreFromCompany.length > 0 ? moreFromCompany : [1,2,3]).map((item: any, idx) => (
-                <div key={item.id || idx} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer">
-                  <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title || 'Product Designer'}</h4>
-                  <p className="text-xs text-on-surface-variant truncate">{item.location || 'San Francisco'} • {item.mode === 'Remote' ? 'Remote' : 'Full-time'}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          {moreFromCompany && moreFromCompany.length > 0 && (
+            <section className="flex flex-col gap-4 mt-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-on-background">More from {company?.name}</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {moreFromCompany.map((item: any, idx: number) => (
+                  <div key={item.id || idx} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer">
+                    <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title}</h4>
+                    <p className="text-xs text-on-surface-variant truncate">{item.location || 'Remote'} • {item.mode === 'Remote' ? 'Remote' : 'Full-time'}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* People also viewed */}
-          <section className="flex flex-col gap-4 mt-2">
-            <h2 className="text-lg font-bold text-on-background">People also viewed</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {(peopleAlsoViewed && peopleAlsoViewed.length > 0 ? peopleAlsoViewed : [1,2,3]).map((item: any, idx) => (
-                <div key={item.id || idx} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer">
-                  <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title || 'UI Engineer'}</h4>
-                  <p className="text-xs text-on-surface-variant truncate">{item.companies?.name || 'Airbnb'} • Remote</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          {peopleAlsoViewed && peopleAlsoViewed.length > 0 && (
+            <section className="flex flex-col gap-4 mt-2">
+              <h2 className="text-lg font-bold text-on-background">People also viewed</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {peopleAlsoViewed.map((item: any, idx: number) => (
+                  <div key={item.id || idx} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer">
+                    <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title}</h4>
+                    {item.companies?.name && (
+                      <p className="text-xs text-on-surface-variant truncate">{item.companies.name} • Remote</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
         </div>
 
@@ -315,71 +287,61 @@ export default async function OpportunityDetailsPage({
             <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
               <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Company Profile</h3>
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                {company.description || `${company.name} is the platform for frontend developers, providing the speed and reliability needed to create at the moment of inspiration.`}
+                {company.description}
               </p>
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase">Founded</span>
-                  <span className="text-sm font-bold text-on-surface">{foundedYear}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase">Headquarters</span>
-                  <span className="text-sm font-bold text-on-surface">{headquarters}</span>
-                </div>
+                {company.founded_year && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Founded</span>
+                    <span className="text-sm font-bold text-on-surface">{company.founded_year}</span>
+                  </div>
+                )}
+                {company.headquarters && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase">Headquarters</span>
+                    <span className="text-sm font-bold text-on-surface">{company.headquarters}</span>
+                  </div>
+                )}
               </div>
-              <button disabled className="mt-2 flex items-center justify-center px-4 py-2.5 rounded-xl bg-surface text-on-surface-variant text-sm font-bold border border-outline-variant w-full opacity-50 cursor-not-allowed" title="Available in future version">
-                View Full Company Profile
-              </button>
+              <Link href={`/search?q=${encodeURIComponent(company.name)}`} className="mt-2 text-sm font-bold text-primary hover:underline flex items-center gap-1 w-fit">
+                View all roles at {company.name}
+                <span className="material-symbols-outlined text-[16px]">arrow_right_alt</span>
+              </Link>
             </div>
           )}
 
           {/* Posted By Card */}
-          <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-            <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Posted By</h3>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/50">
-                <img src={recruiterAvatar} alt="Avatar" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-on-surface text-sm">{recruiterName}</span>
-                <span className="text-xs text-on-surface-variant">{recruiterRole}</span>
+          {opp.recruiter_name && (
+            <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+              <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Posted By</h3>
+              <div className="flex items-center gap-3">
+                {opp.recruiter_avatar_url && (
+                  <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/50">
+                    <img src={opp.recruiter_avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="font-bold text-on-surface text-sm">{opp.recruiter_name}</span>
+                  {opp.recruiter_role && <span className="text-xs text-on-surface-variant">{opp.recruiter_role}</span>}
+                </div>
               </div>
             </div>
-            <button disabled className="mt-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant border border-outline-variant opacity-50 cursor-not-allowed" title="Available in future version">
-              Message Recruiter (Future)
-            </button>
-          </div>
+          )}
 
         </div>
       </div>
 
       {/* Bottom Full Width - Similar Opportunities */}
       <div className="w-full border-t border-outline-variant/60 mt-16 pt-12 pb-16 bg-surface-container-lowest">
-        <div className="px-4 md:px-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
+        <div className="px-4 md:px-8 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-on-background">Similar Opportunities in {industry}</h2>
-            <div className="flex items-center gap-2">
-              <button className="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors shadow-sm cursor-pointer">
-                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-              </button>
-              <button className="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors shadow-sm cursor-pointer">
-                <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-              </button>
-            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {similarOpps && similarOpps.length > 0 ? (
+            {similarOpps && similarOpps.length > 0 && (
               similarOpps.map((opp: any) => (
                 <OpportunitySearchCard key={opp.id} opportunity={opp} />
-              ))
-            ) : (
-              // Fallback if no similar opps in DB
-              [1, 2, 3].map((i) => (
-                <div key={i} className="bg-surface border border-outline-variant rounded-2xl p-6 opacity-60">
-                  <div className="h-4 bg-outline-variant/30 rounded w-3/4 mb-4"></div>
-                  <div className="h-4 bg-outline-variant/30 rounded w-1/2"></div>
-                </div>
               ))
             )}
           </div>
@@ -388,7 +350,7 @@ export default async function OpportunityDetailsPage({
 
       {/* Footer */}
       <footer className="w-full bg-[#f8fafc] border-t border-outline-variant/60 py-8 hidden md:block">
-        <div className="px-4 md:px-8 max-w-[1200px] mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="px-4 md:px-8 max-w-[1600px] mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-bold text-primary">Opportunity Radar</div>
           <div className="flex items-center gap-6 text-sm font-medium text-on-surface-variant">
             <Link href="#" className="hover:text-primary transition-colors">About</Link>
@@ -397,7 +359,7 @@ export default async function OpportunityDetailsPage({
             <Link href="#" className="hover:text-primary transition-colors">Contact</Link>
           </div>
           <div className="text-xs text-on-surface-variant font-medium">
-            © 2024 Opportunity Radar. Precision career advancement.
+            © 2026 Opportunity Radar
           </div>
         </div>
       </footer>

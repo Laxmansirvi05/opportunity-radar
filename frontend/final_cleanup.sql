@@ -1,0 +1,44 @@
+-- FINAL DATABASE CLEANUP SCRIPT
+-- Run this in your Supabase SQL Editor
+
+DELETE FROM opportunities WHERE id = '92e149c6-861e-4ac5-8bad-d24bd3067fb6'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = '379a822a-bf78-45cb-801d-cbca0b1cb7a1'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = 'dc19938d-06d8-4e0a-ad49-06485ff04a3a'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = 'b683eb3e-8771-4b75-b950-eab51fbc98ae'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '4d4bfc5d-9359-4569-8f50-797b8f2b477a'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '0d18955b-2aac-4f56-bfb7-3009bbc3948f'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '944cb65d-e7fc-4196-a26f-c8ad72b72557'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '5cb0c525-ca0e-4690-ad7c-746a9a3e4fbe'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '71949f98-a677-4219-b9ee-dc5fc379a78a'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '9ae7ee41-dfd5-4948-b5d9-5dd2d6f1351a'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '5ebfcf7b-f19a-4833-a907-1dee4b9924f2'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '7e74208f-b93e-482b-96b2-00408275c401'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = 'ee839940-690a-4c46-a37f-9c9870976cc0'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = 'd2bdefae-7e00-42cf-9975-60260fa79dac'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '57a3c2c8-b837-4f87-b7c3-dac0228475a4'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '8e94e4c3-a926-4b4d-9ae3-cd0c4b7c4678'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '3f166830-1f8f-4961-ba15-9620dafdc40e'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '292e76e0-fa6b-4088-8f3e-cb966d00ec5c'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = '8ae0b1f2-0a67-4e7e-9495-5ebdf401d11f'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = '90733b5b-5947-4e40-b0cd-704481469aaa'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = '2c3c98ee-e304-4935-bfef-373b556c6df5'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = 'f75d5bf2-4363-4592-8734-694bc2265899'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = 'cbc447ad-809a-48ef-b6b1-788f8ddd70c1'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = '5e5f1fcf-8ffc-448e-bd77-09503f28d926'; -- Reason: Weak description (< 50 chars)
+DELETE FROM opportunities WHERE id = '88717ade-92ac-45fb-8301-356e4c671c12'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '57693d68-333a-492e-8827-c79a0edafe98'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '9adf21e9-2e94-4e04-8a3d-d6f6de576f7c'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = 'a67e5fd7-d6da-47f0-953a-43da2290421c'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = 'f7855f7f-998c-44f5-9cf2-4054e42369d3'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '73c29bff-17e3-435b-acf1-01960c8e473c'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = 'd62cd959-b660-454f-afbd-0ceac0100131'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '0db5b72c-15b4-4ddd-b0a5-5cf5af976b27'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = 'd97beb38-3c75-4239-acc8-e5955d3b07ac'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = 'c7922cc5-10d0-4d3f-8641-56157e9fc832'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '549181e2-3199-49da-98cb-eb83409679b3'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '186a8609-fe05-41f9-9b54-93a17683a31d'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '9172ef73-6e26-4de7-995e-556189fafea0'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '6e14e4c0-9100-47df-bcd5-5ba84b212a55'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '9cf5a645-49b1-42b5-9a51-6014e078deb7'; -- Reason: Duplicate Title/Company
+DELETE FROM opportunities WHERE id = '2ee89e13-3b3c-4ee6-b199-0755381d1532'; -- Reason: Broken link (HTTP 404)
+DELETE FROM opportunities WHERE id = '44a9c574-7d67-4c96-ba59-33ec0da2c377'; -- Reason: Duplicate Title/Company

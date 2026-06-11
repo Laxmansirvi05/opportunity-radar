@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { OpportunityWithDetails } from '@/types/opportunity'
 import { BookmarkIconButton } from './bookmark-icon-button'
+import DOMPurify from 'isomorphic-dompurify'
 
 /**
  * Opportunity search result card matching the Stitch design exactly.
@@ -73,7 +74,7 @@ export function OpportunitySearchCard({ opportunity }: OpportunitySearchCardProp
         {/* Description Snippet */}
         {opportunity.description && (
           <p className="text-sm text-on-surface-variant line-clamp-2 leading-relaxed">
-            {opportunity.description}
+            {DOMPurify.sanitize(opportunity.description, { ALLOWED_TAGS: [] })}
           </p>
         )}
 

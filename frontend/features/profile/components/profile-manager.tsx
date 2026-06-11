@@ -526,27 +526,57 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
               <h3 className="font-headline-sm text-headline-sm">Account Settings</h3>
             </div>
             <div className="flex flex-col">
-              <button disabled={isEditing} className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group cursor-pointer disabled:opacity-50">
-                <div className="flex items-center gap-md">
-                  <span className="material-symbols-outlined text-outline group-hover:text-primary">lock</span>
-                  <span className="font-body-md text-body-md text-on-surface">Change Password</span>
-                </div>
-                <span className="material-symbols-outlined text-outline">chevron_right</span>
-              </button>
-              <button disabled={isEditing} className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-pointer disabled:opacity-50">
-                <div className="flex items-center gap-md">
-                  <span className="material-symbols-outlined text-outline group-hover:text-primary">notifications_active</span>
-                  <span className="font-body-md text-body-md text-on-surface">Notification Preferences</span>
-                </div>
-                <span className="material-symbols-outlined text-outline">chevron_right</span>
-              </button>
-              <button disabled={isEditing} className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-pointer disabled:opacity-50">
-                <div className="flex items-center gap-md">
-                  <span className="material-symbols-outlined text-outline group-hover:text-primary">security</span>
-                  <span className="font-body-md text-body-md text-on-surface">Privacy Settings</span>
-                </div>
-                <span className="material-symbols-outlined text-outline">chevron_right</span>
-              </button>
+              {isEditing ? (
+                <button disabled className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group cursor-not-allowed opacity-50">
+                  <div className="flex items-center gap-md">
+                    <span className="material-symbols-outlined text-outline">lock</span>
+                    <span className="font-body-md text-body-md text-on-surface">Change Password</span>
+                  </div>
+                  <span className="material-symbols-outlined text-outline">chevron_right</span>
+                </button>
+              ) : (
+                <Link href="/settings" className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group cursor-pointer">
+                  <div className="flex items-center gap-md">
+                    <span className="material-symbols-outlined text-outline group-hover:text-primary">lock</span>
+                    <span className="font-body-md text-body-md text-on-surface">Change Password</span>
+                  </div>
+                  <span className="material-symbols-outlined text-outline">chevron_right</span>
+                </Link>
+              )}
+              {isEditing ? (
+                <button disabled className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-not-allowed opacity-50">
+                  <div className="flex items-center gap-md">
+                    <span className="material-symbols-outlined text-outline">notifications_active</span>
+                    <span className="font-body-md text-body-md text-on-surface">Notification Preferences</span>
+                  </div>
+                  <span className="material-symbols-outlined text-outline">chevron_right</span>
+                </button>
+              ) : (
+                <Link href="/settings" className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-pointer">
+                  <div className="flex items-center gap-md">
+                    <span className="material-symbols-outlined text-outline group-hover:text-primary">notifications_active</span>
+                    <span className="font-body-md text-body-md text-on-surface">Notification Preferences</span>
+                  </div>
+                  <span className="material-symbols-outlined text-outline">chevron_right</span>
+                </Link>
+              )}
+              {isEditing ? (
+                <button disabled className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-not-allowed opacity-50">
+                  <div className="flex items-center gap-md">
+                    <span className="material-symbols-outlined text-outline">security</span>
+                    <span className="font-body-md text-body-md text-on-surface">Privacy Settings</span>
+                  </div>
+                  <span className="material-symbols-outlined text-outline">chevron_right</span>
+                </button>
+              ) : (
+                <Link href="/settings" className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-pointer">
+                  <div className="flex items-center gap-md">
+                    <span className="material-symbols-outlined text-outline group-hover:text-primary">security</span>
+                    <span className="font-body-md text-body-md text-on-surface">Privacy Settings</span>
+                  </div>
+                  <span className="material-symbols-outlined text-outline">chevron_right</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -83,7 +83,7 @@ export default function TermsOfServicePage() {
         <div className="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto">
           <div className="mb-md md:mb-0">
             <span className="font-label-md text-label-md font-bold text-primary">Opportunity Radar</span>
-            <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">© 2026 Opportunity Radar. All rights reserved.</p>
+            <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">© 2026 Opportunity Radar</p>
           </div>
         </div>
       </footer>

@@ -38,11 +38,22 @@ export async function searchOpportunities(
 
   query = applyAllFilters(query, filters, compIds, tagOpps)
 
-  // Sort order per App-Flow §5.5.1
-  query = query
-    .order('status', { ascending: true })
-    .order('posted_at', { ascending: false })
-    .range(from, to)
+  // Sort order
+  if (filters.sort === 'newest') {
+    query = query.order('posted_at', { ascending: false })
+  } else if (filters.sort === 'deadline') {
+    // Only show things with a deadline if we explicitly sort by it
+    query = query
+      .not('deadline', 'is', null)
+      .order('deadline', { ascending: true })
+  } else {
+    // default/relevance: status then posted_at
+    query = query
+      .order('status', { ascending: true })
+      .order('posted_at', { ascending: false })
+  }
+
+  query = query.range(from, to)
 
   const { data, error, count } = await query
 
