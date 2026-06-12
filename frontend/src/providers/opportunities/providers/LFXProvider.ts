@@ -1,7 +1,15 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 
 export class LFXProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    return [];
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    return null;
+  }
+
   async fetch(): Promise<any[]> {
     // LFX API is gated by specific headers and Cloudflare.
     // Using safe fallback strategy with generated realistic data.

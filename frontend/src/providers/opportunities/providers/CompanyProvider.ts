@@ -1,8 +1,16 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 
 export class CompanyProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    return [];
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    return null;
+  }
+
   async fetch(): Promise<any[]> {
     // Mock realistic ATS data from Greenhouse/Lever logic
     return Array.from({ length: 10 }).map((_, i) => ({

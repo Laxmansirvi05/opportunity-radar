@@ -1,8 +1,16 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 
 export class YCProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    return [];
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    return null;
+  }
+
   async fetch(): Promise<any[]> {
     try {
       // 1. Fetch latest job story IDs from Hacker News (official API for YC jobs)

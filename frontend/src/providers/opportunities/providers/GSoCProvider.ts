@@ -1,7 +1,15 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 
 export class GSoCProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    return [];
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    return null;
+  }
+
   async fetch(): Promise<any[]> {
     // GSoC API is unstable outside of active season.
     // Using safe fallback strategy with generated realistic data.

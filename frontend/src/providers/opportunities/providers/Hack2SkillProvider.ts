@@ -1,7 +1,15 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 
 export class Hack2SkillProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    return [];
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    return null;
+  }
+
   async fetch(): Promise<any[]> {
     // Hack2Skill lacks a stable public JSON API.
     // Using safe fallback strategy with generated realistic data.
