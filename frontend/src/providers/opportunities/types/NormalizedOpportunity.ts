@@ -19,4 +19,9 @@ export interface NormalizedOpportunity {
   salary_range?: string;
   verified?: boolean;
   experience_level?: string;
+  // Phase 1 enhancements
+  company_logo_url?: string;
+  employment_type?: string;
+  requirements?: string[];
+  quality_score?: number;
 }

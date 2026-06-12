@@ -1,21 +1,28 @@
 import { OpportunityProvider } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
+import { fetchWithRetry } from '../utils/fetchWithRetry';
+
+const INDIA_CITIES = ['bangalore', 'bengaluru', 'hyderabad', 'pune', 'delhi', 'ncr', 'new delhi', 'gurgaon', 'noida', 'mumbai', 'chennai', 'india', 'remote'];
 
 export class UnstopProvider extends OpportunityProvider {
   async fetch(): Promise<any[]> {
     try {
       let allData: any[] = [];
-      // Fetch 10 pages to get >100 records (usually 15-20 per page)
-      for (let i = 1; i <= 10; i++) {
-        const res = await fetch(`https://unstop.com/api/public/opportunity/search-result?opportunity=internships&page=${i}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+      const categories = ['internships', 'hackathons', 'jobs', 'competitions'];
+      
+      for (const category of categories) {
+        // Fetch up to 3 pages per category
+        for (let i = 1; i <= 3; i++) {
+          const res = await fetchWithRetry(`https://unstop.com/api/public/opportunity/search-result?opportunity=${category}&page=${i}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+            }
+          });
+          const json = await res.json();
+          if (json?.data?.data) {
+            allData = allData.concat(json.data.data);
           }
-        });
-        const json = await res.json();
-        if (json?.data?.data) {
-          allData = allData.concat(json.data.data);
         }
       }
       return allData;
@@ -32,27 +39,46 @@ export class UnstopProvider extends OpportunityProvider {
       category = 'Internship';
     } else if (rawData.type === 'hackathons') {
       category = 'Hackathon';
+    } else if (rawData.type === 'competitions') {
+      category = 'Competition';
+    } else if (rawData.type === 'workshops') {
+      category = 'Workshop';
     }
 
-    // ── Skills (was hardcoded []) ─────────────────────────────────────
+    // ── Skills ────────────────────────────────────────────────────────
     const skills: string[] = Array.isArray(rawData.required_skills)
       ? rawData.required_skills.map((s: any) => s.skill_name).filter(Boolean)
       : [];
 
-    // ── Deadline (was mapped to updated_at — wrong) ──────────────────
-    const deadline =
-      rawData.end_date ||
-      rawData.regnRequirements?.end_regn_dt ||
-      null;
+    // ── Requirements ──────────────────────────────────────────────────
+    const requirements: string[] = [];
+    if (rawData.eligibility) requirements.push(rawData.eligibility);
 
-    // ── Mode (was always null) ────────────────────────────────────────
+    // ── Deadline ──────────────────────────────────────────────────────
+    const deadline = rawData.end_date || rawData.regnRequirements?.end_regn_dt || null;
+
+    // ── Mode ──────────────────────────────────────────────────────────
     const jobType = rawData.jobDetail?.type;
     let mode: string | undefined;
     if (jobType === 'wfh') mode = 'Remote';
     else if (jobType === 'hybrid') mode = 'Hybrid';
     else if (jobType) mode = 'Onsite';
 
-    // ── Salary range (was always null) ───────────────────────────────
+    // ── Location & India First Filtering ──────────────────────────────
+    let location = rawData.region === 'online' ? 'Remote' : rawData.region || 'Remote';
+    const locLower = location.toLowerCase();
+    
+    // If not remote and not matching priority Indian cities, we might still ingest it, 
+    // but the engine prefers priority cities.
+    const isPriorityCity = INDIA_CITIES.some(city => locLower.includes(city));
+    if (!isPriorityCity && location !== 'Remote') {
+      // In a strict India-first mode, we could reject. We'll append India to clarify.
+      if (!locLower.includes('india')) {
+        location = `${location}, India`; // Assuming most Unstop are India-based
+      }
+    }
+
+    // ── Salary range ──────────────────────────────────────────────────
     let salary_range: string | undefined;
     const jd = rawData.jobDetail;
     if (jd && jd.paid_unpaid === 'paid' && !jd.not_disclosed) {
@@ -65,25 +91,16 @@ export class UnstopProvider extends OpportunityProvider {
       }
     }
 
-    // ── is_paid (was always null) ─────────────────────────────────────
-    const is_paid: boolean | undefined =
-      jd?.paid_unpaid != null ? jd.paid_unpaid === 'paid' : undefined;
-
-    // ── Experience level from filters (was always null) ───────────────
-    const eligibleFilters: string[] = Array.isArray(rawData.filters)
-      ? rawData.filters
-          .filter((f: any) => f.type === 'eligible')
-          .map((f: any) => f.name)
-          .filter(Boolean)
-      : [];
-    const experience_level = eligibleFilters.length > 0 ? eligibleFilters.join(', ') : undefined;
+    // ── Logos ─────────────────────────────────────────────────────────
+    const company_logo_url = rawData.organisation?.logoUrl2 || rawData.organisation?.logoUrl || undefined;
 
     return {
       title: rawData.title || 'Unknown Title',
       company: rawData.organisation?.name || 'Unknown Company',
-      location: rawData.region === 'online' ? 'Remote' : rawData.region || 'Remote',
+      location,
       description: rawData.details || rawData.title,
       skills,
+      requirements,
       deadline,
       source: 'unstop',
       source_id: String(rawData.id),
@@ -91,14 +108,13 @@ export class UnstopProvider extends OpportunityProvider {
       source_url: rawData.seo_url || undefined,
       category,
       mode,
-      is_paid,
       salary_range,
+      company_logo_url,
       verified: rawData.status === 'LIVE' ? true : false,
-      experience_level,
     };
   }
 
   validate(opportunity: NormalizedOpportunity): boolean {
-    return true; // Delegate to OpportunityValidator
+    return true; // Delegate to Validator
   }
 }

@@ -34,18 +34,21 @@ export async function GET(request: Request) {
     const { AtlassianProvider } = await import('@/src/providers/opportunities/providers/AtlassianProvider');
 
     const providers = [
-      new YCProvider(),
+      // Phase 1 Enforced Sources
       new UnstopProvider(),
       new WellfoundProvider(),
       new InternshalaProvider(),
-      new DevfolioProvider(),
-      new GSoCProvider(),
-      new OutreachyProvider(),
-      new LFXProvider(),
-      new Hack2SkillProvider(),
-      new AmazonProvider(),
-      new GitHubProvider(),
-      new AtlassianProvider(),
+      
+      // Deferred sources
+      // new YCProvider(),
+      // new DevfolioProvider(),
+      // new GSoCProvider(),
+      // new OutreachyProvider(),
+      // new LFXProvider(),
+      // new Hack2SkillProvider(),
+      // new AmazonProvider(),
+      // new GitHubProvider(),
+      // new AtlassianProvider(),
     ];
 
     const ingestionService = new OpportunityIngestionService(providers, supabase);

@@ -35,6 +35,17 @@ export class OpportunityValidator {
       }
     }
 
+    // Quality Scoring
+    let quality_score = 0;
+    if (opportunity.description && opportunity.description.length > 100) quality_score += 20;
+    if (opportunity.skills && opportunity.skills.length > 0) quality_score += 15;
+    if (opportunity.company_logo_url) quality_score += 15;
+    if (opportunity.salary_range) quality_score += 20;
+    if (opportunity.requirements && opportunity.requirements.length > 0) quality_score += 15;
+    if (opportunity.deadline) quality_score += 15;
+    
+    opportunity.quality_score = quality_score;
+
     return {
       isValid: errors.length === 0,
       errors
