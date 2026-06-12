@@ -89,6 +89,11 @@ async function run() {
   const stats = await service.runPipeline(false); // false = realRun
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
   
+  if ('status' in stats) {
+    console.log("Ingestion disabled via feature flag.");
+    return;
+  }
+
   console.log(`\n=== INGESTION RESULTS ===`);
   console.log(`Pipeline completed in ${duration}s`);
   console.log(`- Processed (Raw): ${stats.processed}`);

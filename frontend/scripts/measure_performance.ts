@@ -124,6 +124,10 @@ async function main() {
   console.log(`Hobby Limit (10s): ${totalDuration <= 10000 ? 'PASS' : 'FAIL'}`);
   console.log(`Pro Limit (60s): ${totalDuration <= 60000 ? 'PASS' : 'FAIL'}`);
   
+  if ('status' in stats) {
+    return;
+  }
+  
   // Scaling estimate
   // Internshala took X seconds for Y items. Unstop took A seconds for B items.
   // If we scale to 5000 items, how long?

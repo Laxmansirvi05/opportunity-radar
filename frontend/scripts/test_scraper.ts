@@ -1,5 +1,5 @@
 // Test InternshalaProvider changes before making them
-import { InternshalaProvider } from './src/providers/opportunities/providers/InternshalaProvider';
+import { InternshalaProvider } from '../src/providers/opportunities/providers/InternshalaProvider';
 
 async function test() {
   const provider = new InternshalaProvider();
