@@ -64,28 +64,17 @@ export class QueueConsumerService {
     
     console.log(`\nFetching up to ${batchSize} pending queue rows...`);
     
-    // 2. Claim rows (pending -> processing)
-    // We use a safe claim to avoid concurrent workers grabbing the same rows.
-    // In PostgreSQL, FOR UPDATE SKIP LOCKED is standard, but via Supabase js we can do a simple RPC or update...
-    // Since we are the only worker right now, a simple update is fine.
+    // 2. Claim rows atomically (pending -> processing)
+    // We use a safe PostgreSQL RPC with FOR UPDATE SKIP LOCKED
+    // to guarantee concurrent workers never claim the same rows.
     
     const { data: rowsToProcess, error: fetchErr } = await this.db
-      .from('ingestion_queue')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(batchSize);
+      .rpc('claim_queue_batch', { batch_size: batchSize });
       
     if (fetchErr || !rowsToProcess || rowsToProcess.length === 0) {
       console.log("No pending rows found.");
       return stats;
     }
-
-    const rowIds = rowsToProcess.map((r: any) => r.id);
-    await this.db
-      .from('ingestion_queue')
-      .update({ status: 'processing', updated_at: new Date().toISOString() })
-      .in('id', rowIds);
 
     console.log(`Claimed ${rowsToProcess.length} rows.`);
 

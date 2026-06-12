@@ -43,12 +43,25 @@ export async function GET(request: Request) {
     if (!error) {
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
+
+      // Ensure 'next' is a valid internal relative path
+      // Reject any path starting with // (protocol-relative) or http (absolute)
+      const isSafePath = next.startsWith('/') && !next.startsWith('//') && !next.startsWith('\\')
+      const safeNext = isSafePath ? next : '/dashboard'
+
+      // Only trust x-forwarded-host in production if it matches our Vercel domain or allowed domains
+      const allowedHosts = [
+        'opportunity-radar.com',
+        'www.opportunity-radar.com',
+        'opportunity-radar.vercel.app'
+      ]
+
       if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+        return NextResponse.redirect(`${origin}${safeNext}`)
+      } else if (forwardedHost && allowedHosts.includes(forwardedHost)) {
+        return NextResponse.redirect(`https://${forwardedHost}${safeNext}`)
       } else {
-        return NextResponse.redirect(`${origin}${next}`)
+        return NextResponse.redirect(`${origin}${safeNext}`)
       }
     }
     // Code exchange failed — fall through to error redirect
