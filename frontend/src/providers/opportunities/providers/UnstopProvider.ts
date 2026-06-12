@@ -26,6 +26,7 @@ export class UnstopProvider extends OpportunityProvider {
   }
 
   normalize(rawData: any): NormalizedOpportunity {
+    // ── Category ─────────────────────────────────────────────────────
     let category = 'Job';
     if (rawData.subtype === 'internships' || rawData.type === 'internships') {
       category = 'Internship';
@@ -33,17 +34,67 @@ export class UnstopProvider extends OpportunityProvider {
       category = 'Hackathon';
     }
 
+    // ── Skills (was hardcoded []) ─────────────────────────────────────
+    const skills: string[] = Array.isArray(rawData.required_skills)
+      ? rawData.required_skills.map((s: any) => s.skill_name).filter(Boolean)
+      : [];
+
+    // ── Deadline (was mapped to updated_at — wrong) ──────────────────
+    const deadline =
+      rawData.end_date ||
+      rawData.regnRequirements?.end_regn_dt ||
+      null;
+
+    // ── Mode (was always null) ────────────────────────────────────────
+    const jobType = rawData.jobDetail?.type;
+    let mode: string | undefined;
+    if (jobType === 'wfh') mode = 'Remote';
+    else if (jobType === 'hybrid') mode = 'Hybrid';
+    else if (jobType) mode = 'Onsite';
+
+    // ── Salary range (was always null) ───────────────────────────────
+    let salary_range: string | undefined;
+    const jd = rawData.jobDetail;
+    if (jd && jd.paid_unpaid === 'paid' && !jd.not_disclosed) {
+      const symbol = jd.currency === 'fa-rupee' ? '₹' : '$';
+      const period = jd.pay_in === 'monthly' ? '/month' : `/${jd.pay_in ?? 'period'}`;
+      if (jd.min_salary != null && jd.max_salary != null) {
+        salary_range = `${symbol}${jd.min_salary.toLocaleString('en-IN')} – ${symbol}${jd.max_salary.toLocaleString('en-IN')}${period}`;
+      } else if (jd.min_salary != null) {
+        salary_range = `${symbol}${jd.min_salary.toLocaleString('en-IN')}+${period}`;
+      }
+    }
+
+    // ── is_paid (was always null) ─────────────────────────────────────
+    const is_paid: boolean | undefined =
+      jd?.paid_unpaid != null ? jd.paid_unpaid === 'paid' : undefined;
+
+    // ── Experience level from filters (was always null) ───────────────
+    const eligibleFilters: string[] = Array.isArray(rawData.filters)
+      ? rawData.filters
+          .filter((f: any) => f.type === 'eligible')
+          .map((f: any) => f.name)
+          .filter(Boolean)
+      : [];
+    const experience_level = eligibleFilters.length > 0 ? eligibleFilters.join(', ') : undefined;
+
     return {
       title: rawData.title || 'Unknown Title',
       company: rawData.organisation?.name || 'Unknown Company',
       location: rawData.region === 'online' ? 'Remote' : rawData.region || 'Remote',
       description: rawData.details || rawData.title,
-      skills: [], // Requires HTML parsing from details which we skip for simplicity
-      deadline: rawData.updated_at || null, // Best effort for deadline if not provided
+      skills,
+      deadline,
       source: 'unstop',
       source_id: String(rawData.id),
       apply_url: rawData.seo_url || `https://unstop.com/${rawData.public_url}`,
-      category: category,
+      source_url: rawData.seo_url || undefined,
+      category,
+      mode,
+      is_paid,
+      salary_range,
+      verified: rawData.status === 'LIVE' ? true : false,
+      experience_level,
     };
   }
 

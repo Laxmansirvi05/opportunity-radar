@@ -168,6 +168,7 @@ export class OpportunityIngestionService {
         company_name: opportunity.company, // mapped to denormalized company_name
         location: opportunity.location,
         description: opportunity.description,
+        skills: opportunity.skills || [],
         requirements: opportunity.skills || [],
         deadline: opportunity.deadline,
         source: opportunity.source,
@@ -177,6 +178,13 @@ export class OpportunityIngestionService {
         event_date: opportunity.event_date || null,
         registration_deadline: opportunity.registration_deadline || null,
         program_duration: opportunity.program_duration || null,
+        // Enrichment fields — null-safe, ignored by DB if column not present
+        source_url: opportunity.source_url || null,
+        mode: opportunity.mode || null,
+        is_paid: opportunity.is_paid ?? null,
+        salary_range: opportunity.salary_range || null,
+        verified: opportunity.verified ?? null,
+        experience_level: opportunity.experience_level || null,
         updated_at: new Date().toISOString(),
         status: 'Published' // default active state
       };

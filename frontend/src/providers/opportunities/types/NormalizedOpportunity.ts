@@ -12,4 +12,11 @@ export interface NormalizedOpportunity {
   event_date?: string;
   registration_deadline?: string;
   program_duration?: string;
+  // Enrichment fields — optional so all other providers remain unaffected
+  source_url?: string;
+  mode?: string;
+  is_paid?: boolean;
+  salary_range?: string;
+  verified?: boolean;
+  experience_level?: string;
 }
