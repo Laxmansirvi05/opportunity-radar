@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchFilters } from '@/features/opportunities/hooks/use-search-filters'
 import { useRecentSearches } from '@/features/opportunities/hooks/use-recent-searches'
@@ -22,7 +22,7 @@ interface FiltersSidebarProps {
   onClose: () => void
 }
 
-export function FiltersSidebar({ isOpen, onClose }: FiltersSidebarProps) {
+export const FiltersSidebar = React.memo(function FiltersSidebar({ isOpen, onClose }: FiltersSidebarProps) {
   const { filters, toggleArrayFilter, setFilter, clearFilter, clearAllFilters } = useSearchFilters()
 
   return (
@@ -131,18 +131,12 @@ export function FiltersSidebar({ isOpen, onClose }: FiltersSidebarProps) {
 
         {/* Location Filter */}
         <FilterSection title="Location">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
-              location_on
-            </span>
-            <input
-              type="text"
-              placeholder="City or region"
-              value={filters.location ?? ''}
-              onChange={(e) => setFilter('location', e.target.value || undefined)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-background text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
-            />
-          </div>
+          <DebouncedFilterInput
+            icon="location_on"
+            placeholder="City or region"
+            currentValue={filters.location}
+            onFilterChange={(val) => setFilter('location', val)}
+          />
         </FilterSection>
 
         {/* Compensation Filter */}
@@ -205,18 +199,12 @@ export function FiltersSidebar({ isOpen, onClose }: FiltersSidebarProps) {
 
         {/* Company Filter */}
         <FilterSection title="Company">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
-              business
-            </span>
-            <input
-              type="text"
-              placeholder="Search companies..."
-              value={filters.company ?? ''}
-              onChange={(e) => setFilter('company', e.target.value || undefined)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-background text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
-            />
-          </div>
+          <DebouncedFilterInput
+            icon="business"
+            placeholder="Search companies..."
+            currentValue={filters.company}
+            onFilterChange={(val) => setFilter('company', val)}
+          />
         </FilterSection>
 
         {/* Deadline Filter */}
@@ -259,7 +247,7 @@ export function FiltersSidebar({ isOpen, onClose }: FiltersSidebarProps) {
       </aside>
     </>
   )
-}
+})
 
 // ── Sub-components ────────────────────────────────────────────────────
 
@@ -369,6 +357,60 @@ function RecentSearchesSection() {
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+function DebouncedFilterInput({
+  icon,
+  placeholder,
+  currentValue,
+  onFilterChange
+}: {
+  icon: string;
+  placeholder: string;
+  currentValue?: string;
+  onFilterChange: (val: string | undefined) => void;
+}) {
+  const [localVal, setLocalVal] = useState(currentValue ?? '')
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    // Only sync if local value differs and we are not currently clearing it maliciously
+    if (currentValue !== localVal) {
+      setLocalVal(currentValue ?? '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentValue])
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setLocalVal(val)
+
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      onFilterChange(val || undefined)
+    }, 300)
+  }
+
+  return (
+    <div className="relative">
+      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+        {icon}
+      </span>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={localVal}
+        onChange={handleChange}
+        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-background text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
+      />
     </div>
   )
 }

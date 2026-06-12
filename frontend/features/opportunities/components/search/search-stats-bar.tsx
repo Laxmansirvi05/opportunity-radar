@@ -1,5 +1,7 @@
 'use client'
 
+import React from 'react'
+
 /**
  * Blue-tinted stats bar showing result counts.
  * Matches the Stitch design row: "{count} Jobs · {companies} Companies · {newToday} New Today"
@@ -10,7 +12,15 @@ interface SearchStatsBarProps {
   newToday: number
 }
 
-export function SearchStatsBar({ totalJobs, totalCompanies, newToday }: SearchStatsBarProps) {
+/**
+ * Simple stats bar below the search input.
+ * Displays total count, companies, and new today.
+ */
+export const SearchStatsBar = React.memo(function SearchStatsBar({
+  totalJobs,
+  totalCompanies,
+  newToday,
+}: SearchStatsBarProps) {
   return (
     <div className="flex items-center gap-6 py-3 px-4 bg-surface-container-low rounded-xl border border-outline-variant/50">
       <div className="flex items-center gap-2">
@@ -33,4 +43,4 @@ export function SearchStatsBar({ totalJobs, totalCompanies, newToday }: SearchSt
       </div>
     </div>
   )
-}
+})

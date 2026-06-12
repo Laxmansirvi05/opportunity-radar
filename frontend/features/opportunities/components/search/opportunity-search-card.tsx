@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { OpportunityWithDetails } from '@/types/opportunity'
 import { BookmarkIconButton } from './bookmark-icon-button'
@@ -20,11 +21,17 @@ interface OpportunitySearchCardProps {
   opportunity: OpportunityWithDetails
 }
 
-export function OpportunitySearchCard({ opportunity }: OpportunitySearchCardProps) {
+export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({ opportunity }: OpportunitySearchCardProps) {
   const company = opportunity.companies
   const tags = opportunity.opportunity_tags ?? []
   const deadlineText = getDeadlineText(opportunity.deadline)
   const isClosingSoon = opportunity.status === 'Closing Soon'
+
+  const sanitizedDescription = React.useMemo(() => {
+    return opportunity.description 
+      ? DOMPurify.sanitize(opportunity.description, { ALLOWED_TAGS: [] })
+      : null
+  }, [opportunity.description])
 
   return (
     <Link
@@ -72,9 +79,9 @@ export function OpportunitySearchCard({ opportunity }: OpportunitySearchCardProp
         </div>
         
         {/* Description Snippet */}
-        {opportunity.description && (
+        {sanitizedDescription && (
           <p className="text-sm text-on-surface-variant line-clamp-2 leading-relaxed">
-            {DOMPurify.sanitize(opportunity.description, { ALLOWED_TAGS: [] })}
+            {sanitizedDescription}
           </p>
         )}
 
@@ -120,7 +127,7 @@ export function OpportunitySearchCard({ opportunity }: OpportunitySearchCardProp
       </div>
     </Link>
   )
-}
+})
 
 // ── Helpers ───────────────────────────────────────────────────────────
 

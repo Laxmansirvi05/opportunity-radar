@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchFilters } from '@/features/opportunities/hooks/use-search-filters'
 
 /**
@@ -8,7 +8,7 @@ import { useSearchFilters } from '@/features/opportunities/hooks/use-search-filt
  * Material icon `search` left, `close` button right.
  * 300ms debounced URL updates.
  */
-export function SearchInput() {
+export const SearchInput = React.memo(function SearchInput() {
   const { filters, setSearchQuery, clearSearch } = useSearchFilters()
   const [localValue, setLocalValue] = useState(filters.q ?? '')
 
@@ -62,4 +62,4 @@ export function SearchInput() {
       )}
     </div>
   )
-}
+})
