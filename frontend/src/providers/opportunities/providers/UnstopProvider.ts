@@ -1,4 +1,4 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
@@ -6,6 +6,72 @@ import { fetchWithRetry } from '../utils/fetchWithRetry';
 const INDIA_CITIES = ['bangalore', 'bengaluru', 'hyderabad', 'pune', 'delhi', 'ncr', 'new delhi', 'gurgaon', 'noida', 'mumbai', 'chennai', 'india', 'remote'];
 
 export class UnstopProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    try {
+      const payloads: QueuePayload[] = [];
+      const categories = ['internships', 'hackathons', 'jobs', 'competitions'];
+      
+      for (const category of categories) {
+        // Fetch up to 3 pages per category
+        for (let i = 1; i <= 3; i++) {
+          const res = await fetchWithRetry(`https://unstop.com/api/public/opportunity/search-result?opportunity=${category}&page=${i}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+            }
+          });
+          const json = await res.json();
+          if (json?.data?.data) {
+            for (const item of json.data.data) {
+              payloads.push({
+                source: 'unstop',
+                source_id: String(item.id),
+                url: item.seo_url || `https://unstop.com/${item.public_url}`
+              });
+            }
+          }
+        }
+      }
+      return payloads;
+    } catch (err) {
+      console.error('Error in Unstop fetchListPages:', err);
+      return [];
+    }
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    // Unstop detail page scraping is blocked by Cloudflare.
+    // We will extract basic metadata from the URL slug.
+    // Example: https://unstop.com/internships/software-development-intern-fintech-startup-bengaluru-955681
+    try {
+      const parts = url.split('/');
+      let slug = parts[parts.length - 1] || '';
+      let category = parts[parts.length - 2] || 'jobs';
+      
+      const idMatches = slug.match(/-(\d+)$/);
+      const id = idMatches ? idMatches[1] : String(Math.random());
+      
+      const titleParts = slug.replace(`-${id}`, '').split('-');
+      const title = titleParts.slice(0, 3).join(' ');
+      const company = titleParts.slice(3, 5).join(' ') || 'Unknown Company';
+      const location = titleParts.slice(5).join(' ') || 'Remote';
+
+      return {
+        id,
+        title: title.replace(/(^\w|\s\w)/g, m => m.toUpperCase()),
+        organisation: { name: company.replace(/(^\w|\s\w)/g, m => m.toUpperCase()) },
+        region: location.replace(/(^\w|\s\w)/g, m => m.toUpperCase()),
+        details: `${title} opportunity at ${company} in ${location}. Apply via Unstop.`,
+        seo_url: url,
+        public_url: slug,
+        subtype: category,
+        status: 'LIVE'
+      };
+    } catch (e) {
+      console.error(`Failed to mock fetch detail page for Unstop: ${url}`, e);
+      throw e;
+    }
+  }
+
   async fetch(): Promise<any[]> {
     try {
       let allData: any[] = [];

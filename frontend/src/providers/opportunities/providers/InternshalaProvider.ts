@@ -1,4 +1,4 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
@@ -7,6 +7,113 @@ import * as cheerio from 'cheerio';
 const INDIA_CITIES = ['bangalore', 'hyderabad', 'pune', 'delhi', 'ncr', 'mumbai', 'chennai', 'remote'];
 
 export class InternshalaProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    try {
+      const payloads: QueuePayload[] = [];
+      const urls = [
+        'https://internshala.com/internships/software-development-internship/',
+        'https://internshala.com/internships/software-development-internship-in-bangalore/',
+        'https://internshala.com/internships/software-development-internship-in-hyderabad/',
+      ];
+
+      for (const url of urls) {
+        try {
+          const res = await fetchWithRetry(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+            }
+          });
+          const html = await res.text();
+          const $ = cheerio.load(html);
+
+          $('.internship_meta').each((i, el) => {
+            const relativeUrl = $(el).find('.job-title-href').attr('href');
+            const apply_url = relativeUrl ? `https://internshala.com${relativeUrl}` : '';
+            if (apply_url) {
+              const source_id = apply_url.split('/').pop() || String(Math.random());
+              payloads.push({
+                source: 'internshala',
+                source_id,
+                url: apply_url
+              });
+            }
+          });
+        } catch (e: any) {
+          console.warn(`Failed to scrape Internshala list url ${url}: ${e.message}`);
+        }
+      }
+      return payloads;
+    } catch (err) {
+      console.error('Error in Internshala fetchListPages:', err);
+      return [];
+    }
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    try {
+      const detailRes = await fetchWithRetry(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+          'Accept': 'text/html'
+        }
+      }, { maxRetries: 1, timeoutMs: 8000 });
+      const detailHtml = await detailRes.text();
+      const $detail = cheerio.load(detailHtml);
+      
+      const item: any = {
+        id: url.split('/').pop() || String(Math.random()),
+        apply_url: url,
+        category: 'Internship',
+        source: 'internshala'
+      };
+
+      // 1. Title and Company
+      item.title = $detail('.profile_on_detail_page').text().trim();
+      item.company = $detail('.company_name').first().text().trim();
+
+      // 2. Location & Stipend
+      item.location = $detail('.location_link').map((i, e) => $detail(e).text().trim()).get().join(', ') || 'Remote';
+      item.salary_range = $detail('.stipend').text().trim();
+
+      // 3. Logo
+      let logoUrl = $detail('.internship_logo img').attr('src');
+      if (!logoUrl) {
+         logoUrl = $detail('.internship_logo img').attr('data-src');
+      }
+      item.company_logo_url = logoUrl;
+
+      // 4. Full Description
+      const fullDesc = $detail('.internship_details').first().text().replace(/\s+/g, ' ').trim();
+      if (fullDesc) {
+        item.description = fullDesc;
+      }
+
+      // 5. Skills
+      const detailSkills: string[] = [];
+      $detail('.round_tabs_container .round_tabs, .training_skills_container span').each((idx, el) => {
+        detailSkills.push($detail(el).text().trim());
+      });
+      item.skills = detailSkills;
+
+      // 6. Deadline
+      $detail('.other_detail_item').each((idx, el) => {
+        const label = $detail(el).find('.detail_title, .item_heading span').text().trim().toLowerCase();
+        if (label.includes('apply by') || label.includes('deadline')) {
+          const value = $detail(el).find('.detail_value, .item_body').text().trim();
+          if (value) {
+            item.deadline = value;
+          }
+        }
+      });
+
+      return item;
+    } catch (e) {
+      console.error(`Failed to fetch detail page for Internshala: ${url}`, e);
+      throw e;
+    }
+  }
+
   async fetch(): Promise<any[]> {
     try {
       let allData: any[] = [];

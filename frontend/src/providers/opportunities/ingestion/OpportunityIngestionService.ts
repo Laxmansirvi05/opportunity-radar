@@ -196,7 +196,7 @@ export class OpportunityIngestionService {
     return newCompany.id;
   }
 
-  private async upsert(opportunity: NormalizedOpportunity): Promise<{ status: 'inserted' | 'updated' | 'error', id?: string }> {
+  public async upsert(opportunity: NormalizedOpportunity): Promise<{ status: 'inserted' | 'updated' | 'error', id?: string }> {
     try {
       // Handle Company ID lookup and insertion safely without altering external relationships
       const companyId = await this.upsertCompany(opportunity.company, opportunity.company_logo_url);

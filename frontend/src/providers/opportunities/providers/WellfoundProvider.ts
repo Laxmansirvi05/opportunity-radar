@@ -1,8 +1,22 @@
-import { OpportunityProvider } from '../base/OpportunityProvider';
+import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 
 export class WellfoundProvider extends OpportunityProvider {
+  async fetchListPages(): Promise<QueuePayload[]> {
+    return [
+      { source: 'wellfound', source_id: 'wf_201', url: 'https://wellfound.com/jobs/201' },
+      { source: 'wellfound', source_id: 'wf_202', url: 'https://wellfound.com/jobs/202' }
+    ];
+  }
+
+  async fetchDetailPage(url: string, rawData?: any): Promise<any> {
+    const data = await this.fetch();
+    const item = data.find(d => d.url === url);
+    if (!item) throw new Error("Wellfound item not found in static seed");
+    return item;
+  }
+
   async fetch(): Promise<any[]> {
     // Due to "No scraping / No external APIs" constraint and Cloudflare blocks,
     // Wellfound uses a static seed.
