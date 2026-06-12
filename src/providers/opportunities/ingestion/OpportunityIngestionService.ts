@@ -1,3 +1,5 @@
+
+
 import { createClient } from '@supabase/supabase-js';
 import { OpportunityProvider } from '../base/OpportunityProvider';
 import { OpportunityValidator, ValidationResult } from '../validation/OpportunityValidator';
@@ -20,13 +22,13 @@ export class OpportunityIngestionService {
 
   // Generate a simplistic fingerprint to catch obvious cross-provider duplicates
   private generateFingerprint(title: string, company: string): string {
-    const normalizeString = (str: string) => 
+    const normalizeString = (str: string) =>
       str.toLowerCase()
-         .replace(/\(.*\)/g, '') // remove parentheticals
-         .replace(/\\b(intern|internship|role|at|inc|llc|ltd)\\b/g, '') // remove stop words
-         .replace(/[^a-z0-9]/g, '') // strip special chars and spaces
-         .trim();
-    
+        .replace(/\(.*\)/g, '') // remove parentheticals
+        .replace(/\\b(intern|internship|role|at|inc|llc|ltd)\\b/g, '') // remove stop words
+        .replace(/[^a-z0-9]/g, '') // strip special chars and spaces
+        .trim();
+
     return `${normalizeString(company)}:${normalizeString(title)}`;
   }
 
@@ -47,39 +49,39 @@ export class OpportunityIngestionService {
       const startTime = Date.now();
       let providerStats = { processed: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
       let providerName = provider.constructor.name;
-      
+
       try {
         // 1. Fetch raw data
         const rawData = await provider.fetch();
-        
+
         for (const raw of rawData) {
           globalStats.processed++;
           providerStats.processed++;
-          
+
           // 2. Normalize
           const normalized = provider.normalize(raw);
-          
+
           // 3. Validate
           const validationResult: ValidationResult = OpportunityValidator.validate(normalized);
-          
+
           if (!validationResult.isValid) {
             console.warn(`[Validation Failed] ${normalized.title}:`, validationResult.errors);
             globalStats.errors++;
             providerStats.errors++;
             continue;
           }
-          
+
           globalStats.valid++;
 
           // 4. Duplicate Protection (Cross-Source)
           const fingerprint = this.generateFingerprint(normalized.title, normalized.company);
           if (this.fingerprintSet.has(fingerprint)) {
-             console.log(`[Duplicate Skipped] ${normalized.company} - ${normalized.title}`);
-             globalStats.skipped_dup++;
-             providerStats.skipped_dup++;
-             continue; // Skip upsert if it's a cross-source duplicate
+            console.log(`[Duplicate Skipped] ${normalized.company} - ${normalized.title}`);
+            globalStats.skipped_dup++;
+            providerStats.skipped_dup++;
+            continue; // Skip upsert if it's a cross-source duplicate
           }
-          
+
           // Add to set to prevent intra-run duplicates
           this.fingerprintSet.add(fingerprint);
 
@@ -89,14 +91,14 @@ export class OpportunityIngestionService {
             globalStats.upserted++;
             providerStats.inserted++;
           } else if (upsertResult === 'updated') {
-             globalStats.upserted++;
-             providerStats.updated++;
+            globalStats.upserted++;
+            providerStats.updated++;
           } else {
             globalStats.errors++;
             providerStats.errors++;
           }
         }
-        
+
         // Log Success to DB
         await this.logRun(providerName, providerStats, 'SUCCESS', null, Date.now() - startTime);
 
@@ -141,7 +143,7 @@ export class OpportunityIngestionService {
         .in('status', ['Published', 'Closing Soon'])
         .not('deadline', 'is', null)
         .lt('deadline', now);
-        
+
       if (error) throw error;
       console.log('Successfully ran expiration routine.');
     } catch (e) {
@@ -187,7 +189,7 @@ export class OpportunityIngestionService {
           .from('opportunities')
           .update(payload)
           .eq('id', existing.id);
-          
+
         if (updateError) throw updateError;
         return 'updated';
       } else {
@@ -195,7 +197,7 @@ export class OpportunityIngestionService {
         const { error: insertError } = await this.db
           .from('opportunities')
           .insert([payload]);
-          
+
         if (insertError) throw insertError;
         return 'inserted';
       }
