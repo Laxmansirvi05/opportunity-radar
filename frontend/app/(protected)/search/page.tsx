@@ -47,8 +47,8 @@ function SearchPageContent() {
       {/* Search & Results Area */}
       <div className="flex-1 flex flex-col bg-surface-container-lowest min-w-0 h-full overflow-hidden">
         {/* Search Header */}
-        <div className="p-4 md:p-8 border-b border-outline-variant bg-surface z-10 shrink-0">
-          <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
+        <div className="p-4 md:p-8 border-b border-outline-variant bg-surface z-20 sticky top-0 shrink-0">
+          <div className="flex flex-col gap-4 max-w-6xl mx-auto w-full">
             {/* Search Input Row */}
             <div className="flex items-center gap-3">
               {/* Mobile filter toggle */}
@@ -80,7 +80,7 @@ function SearchPageContent() {
 
         {/* Results List */}
         <div className="flex-1 p-4 md:p-8 bg-surface-container-lowest overflow-y-auto">
-          <div className="max-w-4xl mx-auto w-full flex flex-col gap-5 pb-24">
+          <div className="max-w-6xl mx-auto w-full flex flex-col gap-5 pb-24">
             {isLoading ? (
               <SearchSkeleton count={3} />
             ) : !hasResults ? (

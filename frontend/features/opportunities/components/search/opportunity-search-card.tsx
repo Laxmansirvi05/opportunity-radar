@@ -39,7 +39,7 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
       href={`/opportunities/${opportunity.id}`}
       className="block"
     >
-      <div className="bg-surface border border-outline-variant rounded-2xl p-6 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group relative cursor-pointer flex flex-col gap-5">
+      <div className="bg-surface border border-outline-variant rounded-2xl p-4 md:p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group relative cursor-pointer flex flex-col gap-4">
         {/* Header: Logo + Title + Bookmark */}
         <div className="flex justify-between items-start">
           <div className="flex gap-4">
@@ -78,7 +78,7 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
               <span
                 key={tag.tag_name}

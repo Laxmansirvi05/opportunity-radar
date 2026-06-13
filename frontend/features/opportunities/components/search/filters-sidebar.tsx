@@ -38,8 +38,8 @@ export const FiltersSidebar = React.memo(function FiltersSidebar({ isOpen, onClo
       {/* Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 w-80 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out
-          md:sticky md:top-[64px] md:h-[calc(100vh-64px)] md:translate-x-0 md:w-72 md:shadow-none md:border-r md:border-outline-variant md:z-auto
+          fixed inset-y-0 left-0 w-72 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out
+          md:sticky md:top-[64px] md:h-[calc(100vh-64px)] md:translate-x-0 md:w-60 md:shadow-none md:border-r md:border-outline-variant md:z-auto
           overflow-y-auto p-6 shrink-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
