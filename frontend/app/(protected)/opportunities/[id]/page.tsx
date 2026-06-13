@@ -21,14 +21,17 @@ export default async function OpportunityDetailsPage({
 
   // Upsert Recently Viewed
   if (user) {
-    // Fire and forget, suppress error
-    supabase.from('recently_viewed').upsert({
-      user_id: user.id,
-      opportunity_id: id,
-      viewed_at: new Date().toISOString()
-    }, {
-      onConflict: 'user_id,opportunity_id'
-    }).then(() => {})
+    try {
+      await supabase.from('recently_viewed').upsert({
+        user_id: user.id,
+        opportunity_id: id,
+        viewed_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,opportunity_id'
+      })
+    } catch (e) {
+      console.error('Failed to upsert recently viewed:', e)
+    }
   }
 
   // 1. Fetch main opportunity
@@ -61,12 +64,16 @@ export default async function OpportunityDetailsPage({
     .limit(3)
 
   // 3. Fetch "More from company"
-  const { data: moreFromCompany } = await supabase
-    .from('opportunities')
-    .select('id, title, location, mode, is_paid')
-    .eq('company_id', opp.company_id)
-    .neq('id', opp.id)
-    .limit(3)
+  let moreFromCompany = null
+  if (opp.company_id) {
+    const { data } = await supabase
+      .from('opportunities')
+      .select('id, title, location, mode, is_paid')
+      .eq('company_id', opp.company_id)
+      .neq('id', opp.id)
+      .limit(3)
+    moreFromCompany = data
+  }
 
   // 4. Fetch "People also viewed"
   const { data: peopleAlsoViewed } = await supabase
