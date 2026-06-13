@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { Radar } from 'lucide-react'
@@ -57,12 +58,14 @@ function NavBar() {
             variant="ghost"
             className="rounded-full text-muted-foreground hover:text-foreground"
             size="sm"
+            render={<Link href="/login" />}
           >
             Sign In
           </Button>
           <Button
             className="rounded-full shadow-lg shadow-primary/25"
             size="sm"
+            render={<Link href="/signup" />}
           >
             Sign Up
           </Button>
