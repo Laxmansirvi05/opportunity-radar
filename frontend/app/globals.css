@@ -350,6 +350,9 @@
     --color-on-surface: oklch(0.985 0 0);
     --color-surface-container-lowest: oklch(0.205 0 0);
 
+    /* Use original Geist typography for ThreeJS parity */
+    --font-sans: var(--font-geist-sans), "Geist Fallback";
+
     color-scheme: dark;
   }
 }

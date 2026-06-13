@@ -1,5 +1,4 @@
 'use client'
-import Link from 'next/link'
 
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
@@ -24,7 +23,7 @@ function NavBar() {
     { label: 'Features', href: '#how-it-works' },
     { label: 'How It Works', href: '#how-it-works' },
     { label: 'Companies', href: '#opportunities' },
-    { label: 'Dashboard', href: '/hub' },
+    { label: 'Dashboard', href: '#' },
   ]
   return (
     <motion.header
@@ -54,18 +53,19 @@ function NavBar() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted text-sm px-3 py-1.5"
+          <Button
+            variant="ghost"
+            className="rounded-full text-muted-foreground hover:text-foreground"
+            size="sm"
           >
             Sign In
-          </Link>
-          <Link
-            href="/signup"
-            className="inline-flex items-center justify-center rounded-full shadow-lg shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/80 text-sm px-3 py-1.5"
+          </Button>
+          <Button
+            className="rounded-full shadow-lg shadow-primary/25"
+            size="sm"
           >
             Sign Up
-          </Link>
+          </Button>
         </div>
       </nav>
     </motion.header>
