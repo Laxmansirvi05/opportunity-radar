@@ -9,7 +9,11 @@ export const metadata = {
 
 export default async function SavedOpportunitiesPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const [
+    { data: { user } }
+  ] = await Promise.all([
+    supabase.auth.getUser()
+  ])
 
   if (!user) {
     return notFound()
@@ -21,8 +25,8 @@ export default async function SavedOpportunitiesPage() {
     .select(`
       id,
       opportunities (
-        *,
-        companies (*),
+        id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description,
+        companies (id, name, logo_url, website_url),
         opportunity_tags (tag_name)
       )
     `)
@@ -68,7 +72,7 @@ export default async function SavedOpportunitiesPage() {
           {savedOpportunities.map((opportunity) => (
             <OpportunitySearchCard
               key={opportunity.id}
-              opportunity={opportunity}
+              opportunity={opportunity as any}
             />
           ))}
         </div>

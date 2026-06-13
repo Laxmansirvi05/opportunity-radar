@@ -14,23 +14,26 @@ export default async function ProfilePage() {
     return notFound()
   }
 
-  // Fetch real profile data
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  // Fetch real profile data and tracker stats concurrently
+  const [
+    { data: profile },
+    { data: trackerData }
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, name, email, university, degree, graduation_year, skills, interests, career_goal, city, gpa, resume_name, resume_size, resume_updated_at, resume_url')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('application_tracker')
+      .select('status')
+      .eq('user_id', user.id)
+  ])
 
   if (!profile) {
     // If profile is missing (e.g. trigger failed on signup), create an empty mock
     // so the page can load and the user can hit Save to trigger an upsert.
   }
-
-  // Fetch real tracker stats
-  const { data: trackerData } = await supabase
-    .from('application_tracker')
-    .select('status')
-    .eq('user_id', user.id)
 
   const stats = {
     saved: 0,

@@ -14,22 +14,44 @@ export default async function DashboardPage() {
 
   if (!user) return null
 
-  // 1. Fetch Profile & Metrics
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  // 1. Fetch Profile & Metrics concurrently
+  const [
+    { data: profile },
+    { count: savedCount },
+    { data: trackerItems },
+    { data: freshOpportunities },
+    { data: recentViews }
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, university, skills, resume_name')
+      .eq('id', user.id)
+      .single(),
+    
+    supabase
+      .from('bookmarks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
 
-  const { count: savedCount } = await supabase
-    .from('bookmarks')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    supabase
+      .from('application_tracker')
+      .select('status')
+      .eq('user_id', user.id),
 
-  const { data: trackerItems } = await supabase
-    .from('application_tracker')
-    .select('status')
-    .eq('user_id', user.id)
+    supabase
+      .from('opportunities')
+      .select('id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description, companies(id, name, logo_url, website_url), opportunity_tags(tag_name)')
+      .eq('status', 'Published')
+      .order('posted_at', { ascending: false })
+      .limit(4),
+
+    supabase
+      .from('recently_viewed')
+      .select('viewed_at, opportunities(id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description, companies(id, name, logo_url, website_url), opportunity_tags(tag_name))')
+      .eq('user_id', user.id)
+      .order('viewed_at', { ascending: false })
+      .limit(10)
+  ])
 
   let appliedCount = 0
   let interviewCount = 0
@@ -43,22 +65,6 @@ export default async function DashboardPage() {
     })
   }
 
-  // 2. Fetch Fresh Opportunities
-  const { data: freshOpportunities } = await supabase
-    .from('opportunities')
-    .select('*, companies(*), opportunity_tags(tag_name)')
-    .eq('status', 'Published')
-    .order('posted_at', { ascending: false })
-    .limit(4)
-
-  // Fetch Recently Viewed
-  const { data: recentViews } = await supabase
-    .from('recently_viewed')
-    .select('viewed_at, opportunities(*, companies(*), opportunity_tags(tag_name))')
-    .eq('user_id', user.id)
-    .order('viewed_at', { ascending: false })
-    .limit(10)
-  
   const recentlyViewed = recentViews?.map((v: any) => v.opportunities).filter(Boolean) || []
 
   // 3. Compute Intelligence
@@ -231,7 +237,7 @@ export default async function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {freshOpportunities?.map((opp) => (
-                <OpportunitySearchCard key={opp.id} opportunity={opp} />
+                <OpportunitySearchCard key={opp.id} opportunity={opp as any} />
               ))}
               {freshOpportunities?.length === 0 && (
                 <div className="col-span-full py-8 text-center text-on-surface-variant">
@@ -253,7 +259,7 @@ export default async function DashboardPage() {
               <div className="flex overflow-x-auto pb-4 gap-4 snap-x">
                 {recentlyViewed.map((opp: any) => (
                   <div key={opp.id} className="min-w-[300px] w-[300px] snap-start shrink-0">
-                    <OpportunitySearchCard opportunity={opp} />
+                    <OpportunitySearchCard opportunity={opp as any} />
                   </div>
                 ))}
               </div>

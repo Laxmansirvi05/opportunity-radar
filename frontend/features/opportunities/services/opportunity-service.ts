@@ -28,8 +28,8 @@ export async function searchOpportunities(
     .from('opportunities')
     .select(
       `
-      *,
-      companies (id, name, logo_url),
+      id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description,
+      companies (id, name, logo_url, website_url),
       opportunity_tags (tag_name)
     `,
       { count: 'exact' }

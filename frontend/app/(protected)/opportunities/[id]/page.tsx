@@ -18,33 +18,35 @@ export default async function OpportunityDetailsPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // 1. Fetch user and opportunity concurrently
+  const [
+    { data: { user } },
+    { data: opp, error }
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('opportunities')
+      .select(`
+        *,
+        companies (id, name, logo_url, website_url, description, industry, created_at),
+        opportunity_tags (tag_name)
+      `)
+      .eq('id', id)
+      .single()
+  ])
 
-  // Upsert Recently Viewed
+  // Upsert Recently Viewed (Fire and forget to avoid blocking render)
   if (user) {
-    try {
-      await supabase.from('recently_viewed').upsert({
-        user_id: user.id,
-        opportunity_id: id,
-        viewed_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,opportunity_id'
-      })
-    } catch (e) {
-      console.error('Failed to upsert recently viewed:', e)
-    }
+    supabase.from('recently_viewed').upsert({
+      user_id: user.id,
+      opportunity_id: id,
+      viewed_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,opportunity_id'
+    }).then(({ error }) => {
+      if (error) console.error('Failed to upsert recently viewed:', error)
+    })
   }
-
-  // 1. Fetch main opportunity
-  const { data: opp, error } = await supabase
-    .from('opportunities')
-    .select(`
-      *,
-      companies (id, name, logo_url, website_url, description, industry, created_at),
-      opportunity_tags (tag_name)
-    `)
-    .eq('id', id)
-    .single()
 
   if (error || !opp) {
     notFound()
@@ -59,7 +61,7 @@ export default async function OpportunityDetailsPage({
   // Parallelize secondary queries
   const similarOppsPromise = supabase
     .from('opportunities')
-    .select('*, companies (id, name, logo_url), opportunity_tags (tag_name)')
+    .select('id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description, companies (id, name, logo_url, website_url), opportunity_tags (tag_name)')
     .eq('category', opp.category)
     .neq('id', opp.id)
     .limit(3)
@@ -355,7 +357,7 @@ export default async function OpportunityDetailsPage({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {similarOpps && similarOpps.length > 0 && (
               similarOpps.map((opp: any) => (
-                <OpportunitySearchCard key={opp.id} opportunity={opp} />
+                <OpportunitySearchCard key={opp.id} opportunity={opp as any} />
               ))
             )}
           </div>
