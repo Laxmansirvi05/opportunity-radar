@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { updateTrackerStatus, removeTrackerItem } from '../actions/tracker-actions'
+import { CompanyLogo } from '@/features/opportunities/components/company-logo'
 
 export type TrackerItem = {
   id: string
@@ -89,19 +90,13 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
                   className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm flex flex-col gap-3"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant/50">
-                      {item.company_logo ? (
-                        <img
-                          src={item.company_logo}
-                          alt={item.company_name}
-                          className="w-6 h-6 object-contain"
-                        />
-                      ) : (
-                        <span className="material-symbols-outlined text-[20px] text-on-surface-variant">
-                          business
-                        </span>
-                      )}
-                    </div>
+                    <CompanyLogo
+                      src={item.company_logo}
+                      alt={item.company_name}
+                      containerClassName="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant/50"
+                      imageClassName="w-6 h-6 object-contain"
+                      fallbackIconClassName="material-symbols-outlined text-[20px] text-on-surface-variant"
+                    />
                     <div className="flex flex-col flex-1 min-w-0">
                       <Link
                         href={`/opportunities/${item.opportunity_id}`}

@@ -8,6 +8,7 @@ import { ApplyWorkflowButton } from '@/features/opportunities/components/opportu
 import { ShareOpportunityButton } from '@/features/opportunities/components/opportunity-detail/share-opportunity-button'
 import { getDeadlineInfo } from '@/features/opportunities/utils/deadline'
 import { extractSkillsFromDescription, sanitizeAndFormatDescription } from '@/utils/skills-parser'
+import { CompanyLogo } from '@/features/opportunities/components/company-logo'
 
 export default async function OpportunityDetailsPage({
   params,
@@ -55,32 +56,38 @@ export default async function OpportunityDetailsPage({
   const deadlineInfo = getDeadlineInfo(opp.deadline)
   const isExpired = deadlineInfo?.expired ?? false
 
-  // 2. Fetch similar opportunities
-  const { data: similarOpps } = await supabase
+  // Parallelize secondary queries
+  const similarOppsPromise = supabase
     .from('opportunities')
     .select('*, companies (id, name, logo_url), opportunity_tags (tag_name)')
     .eq('category', opp.category)
     .neq('id', opp.id)
     .limit(3)
 
-  // 3. Fetch "More from company"
-  let moreFromCompany = null
-  if (opp.company_id) {
-    const { data } = await supabase
-      .from('opportunities')
-      .select('id, title, location, mode, is_paid')
-      .eq('company_id', opp.company_id)
-      .neq('id', opp.id)
-      .limit(3)
-    moreFromCompany = data
-  }
+  const moreFromCompanyPromise = opp.company_id 
+    ? supabase
+        .from('opportunities')
+        .select('id, title, location, mode, is_paid')
+        .eq('company_id', opp.company_id)
+        .neq('id', opp.id)
+        .limit(3)
+    : Promise.resolve({ data: null })
 
-  // 4. Fetch "People also viewed"
-  const { data: peopleAlsoViewed } = await supabase
+  const peopleAlsoViewedPromise = supabase
     .from('opportunities')
     .select('id, title, companies(name)')
     .neq('id', opp.id)
     .limit(3)
+
+  const [
+    { data: similarOpps },
+    { data: moreFromCompany },
+    { data: peopleAlsoViewed }
+  ] = await Promise.all([
+    similarOppsPromise,
+    moreFromCompanyPromise,
+    peopleAlsoViewedPromise
+  ])
 
   const industry = company?.industry || opp.category || 'Technology'
   
@@ -112,13 +119,13 @@ export default async function OpportunityDetailsPage({
           {/* Main Header Box */}
           <div className="bg-surface border border-outline-variant rounded-2xl p-6 md:p-8 shadow-sm flex flex-col gap-6">
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 shadow-sm shrink-0">
-                {company?.logo_url ? (
-                  <img src={company.logo_url} alt={`${company.name} logo`} className="w-10 h-10 md:w-12 md:h-12 object-contain" />
-                ) : (
-                  <span className="material-symbols-outlined text-on-surface-variant text-[32px]">business</span>
-                )}
-              </div>
+              <CompanyLogo
+                src={company?.logo_url}
+                alt={`${company?.name ?? 'Company'} logo`}
+                containerClassName="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 shadow-sm shrink-0"
+                imageClassName="w-10 h-10 md:w-12 md:h-12 object-contain"
+                fallbackIconClassName="material-symbols-outlined text-on-surface-variant text-[32px]"
+              />
               <div className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-2xl md:text-3xl font-bold text-on-background leading-tight">{opp.title}</h1>

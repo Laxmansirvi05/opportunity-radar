@@ -1,4 +1,4 @@
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 
 const SKILL_KEYWORDS = [
   'Python', 'Java', 'React', 'Node.js', 'Machine Learning', 'SQL', 'Git', 'AWS',
@@ -62,8 +62,10 @@ export function sanitizeAndFormatDescription(html: string | null | undefined): s
   clean = clean.replace(/\n\s*\n\s*\n+/g, '\n\n');
   
   // 7. Sanitize final output to ensure no XSS exists (defense in depth)
-  return DOMPurify.sanitize(clean.trim(), {
-    ALLOWED_TAGS: ['h3'],
-    ALLOWED_ATTR: ['class']
+  return sanitizeHtml(clean.trim(), {
+    allowedTags: ['h3'],
+    allowedAttributes: {
+      h3: ['class']
+    }
   });
 }

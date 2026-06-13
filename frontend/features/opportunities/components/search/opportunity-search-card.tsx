@@ -4,7 +4,8 @@ import React from 'react'
 import Link from 'next/link'
 import { OpportunityWithDetails } from '@/types/opportunity'
 import { BookmarkIconButton } from './bookmark-icon-button'
-import DOMPurify from 'isomorphic-dompurify'
+import { CompanyLogo } from '../company-logo'
+import sanitizeHtml from 'sanitize-html'
 
 /**
  * Opportunity search result card matching the Stitch design exactly.
@@ -29,7 +30,7 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
 
   const sanitizedDescription = React.useMemo(() => {
     return opportunity.description 
-      ? DOMPurify.sanitize(opportunity.description, { ALLOWED_TAGS: [] })
+      ? sanitizeHtml(opportunity.description, { allowedTags: [], allowedAttributes: {} })
       : null
   }, [opportunity.description])
 
@@ -42,20 +43,10 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
         {/* Header: Logo + Title + Bookmark */}
         <div className="flex justify-between items-start">
           <div className="flex gap-4">
-            {/* Company Logo */}
-            <div className="w-14 h-14 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 shadow-sm overflow-hidden shrink-0">
-              {company?.logo_url ? (
-                <img
-                  src={company.logo_url}
-                  alt={`${company.name} logo`}
-                  className="w-8 h-8 object-contain"
-                />
-              ) : (
-                <span className="material-symbols-outlined text-on-surface-variant text-[24px]">
-                  business
-                </span>
-              )}
-            </div>
+            <CompanyLogo
+              src={company?.logo_url}
+              alt={`${company?.name ?? 'Company'} logo`}
+            />
             {/* Title + Company */}
             <div className="flex flex-col justify-center">
               <h3 className="text-lg font-semibold text-on-background group-hover:text-primary transition-colors mb-1 leading-tight">
