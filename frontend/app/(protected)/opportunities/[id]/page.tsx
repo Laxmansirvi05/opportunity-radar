@@ -58,12 +58,16 @@ export default async function OpportunityDetailsPage({
   const deadlineInfo = getDeadlineInfo(opp.deadline)
   const isExpired = deadlineInfo?.expired ?? false
 
+  const nowISO = new Date().toISOString()
+
   // Parallelize secondary queries
   const similarOppsPromise = supabase
     .from('opportunities')
     .select('id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description, companies (id, name, logo_url, website_url), opportunity_tags (tag_name)')
     .eq('category', opp.category)
     .neq('id', opp.id)
+    .in('status', ['Published', 'Closing Soon'])
+    .or(`deadline.is.null,deadline.gte.${nowISO}`)
     .limit(3)
 
   const moreFromCompanyPromise = opp.company_id 
@@ -72,6 +76,8 @@ export default async function OpportunityDetailsPage({
         .select('id, title, location, mode, is_paid')
         .eq('company_id', opp.company_id)
         .neq('id', opp.id)
+        .in('status', ['Published', 'Closing Soon'])
+        .or(`deadline.is.null,deadline.gte.${nowISO}`)
         .limit(3)
     : Promise.resolve({ data: null })
 
@@ -79,17 +85,33 @@ export default async function OpportunityDetailsPage({
     .from('opportunities')
     .select('id, title, companies(name)')
     .neq('id', opp.id)
+    .in('status', ['Published', 'Closing Soon'])
+    .or(`deadline.is.null,deadline.gte.${nowISO}`)
     .limit(3)
 
   const [
-    { data: similarOpps },
-    { data: moreFromCompany },
-    { data: peopleAlsoViewed }
+    { data: similarOppsData },
+    { data: moreFromCompanyData },
+    { data: peopleAlsoViewedData }
   ] = await Promise.all([
     similarOppsPromise,
     moreFromCompanyPromise,
     peopleAlsoViewedPromise
   ])
+
+  const filterActive = (opps: any[]) => {
+    if (!opps) return []
+    const nowMs = new Date().getTime()
+    return opps.filter(o => {
+      if (['Closed', 'Expired'].includes(o.status)) return false
+      if (!o.deadline) return true
+      return new Date(o.deadline).getTime() >= nowMs
+    })
+  }
+
+  const similarOpps = filterActive(similarOppsData || [])
+  const moreFromCompany = filterActive(moreFromCompanyData || [])
+  const peopleAlsoViewed = filterActive(peopleAlsoViewedData || [])
 
   const industry = company?.industry || opp.category || 'Technology'
   

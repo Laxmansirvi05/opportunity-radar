@@ -42,6 +42,7 @@ export default async function DashboardPage() {
       .from('opportunities')
       .select('id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description, companies(id, name, logo_url, website_url), opportunity_tags(tag_name)')
       .eq('status', 'Published')
+      .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
       .order('posted_at', { ascending: false })
       .limit(4),
 
@@ -65,7 +66,10 @@ export default async function DashboardPage() {
     })
   }
 
-  const recentlyViewed = recentViews?.map((v: any) => v.opportunities).filter(Boolean) || []
+  const now = new Date()
+  const recentlyViewed = (recentViews?.map((v: any) => v.opportunities).filter(Boolean) || []).filter(
+    (opp: any) => (!opp.deadline || new Date(opp.deadline) >= now) && !['Closed', 'Expired'].includes(opp.status)
+  )
 
   // 3. Compute Intelligence
   const isProfileComplete = profile && profile.university && profile.skills && profile.skills.length > 0
@@ -236,7 +240,11 @@ export default async function DashboardPage() {
               <Link href="/search" className="font-label-md text-primary font-medium hover:underline cursor-pointer">Explore More</Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {freshOpportunities?.map((opp) => (
+              {freshOpportunities?.filter(opp => {
+                if (['Closed', 'Expired'].includes(opp.status)) return false
+                if (!opp.deadline) return true
+                return new Date(opp.deadline).getTime() >= new Date().getTime()
+              }).map((opp) => (
                 <OpportunitySearchCard key={opp.id} opportunity={opp as any} />
               ))}
               {freshOpportunities?.length === 0 && (

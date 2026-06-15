@@ -35,6 +35,7 @@ export async function searchOpportunities(
       { count: 'exact' }
     )
     .in('status', ['Published', 'Closing Soon'])
+    .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
 
   query = applyAllFilters(query, filters, compIds, tagOpps)
 
@@ -85,6 +86,7 @@ export async function getSearchStats(
     .from('opportunities')
     .select('company_id')
     .in('status', ['Published', 'Closing Soon'])
+    .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
     .not('company_id', 'is', null)
 
   companyQuery = applyAllFilters(companyQuery, filters, compIds, tagOpps)
@@ -97,6 +99,7 @@ export async function getSearchStats(
     .from('opportunities')
     .select('id', { count: 'exact', head: true })
     .in('status', ['Published', 'Closing Soon'])
+    .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
     .gte('posted_at', todayStart.toISOString())
 
   newTodayQuery = applyAllFilters(newTodayQuery, filters, compIds, tagOpps)

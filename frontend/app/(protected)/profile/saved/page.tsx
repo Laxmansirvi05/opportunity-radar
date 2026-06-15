@@ -33,7 +33,10 @@ export default async function SavedOpportunitiesPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const savedOpportunities = bookmarks?.map((b: any) => b.opportunities).filter(Boolean) || []
+  const now = new Date()
+  const savedOpportunities = (bookmarks?.map((b: any) => b.opportunities).filter(Boolean) || []).filter(
+    (opp: any) => (!opp.deadline || new Date(opp.deadline) >= now) && !['Closed', 'Expired'].includes(opp.status)
+  )
 
   return (
     <div className="max-w-container-max mx-auto space-y-lg pb-16">

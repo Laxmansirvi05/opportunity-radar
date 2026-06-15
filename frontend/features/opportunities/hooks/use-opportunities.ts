@@ -41,7 +41,14 @@ export function useOpportunities(filters: SearchFilters): UseOpportunitiesResult
         getSearchStats(supabase, filters),
       ])
 
-      setOpportunities(searchResult.data)
+      const now = new Date().getTime()
+      const activeOpps = searchResult.data.filter((opp: any) => {
+        if (['Closed', 'Expired'].includes(opp.status)) return false
+        if (!opp.deadline) return true
+        return new Date(opp.deadline).getTime() >= now
+      })
+
+      setOpportunities(activeOpps)
       setTotalCount(searchResult.count)
       setTotalCompanies(statsResult.totalCompanies)
       setNewToday(statsResult.newToday)
