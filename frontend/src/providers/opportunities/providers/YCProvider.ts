@@ -17,8 +17,8 @@ export class YCProvider extends OpportunityProvider {
       const res = await fetch('https://hacker-news.firebaseio.com/v0/jobstories.json');
       const jobIds = await res.json();
       
-      // Limit to 25 items for initial testing
-      const limitedIds = jobIds.slice(0, 25);
+      // Fetch all available job IDs (no artificial cap)
+      const limitedIds = jobIds;
       
       // 2. Fetch details for each job
       const jobs = await Promise.all(

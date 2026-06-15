@@ -31,7 +31,7 @@ export class LFXProvider extends OpportunityProvider {
       apply_url: rawData.url || '',
       source: 'lfx',
       source_id: rawData.id || `lfx_${Date.now()}`,
-      category: 'Open Source',
+      category: 'Internship',
       program_duration: '12 weeks',
     };
   }

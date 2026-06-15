@@ -31,7 +31,7 @@ export class GSoCProvider extends OpportunityProvider {
       apply_url: rawData.url || '',
       source: 'gsoc',
       source_id: rawData.id || `gsoc_${Date.now()}`,
-      category: 'Open Source',
+      category: 'Internship',
       program_duration: '12 weeks',
     };
   }

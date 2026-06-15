@@ -31,7 +31,7 @@ export class OutreachyProvider extends OpportunityProvider {
       apply_url: rawData.url || '',
       source: 'outreachy',
       source_id: rawData.id || `outreachy_${Date.now()}`,
-      category: 'Open Source',
+      category: 'Internship',
       program_duration: '12 weeks',
     };
   }

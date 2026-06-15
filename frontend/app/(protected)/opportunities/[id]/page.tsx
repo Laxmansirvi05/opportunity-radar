@@ -233,10 +233,10 @@ export default async function OpportunityDetailsPage({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {moreFromCompany.map((item: any, idx: number) => (
-                  <div key={item.id || idx} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer">
+                  <Link key={item.id || idx} href={`/opportunities/${item.id}`} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer block">
                     <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title}</h4>
                     <p className="text-xs text-on-surface-variant truncate">{item.location || 'Remote'} • {item.mode === 'Remote' ? 'Remote' : 'Full-time'}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </section>
@@ -248,12 +248,12 @@ export default async function OpportunityDetailsPage({
               <h2 className="text-lg font-bold text-on-background">People also viewed</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {peopleAlsoViewed.map((item: any, idx: number) => (
-                  <div key={item.id || idx} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer">
+                  <Link key={item.id || idx} href={`/opportunities/${item.id}`} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer block">
                     <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title}</h4>
                     {item.companies?.name && (
                       <p className="text-xs text-on-surface-variant truncate">{item.companies.name} • Remote</p>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             </section>

@@ -4,6 +4,17 @@ import * as path from 'path';
 import { OpportunityIngestionService } from '../src/providers/opportunities/ingestion/OpportunityIngestionService.js';
 import { UnstopProvider } from '../src/providers/opportunities/providers/UnstopProvider.js';
 import { InternshalaProvider } from '../src/providers/opportunities/providers/InternshalaProvider.js';
+import { YCProvider } from '../src/providers/opportunities/providers/YCProvider.js';
+import { WellfoundProvider } from '../src/providers/opportunities/providers/WellfoundProvider.js';
+import { DevfolioProvider } from '../src/providers/opportunities/providers/DevfolioProvider.js';
+import { AmazonProvider } from '../src/providers/opportunities/providers/AmazonProvider.js';
+import { GitHubProvider } from '../src/providers/opportunities/providers/GitHubProvider.js';
+import { AtlassianProvider } from '../src/providers/opportunities/providers/AtlassianProvider.js';
+import { GSoCProvider } from '../src/providers/opportunities/providers/GSoCProvider.js';
+import { LFXProvider } from '../src/providers/opportunities/providers/LFXProvider.js';
+import { Hack2SkillProvider } from '../src/providers/opportunities/providers/Hack2SkillProvider.js';
+import { OutreachyProvider } from '../src/providers/opportunities/providers/OutreachyProvider.js';
+import { CompanyProvider } from '../src/providers/opportunities/providers/CompanyProvider.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 process.env.ENABLE_OPP_INGESTION = 'true';
@@ -79,7 +90,18 @@ async function run() {
 
   const providers = [
     new UnstopProvider(),
-    new InternshalaProvider()
+    new InternshalaProvider(),
+    new YCProvider(),
+    new WellfoundProvider(),
+    new DevfolioProvider(),
+    new AmazonProvider(),
+    new GitHubProvider(),
+    new AtlassianProvider(),
+    new GSoCProvider(),
+    new LFXProvider(),
+    new Hack2SkillProvider(),
+    new OutreachyProvider(),
+    new CompanyProvider()
   ];
 
   const service = new OpportunityIngestionService(providers, supabase);
@@ -108,6 +130,27 @@ async function run() {
   console.log(`- Enriched with Logos: ${stats.upserted} (Parsed and sent to company lookup)`);
 
   console.log(`\n[Stats] Opportunities after run (Real): ${countBefore! + stats.upserted}`);
+  // --- POST-RUN EXACT COUNTS ---
+  const { count: totalAfter } = await supabase.from('opportunities').select('*', { count: 'exact', head: true });
+  const { count: activeAfter } = await supabase.from('opportunities').select('*', { count: 'exact', head: true }).in('status', ['Published', 'Closing Soon']);
+  const { count: expiredAfter } = await supabase.from('opportunities').select('*', { count: 'exact', head: true }).eq('status', 'Expired');
+
+  const { data: sourcesData } = await supabase.from('opportunities').select('source');
+  const sourceCounts: Record<string, number> = {};
+  for (const row of sourcesData || []) {
+    const s = row.source || 'unknown';
+    sourceCounts[s] = (sourceCounts[s] || 0) + 1;
+  }
+  const sortedSources = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]);
+
+  console.log(`\n=== FINAL DATABASE STATE (Exact) ===`);
+  console.log(`Total opportunities: ${totalAfter}`);
+  console.log(`Active opportunities: ${activeAfter}`);
+  console.log(`Expired opportunities: ${expiredAfter}`);
+  console.log(`\nSource-wise counts:`);
+  sortedSources.forEach(([source, count]) => {
+    console.log(`  ${source}: ${count}`);
+  });
 }
 
 run().catch(console.error);

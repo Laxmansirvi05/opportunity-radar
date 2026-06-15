@@ -11,9 +11,29 @@ export class InternshalaProvider extends OpportunityProvider {
     try {
       const payloads: QueuePayload[] = [];
       const urls = [
+        // Software Development
         'https://internshala.com/internships/software-development-internship/',
         'https://internshala.com/internships/software-development-internship-in-bangalore/',
         'https://internshala.com/internships/software-development-internship-in-hyderabad/',
+        'https://internshala.com/internships/software-development-internship-in-pune/',
+        'https://internshala.com/internships/software-development-internship-in-mumbai/',
+        'https://internshala.com/internships/software-development-internship-in-chennai/',
+        'https://internshala.com/internships/software-development-internship-in-delhi/',
+        'https://internshala.com/internships/work-from-home-software-development-internships/',
+        // Web Development
+        'https://internshala.com/internships/web-development-internship/',
+        'https://internshala.com/internships/web-development-internship-in-bangalore/',
+        'https://internshala.com/internships/web-development-internship-in-delhi/',
+        'https://internshala.com/internships/work-from-home-web-development-internships/',
+        // Data Science
+        'https://internshala.com/internships/data-science-internship/',
+        'https://internshala.com/internships/data-science-internship-in-bangalore/',
+        'https://internshala.com/internships/work-from-home-data-science-internships/',
+        // Python / Machine Learning
+        'https://internshala.com/internships/python-django-internship/',
+        'https://internshala.com/internships/machine-learning-internship/',
+        // Mobile
+        'https://internshala.com/internships/mobile-app-development-internship/',
       ];
 
       for (const url of urls) {
@@ -119,9 +139,29 @@ export class InternshalaProvider extends OpportunityProvider {
       let allData: any[] = [];
       // Fetch specifically from priority cities and keywords
       const urls = [
+        // Software Development
         'https://internshala.com/internships/software-development-internship/',
         'https://internshala.com/internships/software-development-internship-in-bangalore/',
         'https://internshala.com/internships/software-development-internship-in-hyderabad/',
+        'https://internshala.com/internships/software-development-internship-in-pune/',
+        'https://internshala.com/internships/software-development-internship-in-mumbai/',
+        'https://internshala.com/internships/software-development-internship-in-chennai/',
+        'https://internshala.com/internships/software-development-internship-in-delhi/',
+        'https://internshala.com/internships/work-from-home-software-development-internships/',
+        // Web Development
+        'https://internshala.com/internships/web-development-internship/',
+        'https://internshala.com/internships/web-development-internship-in-bangalore/',
+        'https://internshala.com/internships/web-development-internship-in-delhi/',
+        'https://internshala.com/internships/work-from-home-web-development-internships/',
+        // Data Science
+        'https://internshala.com/internships/data-science-internship/',
+        'https://internshala.com/internships/data-science-internship-in-bangalore/',
+        'https://internshala.com/internships/work-from-home-data-science-internships/',
+        // Python / Machine Learning
+        'https://internshala.com/internships/python-django-internship/',
+        'https://internshala.com/internships/machine-learning-internship/',
+        // Mobile
+        'https://internshala.com/internships/mobile-app-development-internship/',
       ];
 
       for (const url of urls) {

@@ -14,6 +14,9 @@ const PROTECTED_ROUTES = [
   '/submit',
   '/hub',
   '/search',
+  '/opportunities',
+  '/settings',
+  '/support',
 ]
 
 /**

@@ -9,11 +9,11 @@ export class UnstopProvider extends OpportunityProvider {
   async fetchListPages(): Promise<QueuePayload[]> {
     try {
       const payloads: QueuePayload[] = [];
-      const categories = ['internships', 'hackathons', 'jobs', 'competitions'];
+      const categories = ['internships', 'hackathons', 'jobs', 'competitions', 'workshops'];
       
       for (const category of categories) {
-        // Fetch up to 3 pages per category
-        for (let i = 1; i <= 3; i++) {
+        // Fetch up to 20 pages per category
+        for (let i = 1; i <= 20; i++) {
           const res = await fetchWithRetry(`https://unstop.com/api/public/opportunity/search-result?opportunity=${category}&page=${i}`, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
@@ -75,11 +75,11 @@ export class UnstopProvider extends OpportunityProvider {
   async fetch(): Promise<any[]> {
     try {
       let allData: any[] = [];
-      const categories = ['internships', 'hackathons', 'jobs', 'competitions'];
+      const categories = ['internships', 'hackathons', 'jobs', 'competitions', 'workshops'];
       
       for (const category of categories) {
-        // Fetch up to 3 pages per category
-        for (let i = 1; i <= 3; i++) {
+        // Fetch up to 20 pages per category
+        for (let i = 1; i <= 20; i++) {
           const res = await fetchWithRetry(`https://unstop.com/api/public/opportunity/search-result?opportunity=${category}&page=${i}`, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
