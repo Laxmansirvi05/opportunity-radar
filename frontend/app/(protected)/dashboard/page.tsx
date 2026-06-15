@@ -7,6 +7,8 @@ export const metadata = {
   title: 'Command Center | Opportunity Radar',
 }
 
+export const revalidate = 60;
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
