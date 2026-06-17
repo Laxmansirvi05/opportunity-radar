@@ -13,6 +13,8 @@ interface UseOpportunitiesResult {
   totalCount: number
   totalCompanies: number
   newToday: number
+  postedToday: number
+  importedToday: number
   isLoading: boolean
   error: string | null
 }
@@ -26,6 +28,8 @@ export function useOpportunities(filters: SearchFilters): UseOpportunitiesResult
   const [totalCount, setTotalCount] = useState(0)
   const [totalCompanies, setTotalCompanies] = useState(0)
   const [newToday, setNewToday] = useState(0)
+  const [postedToday, setPostedToday] = useState(0)
+  const [importedToday, setImportedToday] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,6 +56,8 @@ export function useOpportunities(filters: SearchFilters): UseOpportunitiesResult
       setTotalCount(searchResult.count)
       setTotalCompanies(statsResult.totalCompanies)
       setNewToday(statsResult.newToday)
+      setPostedToday(statsResult.postedToday)
+      setImportedToday(statsResult.importedToday)
     } catch (err) {
       console.error('Failed to fetch opportunities:', err)
       setError('Failed to load opportunities. Please try again.')
@@ -73,6 +79,8 @@ export function useOpportunities(filters: SearchFilters): UseOpportunitiesResult
     totalCount,
     totalCompanies,
     newToday,
+    postedToday,
+    importedToday,
     isLoading,
     error,
   }

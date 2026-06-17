@@ -45,10 +45,13 @@ export class OpportunityIngestionService {
       });
     }
 
+    const BATCH_SIZE = 200;
+
     for (const provider of this.providers) {
       const startTime = Date.now();
       let providerStats = { processed: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
       let providerName = provider.constructor.name;
+      let payloadBatch: any[] = [];
 
       try {
         // 1. Fetch raw data
@@ -85,18 +88,38 @@ export class OpportunityIngestionService {
           // Add to set to prevent intra-run duplicates
           this.fingerprintSet.add(fingerprint);
 
-          // 5. Upsert with DB logic
-          const upsertResult = await this.upsert(normalized);
-          if (upsertResult === 'inserted') {
-            globalStats.upserted++;
-            providerStats.inserted++;
-          } else if (upsertResult === 'updated') {
-            globalStats.upserted++;
-            providerStats.updated++;
-          } else {
-            globalStats.errors++;
-            providerStats.errors++;
+          // 5. Add to Batch
+          const payload = {
+            title: normalized.title,
+            company_name: normalized.company, // mapped to denormalized company_name
+            location: normalized.location,
+            description: normalized.description,
+            requirements: normalized.skills || [],
+            deadline: normalized.deadline,
+            source: normalized.source,
+            source_id: normalized.source_id,
+            apply_url: normalized.apply_url,
+            category: normalized.category,
+            event_date: normalized.event_date || null,
+            registration_deadline: normalized.registration_deadline || null,
+            program_duration: normalized.program_duration || null,
+            updated_at: new Date().toISOString(),
+            status: 'Published' // default active state
+          };
+
+          payloadBatch.push(payload);
+
+          // Flush batch if size reached
+          if (payloadBatch.length >= BATCH_SIZE) {
+            await this.flushBatch(providerName, payloadBatch, globalStats, providerStats);
+            payloadBatch = []; // Reset batch
           }
+        }
+
+        // Flush remaining records in the batch
+        if (payloadBatch.length > 0) {
+          await this.flushBatch(providerName, payloadBatch, globalStats, providerStats);
+          payloadBatch = [];
         }
 
         // Log Success to DB
@@ -113,6 +136,53 @@ export class OpportunityIngestionService {
     await this.expireOpportunities();
 
     return globalStats;
+  }
+
+  private async flushBatch(providerName: string, batch: any[], globalStats: any, providerStats: any) {
+    if (batch.length === 0) return;
+
+    try {
+      // 1. Identify which records are existing vs new to preserve accurate logging
+      const sourceIds = batch.map(p => p.source_id);
+      
+      const { data: existingRecords, error: selectError } = await this.db
+        .from('opportunities')
+        .select('source_id')
+        .in('source_id', sourceIds)
+        .eq('source', batch[0].source); // assuming all items in batch are from the same provider
+
+      if (selectError) throw selectError;
+
+      const existingSet = new Set((existingRecords || []).map((r: any) => r.source_id));
+
+      let batchInserted = 0;
+      let batchUpdated = 0;
+
+      for (const p of batch) {
+        if (existingSet.has(p.source_id)) {
+          batchUpdated++;
+        } else {
+          batchInserted++;
+        }
+      }
+
+      // 2. Perform bulk upsert
+      const { error: upsertError } = await this.db
+        .from('opportunities')
+        .upsert(batch, { onConflict: 'source, source_id' });
+
+      if (upsertError) throw upsertError;
+
+      // 3. Update stats if successful
+      globalStats.upserted += batch.length;
+      providerStats.inserted += batchInserted;
+      providerStats.updated += batchUpdated;
+      
+    } catch (err) {
+      console.error(`[Batch Upsert Failed] for ${providerName} (size ${batch.length}):`, err);
+      globalStats.errors += batch.length;
+      providerStats.errors += batch.length;
+    }
   }
 
   private async logRun(providerName: string, stats: any, status: string, errorMessage: string | null, executionTimeMs: number) {
@@ -148,62 +218,6 @@ export class OpportunityIngestionService {
       console.log('Successfully ran expiration routine.');
     } catch (e) {
       console.error('Error running expiration routine:', e);
-    }
-  }
-
-  private async upsert(opportunity: NormalizedOpportunity): Promise<'inserted' | 'updated' | 'error'> {
-    try {
-      // Check if it already exists by source and source_id
-      const { data: existing, error: selectError } = await this.db
-        .from('opportunities')
-        .select('id')
-        .eq('source', opportunity.source)
-        .eq('source_id', opportunity.source_id)
-        .maybeSingle();
-
-      if (selectError && selectError.code !== 'PGRST116') {
-        throw selectError;
-      }
-
-      const payload = {
-        title: opportunity.title,
-        company_name: opportunity.company, // mapped to denormalized company_name
-        location: opportunity.location,
-        description: opportunity.description,
-        requirements: opportunity.skills || [],
-        deadline: opportunity.deadline,
-        source: opportunity.source,
-        source_id: opportunity.source_id,
-        apply_url: opportunity.apply_url,
-        category: opportunity.category,
-        event_date: opportunity.event_date || null,
-        registration_deadline: opportunity.registration_deadline || null,
-        program_duration: opportunity.program_duration || null,
-        updated_at: new Date().toISOString(),
-        status: 'Published' // default active state
-      };
-
-      if (existing) {
-        // Update existing record
-        const { error: updateError } = await this.db
-          .from('opportunities')
-          .update(payload)
-          .eq('id', existing.id);
-
-        if (updateError) throw updateError;
-        return 'updated';
-      } else {
-        // Insert new record safely
-        const { error: insertError } = await this.db
-          .from('opportunities')
-          .insert([payload]);
-
-        if (insertError) throw insertError;
-        return 'inserted';
-      }
-    } catch (err) {
-      console.error(`[Upsert Failed] ${opportunity.title}:`, err);
-      return 'error';
     }
   }
 }

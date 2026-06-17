@@ -19,12 +19,15 @@ const RadarScene = dynamic(
   },
 )
 
+import { useRouter } from 'next/navigation'
+
 function NavBar() {
+  const router = useRouter()
   const links = [
     { label: 'Features', href: '#how-it-works' },
     { label: 'How It Works', href: '#how-it-works' },
     { label: 'Companies', href: '#opportunities' },
-    { label: 'Dashboard', href: '#' },
+    { label: 'Dashboard', href: '/dashboard' },
   ]
   return (
     <motion.header
@@ -58,14 +61,14 @@ function NavBar() {
             variant="ghost"
             className="rounded-full text-muted-foreground hover:text-foreground"
             size="sm"
-            render={<Link href="/login" />}
+            onClick={() => router.push('/login')}
           >
             Sign In
           </Button>
           <Button
             className="rounded-full shadow-lg shadow-primary/25"
             size="sm"
-            render={<Link href="/signup" />}
+            onClick={() => router.push('/signup')}
           >
             Sign Up
           </Button>

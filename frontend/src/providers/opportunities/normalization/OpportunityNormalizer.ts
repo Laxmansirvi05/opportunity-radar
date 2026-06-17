@@ -56,6 +56,7 @@ export class OpportunityNormalizer {
       description: rawData.description || rawData.details || '',
       skills: Array.isArray(rawData.skills) ? rawData.skills : [],
       deadline: parseSafeDeadline(rawData.deadline),
+      posted_at: rawData.posted_at || undefined,
       source: providerSource,
       source_id: rawData.id || rawData.source_id || '',
       apply_url: rawData.apply_url || rawData.url || '',

@@ -18,7 +18,59 @@ export async function searchOpportunities(
   const page = filters.page ?? 0
   const from = page * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
+  
+  // Attempt to use the highly optimized RPC search first
+  const rpcArgs = {
+    search_query: filters.q?.trim() || null,
+    filter_category: filters.category?.length ? filters.category : null,
+    filter_mode: filters.mode?.length ? filters.mode : null,
+    filter_experience_level: filters.experience_level?.length ? filters.experience_level : null,
+    filter_is_paid: filters.is_paid !== undefined ? filters.is_paid : null,
+    filter_location: filters.location?.trim() || null,
+    filter_freshness_interval: (filters.fresh && getFreshnessInterval(filters.fresh)) ? `${getFreshnessInterval(filters.fresh)! / 1000} seconds` : null,
+    filter_deadline_min: filters.deadline ? new Date().toISOString() : null,
+    filter_deadline_max: filters.deadline && getDeadlineInterval(filters.deadline) ? new Date(Date.now() + getDeadlineInterval(filters.deadline)!).toISOString() : null,
+    sort_by: filters.sort || 'relevance',
+    page_offset: from,
+    page_limit: PAGE_SIZE,
+  };
 
+  const { data: rpcData, error: rpcError } = await supabase.rpc('search_opportunities_rpc' as any, rpcArgs);
+
+  if (!rpcError && rpcData) {
+    // Transform RPC result to match the OpportunityWithDetails structure
+    const formattedData = rpcData.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      location: row.location,
+      category: row.category,
+      mode: row.mode,
+      experience_level: row.experience_level,
+      is_paid: row.is_paid,
+      status: row.status,
+      posted_at: row.posted_at,
+      deadline: row.deadline,
+      company_id: row.company_id,
+      apply_url: row.apply_url,
+      companies: {
+        id: row.company_id,
+        name: row.company_name,
+        logo_url: row.company_logo_url,
+        website_url: row.company_website_url,
+      },
+      opportunity_tags: row.tag_names?.map((t: string) => ({ tag_name: t })) || [],
+    }));
+    
+    const count = rpcData.length > 0 ? Number(rpcData[0].total_count) : 0;
+    return { data: formattedData as unknown as OpportunityWithDetails[], count };
+  }
+
+  if (rpcError && rpcError.code !== 'PGRST202') {
+    // Only log if it's not a "function missing" error
+    console.error('RPC Search error:', rpcError);
+  }
+
+  // FALLBACK: Old sequential OR-based search (if migration hasn't been applied yet)
   const [compIds, tagOpps] = await Promise.all([
     getMatchingCompanyIds(supabase, filters.q),
     getMatchingTagOpps(supabase, filters.q),
@@ -28,7 +80,7 @@ export async function searchOpportunities(
     .from('opportunities')
     .select(
       `
-      id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description,
+      id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url,
       companies (id, name, logo_url, website_url),
       opportunity_tags (tag_name)
     `,
@@ -39,16 +91,13 @@ export async function searchOpportunities(
 
   query = applyAllFilters(query, filters, compIds, tagOpps)
 
-  // Sort order
   if (filters.sort === 'newest') {
     query = query.order('posted_at', { ascending: false })
   } else if (filters.sort === 'deadline') {
-    // Only show things with a deadline if we explicitly sort by it
     query = query
       .not('deadline', 'is', null)
       .order('deadline', { ascending: true })
   } else {
-    // default/relevance: status then posted_at
     query = query
       .order('status', { ascending: true })
       .order('posted_at', { ascending: false })
@@ -75,7 +124,7 @@ export async function searchOpportunities(
 export async function getSearchStats(
   supabase: SupabaseClientType,
   filters: SearchFilters
-): Promise<{ totalJobs: number; totalCompanies: number; newToday: number }> {
+): Promise<{ totalJobs: number; totalCompanies: number; newToday: number; postedToday: number; importedToday: number }> {
   const [compIds, tagOpps] = await Promise.all([
     getMatchingCompanyIds(supabase, filters.q),
     getMatchingTagOpps(supabase, filters.q),
@@ -91,22 +140,33 @@ export async function getSearchStats(
 
   companyQuery = applyAllFilters(companyQuery, filters, compIds, tagOpps)
 
-  // New today count
+  // Posted today count
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  let newTodayQuery = supabase
+  let postedTodayQuery = supabase
     .from('opportunities')
     .select('id', { count: 'exact', head: true })
     .in('status', ['Published', 'Closing Soon'])
     .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
     .gte('posted_at', todayStart.toISOString())
 
-  newTodayQuery = applyAllFilters(newTodayQuery, filters, compIds, tagOpps)
+  postedTodayQuery = applyAllFilters(postedTodayQuery, filters, compIds, tagOpps)
 
-  const [companyResult, newTodayResult] = await Promise.all([
+  // Imported today count
+  let importedTodayQuery = supabase
+    .from('opportunities')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['Published', 'Closing Soon'])
+    .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
+    .gte('ingested_at', todayStart.toISOString())
+
+  importedTodayQuery = applyAllFilters(importedTodayQuery, filters, compIds, tagOpps)
+
+  const [companyResult, postedTodayResult, importedTodayResult] = await Promise.all([
     companyQuery,
-    newTodayQuery,
+    postedTodayQuery,
+    importedTodayQuery,
   ])
 
   // Count distinct companies manually
@@ -115,7 +175,9 @@ export async function getSearchStats(
   return {
     totalJobs: 0, // Filled by caller from main query count
     totalCompanies: distinctCompanies.size,
-    newToday: newTodayResult.count ?? 0,
+    newToday: (postedTodayResult.count ?? 0) + (importedTodayResult.count ?? 0), // fallback/combined metric
+    postedToday: postedTodayResult.count ?? 0,
+    importedToday: importedTodayResult.count ?? 0,
   }
 }
 
@@ -158,6 +220,7 @@ async function getMatchingCompanyIds(
     .from('companies')
     .select('id')
     .ilike('name', `%${q.trim()}%`)
+    .limit(50)
   return comps?.map((c) => c.id) || []
 }
 
@@ -170,6 +233,7 @@ async function getMatchingTagOpps(
     .from('opportunity_tags')
     .select('opportunity_id')
     .ilike('tag_name', `%${q.trim()}%`)
+    .limit(50)
   return tags?.map((t) => t.opportunity_id) || []
 }
 

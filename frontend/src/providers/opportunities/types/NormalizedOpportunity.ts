@@ -12,6 +12,7 @@ export interface NormalizedOpportunity {
   event_date?: string;
   registration_deadline?: string;
   program_duration?: string;
+  posted_at?: string;
   // Enrichment fields — optional so all other providers remain unaffected
   source_url?: string;
   mode?: string;

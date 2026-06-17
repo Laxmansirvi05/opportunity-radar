@@ -203,7 +203,7 @@ export class OpportunityIngestionService {
 
       const { data: existing, error: selectError } = await this.db
         .from('opportunities')
-        .select('id')
+        .select('id, posted_at')
         .eq('source', opportunity.source)
         .eq('source_id', opportunity.source_id)
         .maybeSingle();
@@ -223,6 +223,7 @@ export class OpportunityIngestionService {
         source_id: opportunity.source_id,
         apply_url: opportunity.apply_url,
         category: opportunity.category,
+        posted_at: opportunity.posted_at || existing?.posted_at || null,
         event_date: opportunity.event_date || null,
         registration_deadline: opportunity.registration_deadline || null,
         program_duration: opportunity.program_duration || null,

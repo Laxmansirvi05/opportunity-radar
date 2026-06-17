@@ -9,7 +9,8 @@ import React from 'react'
 interface SearchStatsBarProps {
   totalJobs: number
   totalCompanies: number
-  newToday: number
+  postedToday: number
+  importedToday: number
 }
 
 /**
@@ -19,7 +20,8 @@ interface SearchStatsBarProps {
 export const SearchStatsBar = React.memo(function SearchStatsBar({
   totalJobs,
   totalCompanies,
-  newToday,
+  postedToday,
+  importedToday,
 }: SearchStatsBarProps) {
   return (
     <div className="flex items-center gap-6 py-3 px-4 bg-surface-container-low rounded-xl border border-outline-variant/50">
@@ -36,9 +38,15 @@ export const SearchStatsBar = React.memo(function SearchStatsBar({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-secondary text-[20px]">new_releases</span>
+        <span className="material-symbols-outlined text-secondary text-[20px]">calendar_today</span>
         <span className="text-xs font-medium tracking-wide text-on-surface">
-          <span className="font-bold text-secondary">{newToday.toLocaleString()}</span> New Today
+          <span className="font-bold text-secondary">{postedToday.toLocaleString()}</span> Posted Today
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-secondary text-[20px]">cloud_download</span>
+        <span className="text-xs font-medium tracking-wide text-on-surface">
+          <span className="font-bold text-secondary">{importedToday.toLocaleString()}</span> Imported Today
         </span>
       </div>
     </div>

@@ -22,7 +22,8 @@ function SearchPageContent() {
     opportunities,
     totalCount,
     totalCompanies,
-    newToday,
+    postedToday,
+    importedToday,
     isLoading,
   } = useOpportunities(filters)
 
@@ -67,7 +68,8 @@ function SearchPageContent() {
             <SearchStatsBar
               totalJobs={totalCount}
               totalCompanies={totalCompanies}
-              newToday={newToday}
+              postedToday={postedToday}
+              importedToday={importedToday}
             />
 
             {/* Active Filters */}

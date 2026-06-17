@@ -1,12 +1,20 @@
 {
   "crons": [
     {
-      "path": "/api/cron/refresh-opportunities",
+      "path": "/api/cron/refresh-unstop",
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/maintenance",
+      "path": "/api/cron/refresh-internshala",
+      "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-providers",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/maintenance",
+      "schedule": "30 3 * * *"
     }
   ]
 }

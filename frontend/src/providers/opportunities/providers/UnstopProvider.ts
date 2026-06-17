@@ -12,8 +12,8 @@ export class UnstopProvider extends OpportunityProvider {
       const categories = ['internships', 'hackathons', 'jobs', 'competitions', 'workshops'];
       
       for (const category of categories) {
-        // Fetch up to 20 pages per category
-        for (let i = 1; i <= 20; i++) {
+        // Fetch up to 50 pages per category
+        for (let i = 1; i <= 50; i++) {
           const res = await fetchWithRetry(`https://unstop.com/api/public/opportunity/search-result?opportunity=${category}&page=${i}`, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
@@ -78,8 +78,8 @@ export class UnstopProvider extends OpportunityProvider {
       const categories = ['internships', 'hackathons', 'jobs', 'competitions', 'workshops'];
       
       for (const category of categories) {
-        // Fetch up to 20 pages per category
-        for (let i = 1; i <= 20; i++) {
+        // Fetch up to 50 pages per category
+        for (let i = 1; i <= 50; i++) {
           const res = await fetchWithRetry(`https://unstop.com/api/public/opportunity/search-result?opportunity=${category}&page=${i}`, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
@@ -160,6 +160,14 @@ export class UnstopProvider extends OpportunityProvider {
     // ── Logos ─────────────────────────────────────────────────────────
     const company_logo_url = rawData.organisation?.logoUrl2 || rawData.organisation?.logoUrl || undefined;
 
+    // ── Posted Date ───────────────────────────────────────────────────
+    let postedAt = undefined;
+    if (rawData.approved_date) {
+      postedAt = new Date(rawData.approved_date).toISOString();
+    } else if (rawData.updated_at) {
+      postedAt = new Date(rawData.updated_at).toISOString();
+    }
+
     return {
       title: rawData.title || 'Unknown Title',
       company: rawData.organisation?.name || 'Unknown Company',
@@ -176,6 +184,7 @@ export class UnstopProvider extends OpportunityProvider {
       mode,
       salary_range,
       company_logo_url,
+      posted_at: postedAt,
       verified: rawData.status === 'LIVE' ? true : false,
     };
   }
