@@ -49,7 +49,6 @@ export function useSearchFilters() {
       category: category.length > 0 ? category : undefined,
       mode: mode.length > 0 ? mode : undefined,
       is_paid: is_paid_raw !== null ? is_paid_raw === 'true' : undefined,
-      experience_level: experience_level.length > 0 ? experience_level : undefined,
       fresh,
       deadline,
       location,
@@ -70,7 +69,6 @@ export function useSearchFilters() {
       if (merged.category) merged.category.forEach((c) => params.append('category', c))
       if (merged.mode) merged.mode.forEach((m) => params.append('mode', m))
       if (merged.is_paid !== undefined) params.set('is_paid', String(merged.is_paid))
-      if (merged.experience_level) merged.experience_level.forEach((e) => params.append('experience_level', e))
       if (merged.fresh) params.set('fresh', merged.fresh)
       if (merged.deadline) params.set('deadline', merged.deadline)
       if (merged.location) params.set('location', merged.location)
@@ -170,7 +168,6 @@ export function useSearchFilters() {
       filters.category?.length ||
       filters.mode?.length ||
       filters.is_paid !== undefined ||
-      filters.experience_level?.length ||
       filters.fresh ||
       filters.deadline ||
       filters.location ||
@@ -188,7 +185,6 @@ export function useSearchFilters() {
     if (filters.is_paid !== undefined) {
       chips.push({ key: 'is_paid', label: filters.is_paid ? 'Paid' : 'Free', value: String(filters.is_paid) })
     }
-    filters.experience_level?.forEach((e) => chips.push({ key: 'experience_level', label: e, value: e }))
     if (filters.fresh) {
       const labels: Record<string, string> = { '1h': 'Last Hour', '6h': 'Last 6 Hours', '24h': 'Last 24 Hours', '7d': 'Last 7 Days' }
       chips.push({ key: 'fresh', label: labels[filters.fresh] ?? filters.fresh, value: filters.fresh })

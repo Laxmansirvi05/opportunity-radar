@@ -12,6 +12,8 @@ import {
   DEADLINE_OPTIONS,
 } from '@/types/opportunity'
 
+const ENABLE_EXPERIENCE_FILTER = false;
+
 /**
  * Filters sidebar matching the Stitch design.
  * Desktop: static sidebar (w-72, border-r, always visible).
@@ -176,21 +178,23 @@ export const FiltersSidebar = React.memo(function FiltersSidebar({ isOpen, onClo
         </FilterSection>
 
         {/* Experience Filter */}
-        <FilterSection title="Experience">
-          <div className="flex flex-col gap-3">
-            {EXPERIENCE_LEVELS.map((level) => (
-              <label key={level} className="flex items-center gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={filters.experience_level?.includes(level) ?? false}
-                  onChange={() => toggleArrayFilter('experience_level', level)}
-                  className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer"
-                />
-                <span className="text-sm text-on-surface">{level}</span>
-              </label>
-            ))}
-          </div>
-        </FilterSection>
+        {ENABLE_EXPERIENCE_FILTER && (
+          <FilterSection title="Experience">
+            <div className="flex flex-col gap-3">
+              {EXPERIENCE_LEVELS.map((level) => (
+                <label key={level} className="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={filters.experience_level?.includes(level) ?? false}
+                    onChange={() => toggleArrayFilter('experience_level', level)}
+                    className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <span className="text-sm text-on-surface">{level}</span>
+                </label>
+              ))}
+            </div>
+          </FilterSection>
+        )}
 
         {/* Skills Filter */}
         <FilterSection title="Skills">

@@ -28,6 +28,7 @@ async function run() {
   console.log("Starting UX Data Audit...");
 
   const opportunities = await fetchAll('opportunities', 'id, title, company_name, apply_url, description, status, deadline, company_id, source, skills');
+  
   const companies = await fetchAll('companies', 'id, name, website_url, logo_url');
 
   // 1. Missing apply links

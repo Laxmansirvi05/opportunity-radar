@@ -24,7 +24,6 @@ export async function searchOpportunities(
     search_query: filters.q?.trim() || null,
     filter_category: filters.category?.length ? filters.category : null,
     filter_mode: filters.mode?.length ? filters.mode : null,
-    filter_experience_level: filters.experience_level?.length ? filters.experience_level : null,
     filter_is_paid: filters.is_paid !== undefined ? filters.is_paid : null,
     filter_location: filters.location?.trim() || null,
     filter_freshness_interval: (filters.fresh && getFreshnessInterval(filters.fresh)) ? `${getFreshnessInterval(filters.fresh)! / 1000} seconds` : null,
@@ -278,9 +277,7 @@ function applyAllFilters(
     q = q.eq('is_paid', filters.is_paid)
   }
 
-  if (filters.experience_level && filters.experience_level.length > 0) {
-    q = q.in('experience_level', filters.experience_level)
-  }
+
 
   if (filters.fresh) {
     const interval = getFreshnessInterval(filters.fresh)
