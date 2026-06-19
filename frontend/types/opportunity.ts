@@ -1,7 +1,13 @@
+import { z } from 'zod'
 import { Tables } from './database.types'
 
 // ─── Base Table Types ───────────────────────────────────────────────
-export type Opportunity = Tables<'opportunities'>
+export type Opportunity = Tables<'opportunities'> & {
+  // V2 intelligence fields (added by migration 002)
+  extracted_skills: string[]
+  skill_extraction_status: 'pending' | 'processed' | 'failed' | 'skipped'
+  skill_extraction_version: string | null
+}
 export type Company = Tables<'companies'>
 export type OpportunityTag = Tables<'opportunity_tags'>
 
@@ -9,6 +15,25 @@ export type OpportunityTag = Tables<'opportunity_tags'>
 export type OpportunityWithDetails = Opportunity & {
   companies: Pick<Company, 'id' | 'name' | 'logo_url'> | null
   opportunity_tags: Pick<OpportunityTag, 'tag_name'>[]
+}
+
+export type OpportunityWithCompany = Opportunity & {
+  company: {
+    id: string
+    name: string
+    logo_url: string | null
+    website_url: string | null
+    industry: string | null
+  } | null
+  opportunity_tags: { tag_name: string }[]
+}
+
+// ─── V2 Recommendation Types ────────────────────────────────────────
+export interface RankedOpportunity extends Opportunity {
+  match_score: number
+  matched_skills: string[]
+  missing_skills: string[]
+  skill_coverage_pct: number
 }
 
 // ─── Search Filter Params (mirrors URL search params) ───────────────
@@ -26,6 +51,14 @@ export type SearchFilters = {
   sort?: 'relevance' | 'newest' | 'deadline'
   page?: number
 }
+
+export const RecommendedOpportunitiesQuerySchema = z.object({
+  category:          z.string().optional(),
+  location:          z.string().optional(),
+  experience_level:  z.string().optional(),
+  limit:             z.coerce.number().int().min(1).max(100).default(50),
+})
+export type RecommendedOpportunitiesQuery = z.infer<typeof RecommendedOpportunitiesQuerySchema>
 
 // ─── Constants ──────────────────────────────────────────────────────
 export const OPPORTUNITY_CATEGORIES = [
@@ -55,3 +88,8 @@ export const DEADLINE_OPTIONS = [
 ] as const
 
 export const PAGE_SIZE = 20
+
+// ─── Extraction status guard ─────────────────────────────────────────
+export function isProcessed(opp: Opportunity): boolean {
+  return opp.skill_extraction_status === 'processed'
+}
