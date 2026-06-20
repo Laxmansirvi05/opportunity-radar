@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -19,7 +19,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@reactive-resume/schema/*": ["./lib/resume-toolkit/schema/*"],
+      "@reactive-resume/utils/*": ["./lib/resume-toolkit/utils/*"],
+      "@reactive-resume/pdf/*": ["./lib/resume-toolkit/pdf/*"],
+      "@reactive-resume/resume/*": ["./lib/resume-toolkit/resume/*"],
+      "@reactive-resume/fonts": ["./lib/resume-toolkit/fonts/index.ts"]
     }
   },
   "include": [

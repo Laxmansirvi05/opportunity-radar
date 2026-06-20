@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/search', icon: 'search', label: 'Search' },
   { href: '/tracker', icon: 'assignment_turned_in', label: 'Tracker' },
   { href: '/dashboard', icon: 'dashboard', label: 'Command Center' },
+  { href: '/resume', icon: 'document_scanner', label: 'Resume Toolkit' },
   { href: '/profile', icon: 'person', label: 'Profile' },
 ]
 

@@ -6,6 +6,7 @@ import { SaveForLaterButton } from '@/features/opportunities/components/opportun
 import { ReportBrokenLinkButton } from '@/features/opportunities/components/opportunity-detail/report-broken-link-button'
 import { ApplyWorkflowButton } from '@/features/opportunities/components/opportunity-detail/apply-workflow-button'
 import { ShareOpportunityButton } from '@/features/opportunities/components/opportunity-detail/share-opportunity-button'
+import { ATSAnalysisCard } from '@/features/opportunities/components/opportunity-detail/ats-analysis-card'
 import { getDeadlineInfo } from '@/features/opportunities/utils/deadline'
 import { extractSkillsFromDescription, sanitizeAndFormatDescription } from '@/utils/skills-parser'
 import { CompanyLogo } from '@/features/opportunities/components/company-logo'
@@ -292,6 +293,9 @@ export default async function OpportunityDetailsPage({
               You will be redirected to the company's portal.
             </p>
           </div>
+
+          {/* ATS Analysis Card */}
+          <ATSAnalysisCard opportunityId={opp.id} expired={isExpired} />
 
           {/* Trust Indicators Card */}
           <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
