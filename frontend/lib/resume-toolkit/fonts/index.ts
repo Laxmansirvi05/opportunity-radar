@@ -1,4 +1,4 @@
-import { unique } from "@reactive-resume/utils/field";
+import { unique } from "@/lib/resume-toolkit/utils/field";
 import webFontListJSON from "./webfontlist.json";
 
 export type FontCategory = "display" | "handwriting" | "monospace" | "serif" | "sans-serif";

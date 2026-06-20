@@ -1,0 +1,1 @@
+export const Combobox = ({ value, onValueChange, options }: any) => <select value={value} onChange={e => onValueChange(e.target.value)}>{options?.map((o:any)=><option key={o.value} value={o.value}>{o.label}</option>)}</select>;

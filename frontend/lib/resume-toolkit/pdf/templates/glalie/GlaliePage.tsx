@@ -2,7 +2,7 @@ import type { Style } from "@react-pdf/types";
 import type { TemplatePageProps } from "../../document";
 import type { TemplateColorRoles, TemplateFeatures, TemplateStyleContext, TemplateStyleSlots } from "../shared/types";
 import { useMemo } from "react";
-import { parseColorString, rgbaStringToHex } from "@reactive-resume/utils/color";
+import { parseColorString, rgbaStringToHex } from "@/lib/resume-toolkit/utils/color";
 import { useRender } from "../../context";
 import { Image, Page, StyleSheet, View } from "../../renderer";
 import { CustomFieldContactItem, WebsiteContactItem } from "../shared/contact-item";

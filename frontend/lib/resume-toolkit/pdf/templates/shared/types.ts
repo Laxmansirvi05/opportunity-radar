@@ -1,4 +1,4 @@
-import type { CustomSection as SchemaCustomSection } from "@reactive-resume/schema/resume/data";
+import type { CustomSection as SchemaCustomSection } from "@/lib/resume-toolkit/schema/resume/data";
 import type { Icon } from "phosphor-icons-react-pdf/dynamic";
 import type { ComponentProps } from "react";
 import type { StyleInput, TemplatePlacement } from "./styles";

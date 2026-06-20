@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultResumeData } from "@reactive-resume/schema/resume/default";
+import { defaultResumeData } from "@/lib/resume-toolkit/schema/resume/default";
 import { applyResumePatches, createResumePatches, jsonPatchOperationSchema, ResumePatchError } from "./patch";
 
 describe("jsonPatchOperationSchema", () => {

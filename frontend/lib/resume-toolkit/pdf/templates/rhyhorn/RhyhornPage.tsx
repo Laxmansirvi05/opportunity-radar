@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { TemplatePageProps } from "../../document";
 import type { TemplateColorRoles, TemplateStyleContext, TemplateStyleSlots } from "../shared/types";
 import { useMemo } from "react";
-import { rgbaStringToHex } from "@reactive-resume/utils/color";
+import { rgbaStringToHex } from "@/lib/resume-toolkit/utils/color";
 import { useRender } from "../../context";
 import { Image, Page, StyleSheet, View } from "../../renderer";
 import { CustomFieldContactItem, WebsiteContactItem } from "../shared/contact-item";

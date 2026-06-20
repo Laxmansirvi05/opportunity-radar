@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { resumeDataSchema } from '@reactive-resume/schema/resume/data';
-import { defaultResumeData } from '@reactive-resume/schema/resume/default';
-import type { ResumeData } from '@reactive-resume/schema/resume/data';
+import { resumeDataSchema } from '@/lib/resume-toolkit/schema/resume/data';
+import { defaultResumeData } from '@/lib/resume-toolkit/schema/resume/default';
+import type { ResumeData } from '@/lib/resume-toolkit/schema/resume/data';
 
 // This is the shape expected by Reactive Resume components
 export const reactiveResumeSchema = z.object({

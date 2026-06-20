@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { defaultResumeData } from "@reactive-resume/schema/resume/default";
+import { defaultResumeData } from "@/lib/resume-toolkit/schema/resume/default";
 import { getResumeSectionTitle, resolveSectionTitle } from "./section-title";
 
 describe("resolveSectionTitle", () => {

@@ -1,4 +1,4 @@
-import type { Website } from "@reactive-resume/schema/resume/data";
+import type { Website } from "@/lib/resume-toolkit/schema/resume/data";
 
 type ItemWebsite = Website & {
 	inlineLink?: boolean | undefined;

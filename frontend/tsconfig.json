@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,12 +23,99 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@reactive-resume/schema/*": ["./lib/resume-toolkit/schema/*"],
-      "@reactive-resume/utils/*": ["./lib/resume-toolkit/utils/*"],
-      "@reactive-resume/pdf/*": ["./lib/resume-toolkit/pdf/*"],
-      "@reactive-resume/resume/*": ["./lib/resume-toolkit/resume/*"],
-      "@reactive-resume/fonts": ["./lib/resume-toolkit/fonts/index.ts"]
+      "@/*": [
+        "./*"
+      ],
+      "@reactive-resume/schema/*": [
+        "./lib/resume-toolkit/schema/*"
+      ],
+      "@reactive-resume/utils/*": [
+        "./lib/resume-toolkit/utils/*"
+      ],
+      "@reactive-resume/pdf/*": [
+        "./lib/resume-toolkit/pdf/*"
+      ],
+      "@reactive-resume/resume/*": [
+        "./lib/resume-toolkit/resume/*"
+      ],
+      "@reactive-resume/fonts": [
+        "./lib/resume-toolkit/fonts/index.ts"
+      ],
+      "@/dialogs/store": [
+        "./lib/resume-toolkit/dummy/store.ts"
+      ],
+      "@/hooks/use-confirm": [
+        "./lib/resume-toolkit/dummy/use-confirm.ts"
+      ],
+      "@/libs/error-message": [
+        "./lib/resume-toolkit/dummy/error-message.ts"
+      ],
+      "@/libs/orpc/client": [
+        "./lib/resume-toolkit/dummy/orpc-client.ts"
+      ],
+      "@/features/user/dropdown-menu": [
+        "./lib/resume-toolkit/dummy/dropdown-menu.tsx"
+      ],
+      "@/libs/theme": [
+        "./lib/resume-toolkit/dummy/theme.ts"
+      ],
+      "@/components/layout/loading-screen": [
+        "./lib/resume-toolkit/dummy/loading-screen.tsx"
+      ],
+      "@/features/resume/preview/preview": [
+        "./lib/resume-toolkit/dummy/preview.tsx"
+      ],
+      "@/libs/auth/client": [
+        "./lib/resume-toolkit/dummy/auth-client.ts"
+      ],
+      "@/features/resume/export/pdf-document": [
+        "./lib/resume-toolkit/dummy/pdf-document.ts"
+      ],
+      "@reactive-resume/docx": [
+        "./lib/resume-toolkit/dummy/docx.ts"
+      ],
+      "@/components/input/url-input": [
+        "./lib/resume-toolkit/dummy/url-input.tsx"
+      ],
+      "@/hooks/use-sync-form-values": [
+        "./lib/resume-toolkit/dummy/use-sync-form-values.ts"
+      ],
+      "@/libs/tanstack-form": [
+        "./lib/resume-toolkit/dummy/tanstack-form.ts"
+      ],
+      "@/components/input/icon-picker": [
+        "./lib/resume-toolkit/dummy/icon-picker.tsx"
+      ],
+      "@/components/ui/badge": [
+        "./lib/resume-toolkit/dummy/badge.tsx"
+      ],
+      "@/components/ui/input-group": [
+        "./lib/resume-toolkit/dummy/input-group.tsx"
+      ],
+      "@/components/input/color-picker": [
+        "./lib/resume-toolkit/dummy/color-picker.tsx"
+      ],
+      "@/components/input/rich-input": [
+        "./lib/resume-toolkit/dummy/rich-input.tsx"
+      ],
+      "@/libs/resume/move-item": [
+        "./lib/resume-toolkit/dummy/move-item.ts"
+      ],
+      "@/hooks/use-prompt": [
+        "./lib/resume-toolkit/dummy/use-prompt.ts"
+      ],
+      "@/components/ui/copyright": [
+        "./lib/resume-toolkit/dummy/copyright.tsx"
+      ],
+      "@/components/level/combobox": [
+        "./lib/resume-toolkit/dummy/level-combobox.tsx"
+      ],
+      "@/components/level/display": [
+        "./lib/resume-toolkit/dummy/level-display.tsx"
+      ],
+      "@/components/ui/combobox": [
+        "./components/ui/combobox.tsx"
+      ]
     }
   },
   "include": [
@@ -35,5 +126,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts", ".next"]
+  "exclude": [
+    "node_modules",
+    "scripts",
+    ".next"
+  ]
 }

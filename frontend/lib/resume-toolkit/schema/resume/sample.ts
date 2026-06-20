@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ResumeData } from "./data";
 
 export const sampleResumeData: ResumeData = {

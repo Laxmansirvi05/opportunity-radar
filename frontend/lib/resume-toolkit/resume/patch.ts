@@ -1,7 +1,7 @@
-import type { ResumeData } from "@reactive-resume/schema/resume/data";
+import type { ResumeData } from "@/lib/resume-toolkit/schema/resume/data";
 import jsonpatch, { type JsonPatchError, type Operation } from "fast-json-patch";
 import z from "zod";
-import { resumeDataSchema } from "@reactive-resume/schema/resume/data";
+import { resumeDataSchema } from "@/lib/resume-toolkit/schema/resume/data";
 
 /**
  * A Zod schema that models JSON Patch (RFC 6902) operations as a discriminated union on `op`.
