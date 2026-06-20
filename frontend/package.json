@@ -38,6 +38,7 @@
     "cjk-regex": "^3.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "deepmerge-ts": "^7.1.5",
     "dompurify": "^3.4.11",
     "fast-json-patch": "^3.1.1",
