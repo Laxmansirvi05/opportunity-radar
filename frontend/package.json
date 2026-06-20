@@ -13,6 +13,9 @@
     "test:coverage": "vitest run --coverage",
     "cron:consume": "npx tsx scripts/run-cron.ts"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
     "@ai-sdk/google": "^3.0.83",
     "@ai-sdk/openai-compatible": "^2.0.51",
