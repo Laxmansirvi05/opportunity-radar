@@ -1,1 +1,0 @@
-export const Badge = (props: any) => <span {...props} />;

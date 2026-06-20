@@ -290,7 +290,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 ('avatars', 'avatars', false),
 ('company-logos', 'company-logos', true),
 ('report-evidence', 'report-evidence', false)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- Avatars RLS
 CREATE POLICY "Users can view their own avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars' AND auth.uid() = owner);

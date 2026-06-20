@@ -19,7 +19,8 @@ CREATE TABLE resumes (
   user_id                     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   file_url                    TEXT NOT NULL,
   file_name                   TEXT,
-  parsed_data                 JSONB DEFAULT '{}',
+  parsed_data                 JSONB,
+  data                        JSONB DEFAULT '{}'::jsonb,
   -- Denormalised skill columns for fast ATS/Rec Engine queries (Change 2)
   extracted_skills            TEXT[] DEFAULT '{}',
   extracted_project_keywords  TEXT[] DEFAULT '{}',
