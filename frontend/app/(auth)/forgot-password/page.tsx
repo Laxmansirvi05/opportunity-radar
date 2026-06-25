@@ -1,30 +1,87 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordContent() {
+  const searchParams = useSearchParams()
+  const isVerified = searchParams.get('verified') === 'true'
+
   const [isSuccess, setIsSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  
+  const supabase = createClient()
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSendResetLink(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
+    setErrorMessage(null)
     
-    // Integrate with Supabase reset password later
-    setTimeout(() => {
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+
+    if (!email) {
+      setErrorMessage('Please enter an email address.')
       setIsLoading(false)
-      setIsSuccess(true)
-    }, 800)
+      return
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      })
+
+      if (error) {
+        setErrorMessage(error.message)
+      } else {
+        setIsSuccess(true)
+      }
+    } catch (err) {
+      setErrorMessage('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleUpdatePassword(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setIsLoading(true)
+    setErrorMessage(null)
+
+    const formData = new FormData(e.currentTarget)
+    const password = formData.get('password') as string
+
+    if (!password || password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
+
+      if (error) {
+        setErrorMessage(error.message)
+      } else {
+        setIsSuccess(true) // Reusing success state for the final confirmation
+      }
+    } catch (err) {
+      setErrorMessage('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   function resetView() {
     setIsSuccess(false)
+    setErrorMessage(null)
   }
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center">
-      {/* Header Section (Minimal Branding) */}
       <header className="w-full flex justify-center py-xl bg-surface border-b border-outline-variant">
         <div className="flex items-center gap-sm">
           <div className="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center">
@@ -34,25 +91,30 @@ export default function ForgotPasswordPage() {
         </div>
       </header>
 
-      {/* Main Content Canvas */}
       <main className="flex-grow flex items-center justify-center w-full px-margin-mobile relative">
-        {/* Recovery Card */}
         <div className={`max-w-[440px] w-full bg-surface-container-lowest p-xl rounded-xl border transition-all duration-300 ${isSuccess ? 'border-secondary/30' : 'border-outline-variant'}`}>
           
-          {/* Step 1: Request Reset */}
-          {!isSuccess && (
+          {/* Step 1: Request Reset (if not verified and not successful) */}
+          {!isVerified && !isSuccess && (
             <div className="space-y-lg">
               <div className="text-center mb-xl">
                 <h1 className="font-headline-lg text-headline-lg text-on-surface mb-sm">Forgot password?</h1>
                 <p className="font-body-md text-body-md text-on-surface-variant">No worries, it happens. Enter the email address associated with your account and we&apos;ll send you a recovery link.</p>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-md">
+              <form onSubmit={handleSendResetLink} className="space-y-md">
+                {errorMessage && (
+                  <div className="p-sm bg-error/10 border border-error/20 rounded-lg flex items-start gap-xs text-error">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
+                    <p className="font-body-sm text-body-sm mt-0.5">{errorMessage}</p>
+                  </div>
+                )}
                 <div className="space-y-xs">
                   <label className="font-label-md text-label-md text-on-surface-variant block ml-xs" htmlFor="email">Email Address</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-[20px]">mail</span>
                     <input 
                       id="email" 
+                      name="email"
                       type="email" 
                       required 
                       placeholder="name@university.edu" 
@@ -84,26 +146,80 @@ export default function ForgotPasswordPage() {
             </div>
           )}
 
-          {/* Step 2: Success State */}
+          {/* Step 2: Set New Password (if verified and not successful) */}
+          {isVerified && !isSuccess && (
+            <div className="space-y-lg">
+              <div className="text-center mb-xl">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-sm">Reset password</h1>
+                <p className="font-body-md text-body-md text-on-surface-variant">Enter a new, strong password below.</p>
+              </div>
+              <form onSubmit={handleUpdatePassword} className="space-y-md">
+                {errorMessage && (
+                  <div className="p-sm bg-error/10 border border-error/20 rounded-lg flex items-start gap-xs text-error">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
+                    <p className="font-body-sm text-body-sm mt-0.5">{errorMessage}</p>
+                  </div>
+                )}
+                <div className="space-y-xs">
+                  <label className="font-label-md text-label-md text-on-surface-variant block ml-xs" htmlFor="password">New Password</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
+                    <input 
+                      id="password" 
+                      name="password"
+                      type="password" 
+                      required 
+                      minLength={6}
+                      placeholder="Enter new password" 
+                      className="w-full pl-xl pr-md py-md bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none" 
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full py-md px-lg bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container active:scale-[0.98] transition-all flex items-center justify-center gap-sm shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                  ) : (
+                    <span>Update Password</span>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Step 3: Success State (Shared for Reset Link Sent OR Password Updated) */}
           {isSuccess && (
             <div className="space-y-lg text-center animate-in fade-in zoom-in duration-300">
               <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-lg">
                 <span className="material-symbols-outlined text-secondary text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
               </div>
               <div>
-                <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">Check your inbox</h2>
-                <p className="font-body-md text-body-md text-on-surface-variant">We&apos;ve sent a password reset link to your email. Please click the link to create a new password.</p>
+                <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
+                  {isVerified ? 'Password updated' : 'Check your inbox'}
+                </h2>
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  {isVerified 
+                    ? 'Your password has been successfully updated. You can now log in.' 
+                    : 'We\'ve sent a password reset link to your email. Please click the link to create a new password.'}
+                </p>
               </div>
-              <div className="bg-surface-container-low p-md rounded-lg text-left">
-                <p className="font-label-sm text-label-sm text-on-surface-variant mb-xs">Didn&apos;t receive the email?</p>
-                <p className="font-body-md text-body-md text-on-surface">Check your spam folder or try again in <span className="font-bold text-primary">59s</span></p>
-              </div>
-              <button 
-                onClick={resetView}
-                className="w-full py-md border border-outline-variant text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-container-high transition-all cursor-pointer"
-              >
-                Resend link
-              </button>
+              {!isVerified && (
+                <>
+                  <div className="bg-surface-container-low p-md rounded-lg text-left">
+                    <p className="font-label-sm text-label-sm text-on-surface-variant mb-xs">Didn&apos;t receive the email?</p>
+                    <p className="font-body-md text-body-md text-on-surface">Check your spam folder or try again.</p>
+                  </div>
+                  <button 
+                    onClick={resetView}
+                    className="w-full py-md border border-outline-variant text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-container-high transition-all cursor-pointer"
+                  >
+                    Resend link
+                  </button>
+                </>
+              )}
               <div className="pt-lg">
                 <Link href="/login" className="flex items-center justify-center gap-xs font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">
                   <span className="material-symbols-outlined text-[16px]">arrow_back</span>
@@ -134,5 +250,17 @@ export default function ForgotPasswordPage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <span className="material-symbols-outlined animate-spin text-[32px] text-primary">progress_activity</span>
+      </div>
+    }>
+      <ForgotPasswordContent />
+    </Suspense>
   )
 }
