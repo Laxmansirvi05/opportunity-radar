@@ -41,6 +41,11 @@ export async function GET(request: Request) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Password recovery — redirect to the update-password form
+      if (type === 'recovery') {
+        return NextResponse.redirect(`${origin}/forgot-password?verified=true`)
+      }
+
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
 
