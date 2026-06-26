@@ -19,7 +19,12 @@ export async function loginAction(formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    if (error.message.includes('Invalid login credentials')) {
+      return { error: 'Invalid email or password. Please try again.' }
+    } else if (error.message.includes('rate limit')) {
+      return { error: 'Too many attempts. Please try again later.' }
+    }
+    return { error: 'An error occurred during login. Please try again.' }
   }
 
   revalidatePath('/', 'layout')
@@ -49,7 +54,14 @@ export async function signupAction(formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    if (error.message.includes('already registered')) {
+      return { error: 'An account with this email already exists.' }
+    } else if (error.message.includes('weak')) {
+      return { error: 'Password is too weak. Please use a stronger password.' }
+    } else if (error.message.includes('rate limit')) {
+      return { error: 'Too many attempts. Please try again later.' }
+    }
+    return { error: 'An error occurred during signup. Please try again.' }
   }
 
   revalidatePath('/', 'layout')

@@ -35,12 +35,17 @@ function ForgotPasswordContent() {
       })
 
       if (error) {
-        setErrorMessage(error.message)
+        // Map common Supabase errors to user-friendly messages
+        if (error.message.includes('rate limit')) {
+          setErrorMessage('Too many requests. Please try again later.')
+        } else {
+          setErrorMessage('Failed to send reset link. Please verify your email and try again.')
+        }
       } else {
         setIsSuccess(true)
       }
     } catch (err) {
-      setErrorMessage('An unexpected error occurred. Please try again.')
+      setErrorMessage('A network error occurred. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -64,12 +69,18 @@ function ForgotPasswordContent() {
       const { error } = await supabase.auth.updateUser({ password })
 
       if (error) {
-        setErrorMessage(error.message)
+        if (error.message.includes('New password should be different')) {
+          setErrorMessage('New password must be different from the old password.')
+        } else if (error.message.includes('weak')) {
+          setErrorMessage('Password is too weak. Please use a stronger password.')
+        } else {
+          setErrorMessage('Failed to update password. Your reset link may have expired.')
+        }
       } else {
         setIsSuccess(true) // Reusing success state for the final confirmation
       }
     } catch (err) {
-      setErrorMessage('An unexpected error occurred. Please try again.')
+      setErrorMessage('A network error occurred. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
