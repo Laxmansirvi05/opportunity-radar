@@ -254,9 +254,9 @@ function ForgotPasswordContent() {
         <div className="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center px-gutter gap-md">
           <p className="font-label-sm text-label-sm text-on-surface-variant">© 2026 Opportunity Radar</p>
           <div className="flex gap-lg">
-            <Link href="#" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</Link>
-            <Link href="#" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link href="#" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Support</Link>
+            <Link href="/terms" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/support" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Support</Link>
           </div>
         </div>
       </footer>

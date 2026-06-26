@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { OpportunitySearchCard } from '@/features/opportunities/components/search/opportunity-search-card'
 import { SaveForLaterButton } from '@/features/opportunities/components/opportunity-detail/save-for-later-button'
@@ -355,7 +356,13 @@ export default async function OpportunityDetailsPage({
               <div className="flex items-center gap-3">
                 {opp.recruiter_avatar_url && (
                   <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/50">
-                    <img src={opp.recruiter_avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    <Image
+                      src={opp.recruiter_avatar_url}
+                      alt={`${opp.recruiter_name} avatar`}
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 )}
                 <div className="flex flex-col">
@@ -391,10 +398,10 @@ export default async function OpportunityDetailsPage({
         <div className="px-4 md:px-8 max-w-[1600px] mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-bold text-primary">Opportunity Radar</div>
           <div className="flex items-center gap-6 text-sm font-medium text-on-surface-variant">
-            <Link href="#" className="hover:text-primary transition-colors">About</Link>
+            <Link href="/" className="hover:text-primary transition-colors">About</Link>
             <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Contact</Link>
+            <Link href="/support" className="hover:text-primary transition-colors">Contact</Link>
           </div>
           <div className="text-xs text-on-surface-variant font-medium">
             © 2026 Opportunity Radar

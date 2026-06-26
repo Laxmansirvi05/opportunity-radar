@@ -47,8 +47,8 @@ export default function VerifyEmailPage() {
               </div>
 
               <div className="mt-xl pt-lg border-t border-outline-variant w-full">
-                <p className="font-label-md text-label-md text-on-surface-variant">
-                  Did not receive anything? <Link href="#" className="text-primary hover:underline font-semibold">Check your spam folder</Link> or try again in 5 minutes.
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-xs">
+                  Did not receive anything? <span className="text-primary font-semibold">Check your spam folder</span> or try again in 5 minutes.
                 </p>
               </div>
             </div>
@@ -79,10 +79,10 @@ export default function VerifyEmailPage() {
               </div>
 
               <div className="mt-xl flex flex-col items-center gap-md">
-                <div className="flex -space-x-2">
-                  <img alt="User profile" className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMtpUqmwmLI4bCqe5VUgcdwV7xs_9j5A0xbIrCgMlyuDXAcVWTln9tTEGwZDerc2StnDNysyts8zFs4hAtGfsEN_akPrMfO3mw4UkfwjIu6aqR1Z3uhiyn-wjQVF_VSS-pP9ErNUdSYZv2-9ZAXgNlDjohoNTcPa75jh6MMhVpIzXWy3foVcvSPhLQt4OI2OQSv3CH0GaVlnAkvrp5mBbPlHUdQhXBPJvhoR2AiCpF8L8jXCq1UHrLWL_pE45K3iCK3ba_4ZSiXIfZ" />
-                  <img alt="User profile" className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4rU58TBwQBbcpzirolT3IhxiWlPrVNZuYeWjbHVykJwQ-dju6M46TS16fw1_poxfKi_C2po60Ho1K_7uTpjHVpIhoeAkrNv5OQjotk23Kx9mXQSAlcP-5szZnmHd-pUQuaAFVRhA2HGEqzBFFRjKkxzEE9iTV-nRwG-gX8EAhx9CUNeW1pLRUdit981mqiWjk0dKOxdhYGOBWtya8aCthRSxIEn5WpnvkefIqFkrhClduE-6zRztZXZSX9DWxQdkuml4sR15aTjJQ" />
-                  <img alt="User profile" className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQwM39bgSzmaKdtPJ6CHcwVGJSFVEwQSaS0zZP4rok1z62k5Iu1QoEFsKgXnO5xGIN65n8KHFkCfO3QMNzrKB5xaUtx1RtiYJorZkSWra-WV1x8MM_vY3qx0F_aYDepk3qu_6UeH4q-2doCDDg1-DJyk4IO4yxYdEnysbs7J1aYlF7daLKMhfqpqkOHTbNdaKysmzhwpQSIAjY4wwdj1YHFWk0XhN1UbwxZaHMNtjZj3Kqwvzn-yYo5Rw2_OrQU2hpFV7yV4LT0WUO" />
+                <div className="flex -space-x-2" aria-hidden="true">
+                  <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-primary/20 text-primary font-semibold text-xs flex items-center justify-center">A</div>
+                  <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-secondary/20 text-secondary font-semibold text-xs flex items-center justify-center">R</div>
+                  <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-tertiary/20 text-tertiary font-semibold text-xs flex items-center justify-center">S</div>
                 </div>
                 <p className="font-label-sm text-label-sm text-on-surface-variant">Join 2,400+ students already advancing their careers.</p>
               </div>
@@ -97,9 +97,9 @@ export default function VerifyEmailPage() {
         <div className="max-w-container-max mx-auto px-gutter flex flex-col md:flex-row justify-between items-center gap-md">
           <div className="font-label-md text-label-md font-bold text-primary">Opportunity Radar</div>
           <div className="flex gap-lg">
-            <Link href="#" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</Link>
-            <Link href="#" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link href="#" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Support</Link>
+            <Link href="/terms" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/support" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Support</Link>
           </div>
           <div className="font-label-sm text-label-sm text-on-surface-variant opacity-80">
             © 2026 Opportunity Radar

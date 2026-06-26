@@ -12,6 +12,7 @@ export function MobileBottomNav() {
         <li>
           <Link
             href="/hub"
+            aria-label="Hub"
             className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/hub' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
           >
             <span className={`material-symbols-outlined mb-1 ${pathname === '/hub' ? 'filled' : ''}`}>explore</span>
@@ -21,6 +22,7 @@ export function MobileBottomNav() {
         <li>
           <Link
             href="/search"
+            aria-label="Search"
             className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/search' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
           >
             <span className={`material-symbols-outlined mb-1 ${pathname === '/search' ? 'filled' : ''}`}>search</span>
@@ -30,6 +32,7 @@ export function MobileBottomNav() {
         <li>
           <Link
             href="/tracker"
+            aria-label="Tracker"
             className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/tracker' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
           >
             <span className={`material-symbols-outlined mb-1 ${pathname === '/tracker' ? 'filled' : ''}`}>assignment_turned_in</span>
@@ -39,6 +42,7 @@ export function MobileBottomNav() {
         <li>
           <Link
             href="/dashboard"
+            aria-label="Command Center"
             className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/dashboard' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
           >
             <span className={`material-symbols-outlined mb-1 ${pathname === '/dashboard' ? 'filled' : ''}`}>dashboard</span>

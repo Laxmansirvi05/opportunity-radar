@@ -14,6 +14,17 @@ const cspHeader = `
 `;
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      // Google user avatars (recruiter avatars from Supabase profiles)
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      // Google favicon service (company logos)
+      { protocol: 'https', hostname: 'www.google.com', pathname: '/s2/favicons/**' },
+      // Supabase Storage (resume uploads, user-uploaded logos)
+      { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: '*.supabase.in' },
+    ],
+  },
   async headers() {
     return [
       {

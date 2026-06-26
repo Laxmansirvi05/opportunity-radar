@@ -30,6 +30,7 @@ export function ShareOpportunityButton({ title }: { title: string }) {
   return (
     <button 
       onClick={handleShare}
+      aria-label={copied ? 'Link copied' : 'Share opportunity'}
       className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-outline-variant text-on-surface-variant text-sm font-bold shadow-sm hover:bg-surface-container transition-colors cursor-pointer w-full"
     >
       <span className="material-symbols-outlined text-[18px]">{copied ? 'check' : 'share'}</span>

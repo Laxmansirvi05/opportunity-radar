@@ -40,6 +40,7 @@ export function ReportBrokenLinkButton({ opportunityId }: ReportBrokenLinkButton
     <button
       onClick={handleReport}
       disabled={isLoading || isReported}
+      aria-label={isReported ? 'Report submitted' : 'Report broken link'}
       className={`mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors w-full ${
         isReported
           ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
