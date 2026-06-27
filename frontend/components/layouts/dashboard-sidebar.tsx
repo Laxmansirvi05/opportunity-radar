@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: '/hub', icon: 'explore', label: 'Hub' },
   { href: '/search', icon: 'search', label: 'Search' },
   { href: '/tracker', icon: 'assignment_turned_in', label: 'Tracker' },
+  { href: '/resume', icon: 'description', label: 'Resume' },
   { href: '/dashboard', icon: 'dashboard', label: 'Command Center' },
   { href: '/profile', icon: 'person', label: 'Profile' },
 ]

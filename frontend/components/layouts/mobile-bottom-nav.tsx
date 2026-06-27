@@ -49,6 +49,16 @@ export function MobileBottomNav() {
             <span className={`font-label-sm ${pathname === '/dashboard' ? 'font-bold' : ''}`}>Command</span>
           </Link>
         </li>
+        <li>
+          <Link
+            href="/resume"
+            aria-label="Resume"
+            className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/resume' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
+          >
+            <span className={`material-symbols-outlined mb-1 ${pathname === '/resume' ? 'filled' : ''}`}>description</span>
+            <span className={`font-label-sm ${pathname === '/resume' ? 'font-bold' : ''}`}>Resume</span>
+          </Link>
+        </li>
       </ul>
     </nav>
   )
