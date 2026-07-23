@@ -49,7 +49,7 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
             <span className="material-symbols-outlined text-primary shrink-0">description</span>
             <div className="flex-1 min-w-0">
               <Link
-                href={`/resume/builder/${resume.slug}`}
+                href={`/resume/builder/${resume.id}`}
                 className="text-sm font-medium text-on-background hover:text-primary transition-colors truncate block"
               >
                 {resume.title}
@@ -62,7 +62,7 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
 
           <div className="flex items-center gap-1 sm:shrink-0 mt-2 sm:mt-0">
             {/* Edit */}
-            <Link href={`/resume/builder/${resume.slug}`}>
+            <Link href={`/resume/builder/${resume.id}`}>
               <Button variant="ghost" size="sm" className="h-8 px-2" title="Edit Resume">
                 <span className="material-symbols-outlined text-sm">edit</span>
                 <span className="sr-only">Edit</span>

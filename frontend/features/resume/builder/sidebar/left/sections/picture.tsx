@@ -382,8 +382,23 @@ function PictureSectionForm() {
 	const pictureSrc = picturePreviewQuery.data ?? normalizedPictureUrl;
 	const updateResumeData = useUpdateResumeData();
 
-	const uploadFile = (params, { onSuccess }) => onSuccess("https://picsum.photos/200");
-	const deleteFile = (params, { onSuccess }) => onSuccess();
+	const uploadFile = async (file: File): Promise<{ url: string }> => {
+		const formData = new FormData();
+		formData.append("file", file);
+		const response = await fetch("/api/resume/picture", { method: "POST", body: formData });
+		const payload = await response.json().catch(() => null);
+		if (!response.ok || !payload?.url) throw new Error(payload?.error || "Picture upload failed.");
+		return { url: payload.url };
+	};
+
+	const deleteFile = async (path: string) => {
+		const response = await fetch("/api/resume/picture", {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ path }),
+		});
+		if (!response.ok) throw new Error("Picture deletion failed.");
+	};
 
 	const persist = (data: PictureValues) => {
 		updateResumeData((draft) => {
@@ -409,11 +424,12 @@ function PictureSectionForm() {
 		const pictureUrl = new URL(picture.url, appOrigin);
 		const pictureOrigin = pictureUrl.origin;
 
-		const filename = pictureUrl.pathname.split("/").pop();
-		if (!filename) return;
+		const path = pictureUrl.searchParams.get("path");
 
-		// If the picture is from the same origin, attempt to delete it
-		if (pictureOrigin === appOrigin) deleteFile({ filename });
+		// Only delete pictures served by this authenticated workspace.
+		if (pictureOrigin === appOrigin && pictureUrl.pathname === "/api/resume/picture" && path) {
+			void deleteFile(path).catch(() => toast.error(t`Failed to delete picture.`));
+		}
 
 		form.setFieldValue("url", "");
 		handleAutoSave();
@@ -425,24 +441,21 @@ function PictureSectionForm() {
 
 		const toastId = toast.loading(t`Uploading picture…`);
 
-		uploadFile(file, {
-			onSuccess: ({ url }) => {
+		void uploadFile(file)
+			.then(({ url }) => {
 				form.setFieldValue("url", url);
 				handleAutoSave();
 				toast.dismiss(toastId);
 				if (fileInputRef.current) fileInputRef.current.value = "";
-			},
-			onError: (error) => {
+			})
+			.catch((error: unknown) => {
 				toast.error(
 					getReadableErrorMessage(
 						error,
-						t({
-							comment: "Fallback toast when uploading profile picture for resume fails",
-							message: "Failed to upload picture. Please try again." }),
 					),
 					{ id: toastId },
 				);
-			} });
+			});
 	};
 
 	useEffect(() => {

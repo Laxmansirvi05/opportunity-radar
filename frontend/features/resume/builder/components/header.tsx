@@ -22,6 +22,7 @@ import {
 import { useDialogStore } from "@/features/resume/dialogs/store";
 import { useCurrentResume, usePatchResume } from "@/features/resume/builder/draft";
 import { useConfirm } from "@/hooks/use-confirm";
+import { deleteResume, updateResume } from "@/features/resume-toolkit/services/resume-actions";
 
 import { useBuilderSidebar } from "../../store/sidebar";
 
@@ -87,9 +88,6 @@ function BuilderHeaderDropdown() {
 	const tags = resume.tags;
 	const isLocked = resume.isLocked;
 
-	const deleteResume = (params, { onSuccess }) => onSuccess();
-	const setLockedResume = (params, { onSuccess }) => onSuccess();
-
 	const handleUpdate = () => {
 		openDialog("resume.update", { id, name, slug, tags });
 	};
@@ -106,39 +104,30 @@ function BuilderHeaderDropdown() {
 			if (!confirmation) return;
 		}
 
-		setLockedResume(
-			{ id, isLocked: !isLocked },
-			{
-				onSuccess: () => {
-					patchResume((draft) => {
-						draft.isLocked = !isLocked;
-					});
-				},
-				onError: (error) => {
-					toast.error("An error occurred");
-				},
-			},
-		);
+		const result = await updateResume(id, { is_locked: !isLocked });
+		if (!result.success) {
+			toast.error(result.error || "An error occurred");
+			return;
+		}
+
+		patchResume((draft) => {
+			draft.isLocked = !isLocked;
+		});
 	};
 
-	const handleDelete = () => {
-		confirm({
-			title: t`Delete Resume?`,
+	const handleDelete = async () => {
+		const confirmed = await confirm(t`Delete Resume?`, {
 			description: t`Are you sure you want to delete this resume? This action cannot be undone.`,
-			onConfirm: () => {
-				deleteResume(
-					{ id },
-					{
-						onSuccess: () => {
-							router.push("/resume");
-						},
-						onError: (error) => {
-							toast.error("An error occurred");
-						},
-					},
-				);
-			},
 		});
+		if (!confirmed) return;
+
+		const result = await deleteResume(id);
+		if (!result.success) {
+			toast.error(result.error || "An error occurred");
+			return;
+		}
+
+		router.push("/resume");
 	};
 
 	return (

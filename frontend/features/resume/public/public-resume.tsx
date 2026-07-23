@@ -1,7 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { CircleNotchIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { getRouteApi } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { BrandIcon } from "@reactive-resume/ui/components/brand-icon";
@@ -12,10 +12,8 @@ import { createResumePdfBlob } from "@/features/resume/export/pdf-document";
 import { orpc } from "@/libs/orpc/client";
 import { PdfViewer } from "./pdf-viewer";
 
-const publicResumeRoute = getRouteApi("/$username/$slug");
-
 export function PublicResumeRoute() {
-	const { username, slug } = publicResumeRoute.useParams();
+	const { username, slug } = useParams<{ username: string; slug: string }>();
 
 	const { data: resume } = useQuery(orpc.resume.getBySlug.queryOptions({ input: { username, slug } }));
 	const [isPrinting, setIsPrinting] = useState(false);

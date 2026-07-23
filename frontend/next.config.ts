@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  serverExternalPackages: ['pdf-parse'],
   experimental: {
     swcPlugins: [
       ['@lingui/swc-plugin', {}],

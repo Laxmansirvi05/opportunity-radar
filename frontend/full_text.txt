@@ -1,0 +1,83 @@
+Warning: Setting up fake worker.
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Warning: Unsupported: field.type of Link
+Warning: NOT valid form element
+Strong academic performance across dual-degree programs
+Academic Excellence Award — Intermediate (96.5%)
+Academic Topper — St. Anthony’s Grammar High School
+ACHIEVEMENTS
+Tools :-  Git, GitHub, VS Code, PowerPoint, AutoCAD, Antigravity, Vercel, Claude Code , Google Stitch, Firebase.
+AI / Data :- Data Science, Data Analysis, Machine Learning Fundamentals, Artificial Intelligence
+Web :-  HTML, CSS( Learning )
+Programming :-  C, Python
+SKILLS
+Additional certifications completed in AI tools, cloud fundamentals, and technical skill development.
+Data Analytics Job Simulation — Deloitte / Forage
+AI for Beginners — HP LIFE
+Python Essentials 1 — Cisco Networking Academy / OpenEDG Python Institute
+Introduction to Prompt Engineering with GitHub Copilot
+Introduction to Generative AI — IBM SkillsBuild / Google Cloud
+AWS Foundations: Machine Learning Basics
+CERTIFICATIONS
+ Live Demo: https://aether-weather-dun.vercel.app/
+ • Integrated API-driven data handling to create a fast, practical, and user-friendly experience.
+updates.
+ • Developed a responsive weather application that displays real-time weather conditions, forecast insights, and location-based
+Aether Weather App | HTML, CSS, JavaScript, Weather API, Vercel
+ Git hub repo : https://github.com/Laxmansirvi05/ResumeAI
+ • Streamlined the resume creation process to improve usability, professional presentation, and overall workflow efficiency.
+ • Built an AI-powered resume builder that helps users create ATS-friendly resumes with structured editing and live preview support.
+AI Resume Generator | React, JavaScript, AI Integration
+ Live Demo: https://ai-saas-chat-app-three.vercel.app/chat
+ • Focused on delivering a product-like user experience with fast interaction, clean navigation, and strong visual clarity.
+responsive interface.
+ • Designed and developed a SaaS-style AI chat application with a modern dashboard, sidebar conversation history, and a polished
+AI Chatbox | React, Next.js, Tailwind CSS, Vercel
+PROJECTS
+Academic Topper (2023)
+Award: Academic Excellence (2023)
+CGPA : 9.3
+St. Anthony’s Grammar High School (April 2023)
+SSC (10th Grade) 
+Award: Academic Excellence (2024)
+Percentage: 96.5%
+Gatik Junior College, Hyderabad (May 2025)
+Intermediate (MPC)
+SGPA: 7.17
+IIT Madras  (Expected May 2029 )
+B.Sc in Data Science
+SGPA: 9.5
+Geethanjali College of Engineering & Technology  (Expected May 2029)
+B.Tech in Al & Computer Science Engineering (AI & ML)
+EDUCATION
+ Demonstrated leadership, communication, teamwork, and responsibility in student leadership roles.
+ Represented students and coordinated with faculty on school activities and initiatives.
+Head Boy | St. Anthony’s Grammar High School, Hyderabad
+ Collaborated with teams to ensure smooth operations and effective campus activities.
+ Supported academic and student events through coordination, planning, and execution.
+Student Volunteer | Gatik Junior College, Hyderabad
+ Analyzed case-based scenarios and developed structured insights to support decision-making.
+ Completed hands-on virtual tasks in data analytics and business problem-solving.
+Data Analytics Job Simulation | Deloitte (Forage)
+EXPERIENCE
+building practical technology solutions through continuous learning, real-world projects, and internship opportunities.
+applications, data-driven problem solving, and modern web development. Passionate about Artificial Intelligence, Data Science, and
+Technology and B.Sc in Data Science at IIT Madras. Strong academic foundation with hands-on experience in AI-powered web
+First-year dual-degree student pursuing B.Tech in Computer Science Engineering (AI & ML) at Geethanjali College of Engineering and
+ABOUT ME
++91  8688137388           https://laxmansirvi.vercel.app/            https://github.com/Laxmansirvi05
+Hyderabad, Telangana, India      laxmansirvi2203@gmail.com              linkedin.com/in/laxmansirvi
+LAXMAN SIRVI
+----------------Page (0) Break----------------
+

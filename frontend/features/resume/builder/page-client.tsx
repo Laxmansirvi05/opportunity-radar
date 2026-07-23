@@ -36,12 +36,12 @@ import { CommandPalette } from "@/features/command-palette";
 
 const queryClient = new QueryClient();
 
-export function BuilderPageClient({ resumeId }: { resumeId: string }) {
+export function BuilderPageClient({ initialResume }: { initialResume: Resume }) {
 	const initializeResumeStore = useInitializeResumeStore();
 	const mergeResumeMetadata = useMergeResumeMetadata();
 	const isReady = useResumeStore((state) => state.isReady);
 	const initializedResumeId = useResumeStore((state) => state.resumeId);
-	const isInitialized = isReady && initializedResumeId === resumeId;
+	const isInitialized = isReady && initializedResumeId === initialResume.id;
 
 	useResumeCleanup();
 	useResumeUpdateSubscription();
@@ -56,35 +56,13 @@ export function BuilderPageClient({ resumeId }: { resumeId: string }) {
 
 	useEffect(() => {
 		if (isInitialized) return;
-
-		// Use Reactive Resume's canonical sample until persisted resume loading is connected.
-		const mockResume: Resume = {
-			id: resumeId,
-			name: "Domestic Jade Capybara",
-			slug: "my-resume",
-			tags: [],
-			data: sampleResumeData,
-			isLocked: false,
-			updatedAt: new Date()
-		};
-
-		initializeResumeStore(mockResume);
-	}, [initializeResumeStore, isInitialized, resumeId]);
+		initializeResumeStore(initialResume);
+	}, [initializeResumeStore, isInitialized, initialResume]);
 
 	useEffect(() => {
 		if (!isInitialized) return;
-
-		const mockResume: Resume = {
-			id: resumeId,
-			name: "Domestic Jade Capybara",
-			slug: "my-resume",
-			tags: [],
-			data: sampleResumeData,
-			isLocked: false,
-			updatedAt: new Date()
-		};
-		mergeResumeMetadata(mockResume);
-	}, [mergeResumeMetadata, resumeId, isInitialized]);
+		mergeResumeMetadata(initialResume);
+	}, [mergeResumeMetadata, initialResume, isInitialized]);
 
 	const iconContextValue = useMemo<IconProps>(() => ({ size: 16, weight: "regular" }), []);
 

@@ -1,7 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
+import { listResumes } from '@/features/resume-toolkit/services/resume-actions';
+import { ResumeListClient } from '@/features/resume-toolkit/components/resume-list-client';
 
-export default function ResumeToolkitPrototype() {
+export default async function ResumeToolkitPrototype() {
+  const result = await listResumes();
+  const resumes = result.success ? result.resumes : [];
+
   return (
     <div className="flex w-full gap-8 font-sans items-start" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       
@@ -36,44 +41,48 @@ export default function ResumeToolkitPrototype() {
         </Link>
 
         {/* Card 2: Extract & Edit */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: '8px',
-          padding: '16px', borderRadius: '12px',
-          backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
-        }}>
+        <Link href="/resume/upload" style={{ textDecoration: 'none' }}>
           <div style={{
-            width: '40px', height: '40px', borderRadius: '8px',
-            backgroundColor: '#71f8e4',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+            padding: '16px', borderRadius: '12px',
+            backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#006b5f' }}>post_add</span>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '8px',
+              backgroundColor: '#71f8e4',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#006b5f' }}>post_add</span>
+            </div>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>Extract &amp; Edit</span>
+            <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.5 }}>
+              Import existing documents and convert to editable format.
+            </span>
           </div>
-          <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>Extract &amp; Edit</span>
-          <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.5 }}>
-            Import existing documents and convert to editable format.
-          </span>
-        </div>
+        </Link>
 
         {/* Card 3: ATS Score Checker */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: '8px',
-          padding: '16px', borderRadius: '12px',
-          backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
-        }}>
+        <Link href="/resume/ats" style={{ textDecoration: 'none' }}>
           <div style={{
-            width: '40px', height: '40px', borderRadius: '8px',
-            backgroundColor: '#ffdbcd',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+            padding: '16px', borderRadius: '12px',
+            backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#943700' }}>fact_check</span>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '8px',
+              backgroundColor: '#ffdbcd',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#943700' }}>fact_check</span>
+            </div>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>ATS Score Checker</span>
+            <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.5 }}>
+              Instant feedback on how well your resume reads by robots.
+            </span>
           </div>
-          <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>ATS Score Checker</span>
-          <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.5 }}>
-            Instant feedback on how well your resume reads by robots.
-          </span>
-        </div>
+        </Link>
 
         {/* Card 4: AI Optimizer (Active — dashed selection border) */}
         <div style={{
@@ -98,6 +107,20 @@ export default function ResumeToolkitPrototype() {
               Smart enhancement suggestions based on your target role.
             </span>
           </div>
+        </div>
+
+        {/* Resumes List */}
+        <div className="mt-6 flex flex-col gap-4">
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+            Your Resumes
+          </h2>
+          {resumes.length > 0 ? (
+            <ResumeListClient initialResumes={resumes} />
+          ) : (
+            <div className="text-sm text-on-surface-variant p-4 border border-outline-variant rounded-xl bg-surface">
+              No resumes created yet. Click &quot;Build from Scratch&quot; to get started.
+            </div>
+          )}
         </div>
       </div>
 

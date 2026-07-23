@@ -39,6 +39,30 @@ type ResumeStore = ResumeStoreState & ResumeStoreActions;
 
 let lockedToastId: string | number | undefined;
 
+import { patchResumeData, updateResume } from "@/features/resume-toolkit/services/resume-actions";
+
+let saveTimeout: ReturnType<typeof setTimeout>;
+function debouncedSaveData(id: string, data: ResumeData) {
+	clearTimeout(saveTimeout);
+	saveTimeout = setTimeout(() => {
+		patchResumeData(id, data).catch(console.error);
+	}, 1500);
+}
+
+let updateTimeout: ReturnType<typeof setTimeout>;
+function debouncedUpdateResume(id: string, updates: Partial<Resume>) {
+	clearTimeout(updateTimeout);
+	updateTimeout = setTimeout(() => {
+		updateResume(id, { 
+			title: updates.name, 
+			slug: updates.slug, 
+			tags: updates.tags, 
+			is_locked: updates.isLocked, 
+			is_public: updates.isPublic 
+		}).catch(console.error);
+	}, 1500);
+}
+
 export const useResumeStore = create<ResumeStore>()(
 	immer((set, get) => ({
 		resume: null,
@@ -82,6 +106,11 @@ export const useResumeStore = create<ResumeStore>()(
 				if (!state.resume) return;
 				fn(state.resume as WritableDraft<Resume>);
 			});
+
+			const updated = get().resume;
+			if (updated) {
+				debouncedUpdateResume(updated.id, updated);
+			}
 		},
 
 		mergeResumeMetadata: (resume) => {
@@ -104,41 +133,22 @@ export const useResumeStore = create<ResumeStore>()(
 
 			if (currentResume.isLocked) {
 				lockedToastId = toast.error(t`This resume is locked and cannot be updated.`, {
-					id: lockedToastId });
+					id: lockedToastId,
+				});
 				return;
 			}
 
 			set((state) => {
-				const nextState = produce(state, (draft) => {
-					if (draft.resume) {
-						fn(draft.resume.data as WritableDraft<ResumeData>);
-					}
-				});
-
-				// Generic logging for debugging all section updates
-				const prevData = state.resume?.data;
-				const nextData = nextState.resume?.data;
-
-				if (prevData && nextData) {
-					// Log section updates
-					for (const [key, section] of Object.entries(nextData.sections)) {
-						const prevSection = prevData.sections[key as keyof typeof prevData.sections];
-						if (prevSection && "items" in prevSection && "items" in section) {
-							if (JSON.stringify(prevSection.items) !== JSON.stringify(section.items)) {
-								console.log(`[ZUSTAND UPDATE SECTION ${key.toUpperCase()}]`, (section.items as any[]).map((i: any) => i.name || i.institution || i.company || i.title || i.id));
-							}
-						}
-					}
-					
-					// Log metadata (theme, typography, template) updates
-					if (JSON.stringify(prevData.metadata) !== JSON.stringify(nextData.metadata)) {
-						console.log(`[ZUSTAND UPDATE METADATA]`, JSON.stringify(nextData.metadata));
-					}
-				}
-
-				return nextState;
+				if (!state.resume) return;
+				fn(state.resume.data as WritableDraft<ResumeData>);
 			});
-		} })),
+
+			const updated = get().resume;
+			if (updated) {
+				debouncedSaveData(updated.id, updated.data);
+			}
+		},
+	})),
 );
 
 export function useInitializeResumeStore() {

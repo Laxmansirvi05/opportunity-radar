@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { ResumeData } from '@/features/resume-toolkit/lib/schema/resume/data'
+import type { ResumeData } from '@reactive-resume/schema/resume/data'
 
 function generateSlug(title: string): string {
   return title
@@ -15,60 +15,121 @@ function generateSlug(title: string): string {
     || 'untitled'
 }
 
-export async function createResume(title: string, data: ResumeData) {
+export async function createResume(
+  title: string,
+  data: ResumeData,
+  metadata?: { slug?: string; tags?: string[] },
+) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Not authenticated' }
-
-  const baseSlug = generateSlug(title || 'Untitled Resume')
-  // Ensure slug is unique for this user
-  const { count } = await supabase
-    .from('resumes')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .like('slug', `${baseSlug}%`)
-
-  const slug = count && count > 0 ? `${baseSlug}-${count}` : baseSlug
+  if (!user) return { success: false as const, error: 'Not authenticated' }
 
   const { data: resume, error } = await supabase
     .from('resumes')
     .insert({
       user_id: user.id,
-      title: title || 'Untitled Resume',
-      slug,
-      data,
+      file_name: title || 'Untitled Resume',
+      status: 'verified',
+      parsed_data: data,
     })
-    .select('id, slug')
+    .select('id, file_name')
     .single()
 
   if (error) {
     console.error('Failed to create resume', error)
-    return { success: false, error: error.message }
+    return { success: false as const, error: error.message }
   }
 
-  revalidatePath('/resume')
-  return { success: true, slug: resume.slug, id: resume.id }
+  return { success: true as const, slug: generateSlug(metadata?.slug || resume.file_name), id: resume.id }
 }
 
-export async function updateResume(id: string, updates: { title?: string; data?: ResumeData }) {
+export async function getResumeById(id: string) {
+  const supabase = await createClient()
+
+  const { data: resume, error } = await supabase
+    .from('resumes')
+    .select('id, file_name, parsed_data, created_at, updated_at')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    return { success: false as const, error: error.message, resume: null }
+  }
+
+  return {
+    success: true as const,
+    resume: {
+      ...resume,
+      title: resume.file_name,
+      data: resume.parsed_data,
+      slug: resume.id,
+      tags: [] as string[],
+      is_public: false,
+      is_locked: false,
+    },
+  }
+}
+
+export async function updateResume(
+  id: string,
+  updates: {
+    title?: string
+    data?: ResumeData
+    slug?: string
+    tags?: string[]
+    is_public?: boolean
+    is_locked?: boolean
+  },
+) {
   const supabase = await createClient()
 
   const updatePayload: Record<string, unknown> = {}
-  if (updates.title !== undefined) updatePayload.title = updates.title
-  if (updates.data !== undefined) updatePayload.data = updates.data
+  if (updates.title !== undefined) updatePayload.file_name = updates.title
+  if (updates.data !== undefined) updatePayload.parsed_data = updates.data
 
-  const { error } = await supabase
+  const { data: resume, error } = await supabase
     .from('resumes')
     .update(updatePayload)
     .eq('id', id)
+    .select('id, file_name')
+    .single()
 
   if (error) {
     console.error('Failed to update resume', error)
-    return { success: false, error: error.message }
+    return { success: false as const, error: error.message }
   }
 
-  revalidatePath('/resume')
-  return { success: true }
+  return {
+    success: true as const,
+    resume: {
+      ...resume,
+      title: resume.file_name,
+      slug: resume.id,
+      tags: updates.tags || [],
+      is_public: updates.is_public || false,
+      is_locked: updates.is_locked || false,
+    },
+  }
+}
+
+/**
+ * Patch only the `data` JSONB column of a resume.
+ * Used by the builder's autosave debounce to persist draft changes.
+ */
+export async function patchResumeData(id: string, data: ResumeData) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('resumes')
+    .update({ parsed_data: data, status: 'verified' })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to patch resume data', error)
+    return { success: false as const, error: error.message }
+  }
+
+  return { success: true as const }
 }
 
 export async function deleteResume(id: string) {
@@ -81,11 +142,32 @@ export async function deleteResume(id: string) {
 
   if (error) {
     console.error('Failed to delete resume', error)
-    return { success: false, error: error.message }
+    return { success: false as const, error: error.message }
   }
 
   revalidatePath('/resume')
-  return { success: true }
+  return { success: true as const }
+}
+
+export async function duplicateResume(
+  id: string,
+  metadata?: { title?: string; slug?: string; tags?: string[] },
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false as const, error: 'Not authenticated' }
+
+  const result = await getResumeById(id)
+  if (!result.success || !result.resume) {
+    return { success: false as const, error: result.error || 'Resume not found' }
+  }
+
+  const original = result.resume
+  const newTitle = metadata?.title || `${original.title} (Copy)`
+  return createResume(newTitle, original.data as ResumeData, {
+    slug: metadata?.slug,
+    tags: metadata?.tags ?? original.tags ?? [],
+  })
 }
 
 export async function getResumeBySlug(slug: string) {
@@ -93,15 +175,26 @@ export async function getResumeBySlug(slug: string) {
 
   const { data: resume, error } = await supabase
     .from('resumes')
-    .select('id, title, slug, data, created_at, updated_at')
-    .eq('slug', slug)
+    .select('id, file_name, parsed_data, created_at, updated_at')
+    .eq('id', slug)
     .single()
 
   if (error) {
-    return { success: false, error: error.message, resume: null }
+    return { success: false as const, error: error.message, resume: null }
   }
 
-  return { success: true, resume }
+  return {
+    success: true as const,
+    resume: {
+      ...resume,
+      title: resume.file_name,
+      data: resume.parsed_data,
+      slug: resume.id,
+      tags: [] as string[],
+      is_public: false,
+      is_locked: false,
+    },
+  }
 }
 
 export async function listResumes() {
@@ -109,13 +202,23 @@ export async function listResumes() {
 
   const { data: resumes, error } = await supabase
     .from('resumes')
-    .select('id, title, slug, created_at, updated_at')
+    .select('id, file_name, created_at, updated_at')
     .order('updated_at', { ascending: false })
 
   if (error) {
     console.error('Failed to list resumes', error)
-    return { success: false, error: error.message, resumes: [] }
+    return { success: false as const, error: error.message, resumes: [] }
   }
 
-  return { success: true, resumes: resumes || [] }
+  return {
+    success: true as const,
+    resumes: (resumes || []).map((resume) => ({
+      ...resume,
+      title: resume.file_name,
+      slug: resume.id,
+      tags: [] as string[],
+      is_public: false,
+      is_locked: false,
+    })),
+  }
 }
