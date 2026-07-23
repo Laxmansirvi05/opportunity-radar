@@ -4,6 +4,7 @@
 
 export type AIFeature =
   | 'resume_parser'
+  | 'resume_ats'
   | 'resume_optimizer'
   | 'skill_extraction'
 
@@ -18,6 +19,7 @@ export interface AIRequest {
   maxTokens?: number      // Default: 500
   temperature?: number    // Default: 0.3
   outputFormat?: 'text' | 'json'  // 'json' activates Gemini JSON mode
+  media?: { data: string; mimeType: string }
 }
 
 // ---------------------------------------------------------------------------

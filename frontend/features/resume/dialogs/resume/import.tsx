@@ -143,31 +143,7 @@ export function ImportResumeDialog(_: DialogProps<"resume.import">) {
 			} catch (error: unknown) {
 				console.error("[IMPORT] GEMINI_FAILED |", error);
 				toast.error(
-					getErrorMessage(error, {
-						allowServerMessage: true,
-						byCode: {
-							BAD_REQUEST: t({
-								comment: "Error shown when AI parsing returns invalid resume structure during import",
-								message: "The imported file could not be parsed into a valid resume.",
-							}),
-							BAD_GATEWAY: t({
-								comment: "Error shown when AI provider is unreachable during PDF/DOCX resume import",
-								message: "Could not reach the AI provider. Please try again.",
-							}),
-							PRECONDITION_FAILED: t({
-								comment: "Error shown when ENCRYPTION_SECRET is not configured",
-								message: "AI providers are unavailable. Please configure ENCRYPTION_SECRET in your environment.",
-							}),
-							TOO_MANY_REQUESTS: t({
-								comment: "Error shown when Gemini quota is exceeded during import",
-								message: "AI quota exceeded. Please wait a minute and try again.",
-							}),
-						},
-						fallback: t({
-							comment: "Fallback toast when importing a resume fails for an unknown reason",
-							message: "Import failed. Make sure you have an AI provider configured in Settings → AI Providers.",
-						}),
-					}),
+					getErrorMessage(error),
 					{ id: toastId, description: null },
 				);
 			} finally {

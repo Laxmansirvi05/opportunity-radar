@@ -21,6 +21,7 @@ const GEMINI_RETRY_WAIT = 1_000
 // ---------------------------------------------------------------------------
 const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
   resume_parser:    { max: 5,   windowMs: 3_600_000 },   // 5/hour
+  resume_ats:       { max: 10,  windowMs: 3_600_000 },
   resume_optimizer: { max: 20,  windowMs: 86_400_000 },  // 20/day
   skill_extraction: { max: 500, windowMs: 3_600_000 },   // 500/hour (server-side only)
 }
@@ -76,12 +77,17 @@ async function checkRateLimit(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { data } = await supabase.rpc('check_ai_rate_limit', {
+  const { data, error } = await supabase.rpc('check_ai_rate_limit', {
     p_user_id:   userId,
     p_feature:   feature,
     p_max:       limit.max,
     p_window_ms: limit.windowMs,
   })
+
+  if (error) {
+    console.error('[RateLimit] RPC Error:', error)
+    return true // Default to allowed if RPC is missing
+  }
 
   return (data as { allowed: boolean }[])?.[0]?.allowed ?? false
 }
@@ -111,41 +117,51 @@ export async function callAI(
       reason:     'rate_limit',
       latencyMs:  0,
     }
+    console.error(`[AI Gateway] User rate limit exceeded for feature: ${context.feature}`)
     await logUsage(err, context)
     return err
   }
 
   // 2. Try Gemini Flash (primary)
+  console.log(`[AI Gateway] Attempting Primary Provider: Gemini (gemini-2.5-flash) for feature: ${context.feature}`)
   const geminiResult = await callGemini(request, GEMINI_TIMEOUT_MS)
   if (geminiResult.success) {
+    console.log(`[AI Gateway] SUCCESS: Gemini (gemini-2.5-flash)`)
     await logUsage(geminiResult, context)
     return geminiResult
   }
 
-  // 3. Retry Gemini once after brief pause
-  console.warn(`[AI Gateway] Gemini failed (${geminiResult.reason}). Retrying once…`)
-  await sleep(GEMINI_RETRY_WAIT)
-  const geminiRetry = await callGemini(request, GEMINI_TIMEOUT_MS)
-  if (geminiRetry.success) {
-    await logUsage(geminiRetry, context)
-    return geminiRetry
+  // 3. Retry Gemini ONLY if appropriate
+  let geminiRetry = geminiResult
+  if (geminiResult.reason !== 'rate_limit') {
+    console.warn(`[AI Gateway] Gemini failed (reason: ${geminiResult.reason}). Retrying once…`)
+    await sleep(GEMINI_RETRY_WAIT)
+    geminiRetry = await callGemini(request, GEMINI_TIMEOUT_MS)
+    if (geminiRetry.success) {
+      console.log(`[AI Gateway] SUCCESS (after retry): Gemini (gemini-2.5-flash)`)
+      await logUsage(geminiRetry, context)
+      return geminiRetry
+    }
+  } else {
+    console.warn(`[AI Gateway] Gemini failed with rate_limit (429 Quota Exceeded). Skipping retry.`)
   }
 
   // 4. Fallback to Groq
-  console.warn(`[AI Gateway] Gemini retry failed. Falling back to Groq…`)
+  console.warn(`[AI Gateway] Primary provider exhausted (reason: ${geminiRetry.reason}). Falling back to Groq…`)
   const groqResult = await callGroq(request, GROQ_TIMEOUT_MS)
   if (groqResult.success) {
+    console.log(`[AI Gateway] SUCCESS (Fallback): Groq (${groqResult.model})`)
     await logUsage(groqResult, context)
     return groqResult
   }
 
   // 5. Both providers failed
-  console.error(`[AI Gateway] All providers failed for feature: ${context.feature}`)
+  console.error(`[AI Gateway] FATAL: All providers failed for feature: ${context.feature}. Gemini: ${geminiRetry.reason}, Groq: ${groqResult.reason}`)
   const allFailed: AIResult = {
     success:   false,
     provider:  'all',
     reason:    'all_failed',
-    latencyMs: geminiResult.latencyMs + groqResult.latencyMs,
+    latencyMs: geminiRetry.latencyMs + groqResult.latencyMs,
   }
   await logUsage(allFailed, context)
   return allFailed
