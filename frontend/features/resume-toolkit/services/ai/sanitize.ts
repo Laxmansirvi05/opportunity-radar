@@ -252,6 +252,8 @@ function mapAiParserVariations(data: Record<string, unknown>): Record<string, un
 					// Map gpa/score → grade
 					if (!item.grade) {
 						if (item.gpa) item.grade = String(item.gpa);
+						else if (item.cgpa) item.grade = String(item.cgpa);
+						else if (item.sgpa) item.grade = String(item.sgpa);
 						else if (item.score) item.grade = String(item.score);
 						else if (item.percentage) item.grade = `${item.percentage}%`;
 					}

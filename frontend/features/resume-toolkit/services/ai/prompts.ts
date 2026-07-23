@@ -26,9 +26,10 @@ export const pdfParserSystemPrompt = `You are an expert, highly meticulous resum
 - Experience & Projects: Capture the FULL description/bullet points. Output HTML using <ul>, <li>, <p>, <br> to perfectly match the original resume's bullet points and paragraphs. Do not merge bullet points.
 - Project Links: Ignore project-specific links/URLs to preserve structural reliability. Only extract text for projects.
 - Dates & Roles: Extract exact company names, roles, and dates for all experiences.
-- Education: Extract degree, institution, location, dates, and any related descriptions, SGPA, CGPA, or percentage EXACTLY as written. NEVER guess the scale or format.
+- Education: Extract degree, institution, location, dates, and any related descriptions. Put SGPA, CGPA, GPA, or percentage in the 'score' field EXACTLY as written. NEVER guess the scale or format.
 - Skills: Extract all explicit skills, technologies, and tools.
-- Certifications/Awards: Extract all listed certifications and awards. NEVER invent a date/year if not present in the PDF. Do NOT convert education awards into standalone achievements unless they are explicitly in an achievements section.
+- Certifications: Extract all listed certifications into the 'certifications' section.
+- Awards: Extract all achievements, awards, competitive programming stats (e.g. 250+ problems solved), and hackathons into the 'awards' section. NEVER invent a date/year if not present in the PDF. Do NOT convert education awards into standalone achievements unless they are explicitly in an achievements section.
 - IDs: generate unique UUIDs for all id fields.
 - hidden: default to false unless explicitly indicated otherwise.
 - columns: default to 1.

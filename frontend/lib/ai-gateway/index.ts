@@ -7,6 +7,7 @@ import {
 } from '@/types/ai'
 import { callGemini } from './providers/gemini'
 import { callGroq } from './providers/groq'
+import { callOpenRouter } from './providers/openrouter'
 import { createClient } from '@supabase/supabase-js'
 
 // ---------------------------------------------------------------------------
@@ -14,6 +15,7 @@ import { createClient } from '@supabase/supabase-js'
 // ---------------------------------------------------------------------------
 const GEMINI_TIMEOUT_MS = 10_000
 const GROQ_TIMEOUT_MS   = 8_000
+const OPENROUTER_TIMEOUT_MS = 15_000
 const GEMINI_RETRY_WAIT = 1_000
 
 // ---------------------------------------------------------------------------
@@ -155,13 +157,22 @@ export async function callAI(
     return groqResult
   }
 
-  // 5. Both providers failed
-  console.error(`[AI Gateway] FATAL: All providers failed for feature: ${context.feature}. Gemini: ${geminiRetry.reason}, Groq: ${groqResult.reason}`)
+  // 5. Fallback to OpenRouter
+  console.warn(`[AI Gateway] Groq fallback exhausted (reason: ${groqResult.reason}). Falling back to OpenRouter…`)
+  const openRouterResult = await callOpenRouter(request, OPENROUTER_TIMEOUT_MS)
+  if (openRouterResult.success) {
+    console.log(`[AI Gateway] SUCCESS (Fallback): OpenRouter (${openRouterResult.model})`)
+    await logUsage(openRouterResult, context)
+    return openRouterResult
+  }
+
+  // 6. All providers failed
+  console.error(`[AI Gateway] FATAL: All providers failed for feature: ${context.feature}. Gemini: ${geminiRetry.reason}, Groq: ${groqResult.reason}, OpenRouter: ${openRouterResult.reason}`)
   const allFailed: AIResult = {
     success:   false,
     provider:  'all',
     reason:    'all_failed',
-    latencyMs: geminiRetry.latencyMs + groqResult.latencyMs,
+    latencyMs: geminiRetry.latencyMs + groqResult.latencyMs + openRouterResult.latencyMs,
   }
   await logUsage(allFailed, context)
   return allFailed

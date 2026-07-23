@@ -8,7 +8,7 @@ export type AIFeature =
   | 'resume_optimizer'
   | 'skill_extraction'
 
-export type AIProvider = 'gemini' | 'groq'
+export type AIProvider = 'gemini' | 'groq' | 'openrouter'
 
 // ---------------------------------------------------------------------------
 // Request
@@ -95,6 +95,10 @@ export function estimateCostUsd(
   if (provider === 'gemini') {
     // Gemini 1.5 Flash pricing
     return tokensInput * 0.000000075 + tokensOutput * 0.0000003
+  }
+  if (provider === 'openrouter') {
+    // OpenRouter models vary, estimate zero for free/low cost development or calculate if needed
+    return 0;
   }
   // Groq free tier
   return 0

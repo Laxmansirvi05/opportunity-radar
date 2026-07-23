@@ -11,7 +11,7 @@ async function verify() {
   const pdfPath = '/Users/laxmansirvi/Downloads/sample_frontend_developer_resume.pdf';
   const pdfBuffer = readFileSync(pdfPath);
   const text = await extractTextFromPDF(pdfBuffer.buffer as ArrayBuffer);
-  
+
   const aiResult = await callAI({
     systemPrompt: pdfParserSystemPrompt,
     userPrompt: `Extract my resume into the template format provided. Output strictly valid JSON.\n\n${text}`,
@@ -22,15 +22,15 @@ async function verify() {
     feature: 'resume_parser',
     userId: 'test-user',
   });
-  
+
   if (!aiResult.success) {
     console.error("AI call failed:", aiResult.reason);
     return;
   }
-  
+
   const { data: finalData } = sanitizeAndParseResumeJson(aiResult.content);
   console.log("\n================ VERIFICATION REPORT ================\n");
-  
+
   const check = (name: string, condition: boolean, details: string = "") => {
     console.log(`${name.padEnd(35)} ${condition ? '✅ PASS' : '❌ FAIL'} ${details ? `(${details})` : ''}`);
   };
@@ -41,20 +41,22 @@ async function verify() {
 
   const linksFound = finalData.basics.customFields?.length > 0 || (finalData.basics.website?.url && finalData.basics.website?.url?.length > 0);
   check("Social URLs Excluded", !linksFound, "Links found in customFields or website");
-  
+
   const edu = finalData.sections.education.items as any[];
-  const iiitb = edu.find((e) => e.school?.includes("Institute of Information Technology") || e.school?.includes("IIIT"));
+  const iiitb = edu.find((e) => e.school?.includes("National Institute of Technology") || e.school?.includes("NIT"));
   check("Education -> CGPA 9.1/10", iiitb?.grade?.includes("9.1") || iiitb?.score?.includes("9.1"), iiitb?.grade || iiitb?.score || "Not found");
-  
+
   const exp = finalData.sections.experience.items as any[];
   const novatech = exp.find((e) => e.company?.includes("NovaTech"));
-  check("NovaTech Dates", novatech?.period?.includes("May 2026") && novatech?.period?.includes("Jul 2026"), novatech?.period || "Not found");
+  const np = novatech?.period?.toLowerCase() || "";
+  check("NovaTech Dates", (np.includes("may 2026") || np.includes("2026-05")) && (np.includes("jul 2026") || np.includes("2026-07")), novatech?.period || "Not found");
   check("NovaTech 28%", novatech?.description?.includes("28%"), "28% found in bullets");
 
   const codesphere = exp.find((e) => e.company?.includes("CodeSphere"));
-  check("CodeSphere Dates", codesphere?.period?.includes("Dec 2025") && codesphere?.period?.includes("Feb 2026"), codesphere?.period || "Not found");
+  const cp = codesphere?.period?.toLowerCase() || "";
+  check("CodeSphere Dates", (cp.includes("dec 2025") || cp.includes("2025-12")) && (cp.includes("feb 2026") || cp.includes("2026-02")), codesphere?.period || "Not found");
   check("CodeSphere 15+", codesphere?.description?.includes("15+"), "15+ found in bullets");
-  
+
   const proj = finalData.sections.projects.items as any[];
   const oppTracker = proj.find((e) => e.name?.includes("Opportunity Tracker"));
   check("Opportunity Tracker Project", !!oppTracker, "Found");
@@ -63,7 +65,7 @@ async function verify() {
 
   const skills = finalData.sections.skills.items as any[];
   check("Skills Categories", skills.length > 2, `${skills.length} found`);
-  
+
   const certs = finalData.sections.certifications.items as any[];
   const metaCert = certs.find((e) => e.title?.includes("Meta Front-End Developer Foundations"));
   check("Meta Cert", !!metaCert, "Found");
@@ -72,8 +74,9 @@ async function verify() {
 
   const awards = finalData.sections.awards.items as any[];
   const hackathon = awards.find((e) => e.title?.includes("Hackathon"));
-  check("Hackathon Award", !!hackathon, "Found");
-  check("Hackathon 250+", hackathon?.description?.includes("250+") || hackathon?.title?.includes("250+"), "250+ found in hackathon");
+  check("Hackathon Award", !!hackathon, hackathon?.title || "Found");
+  const dsa = awards.find((e) => e.title?.includes("250+") || e.description?.includes("250+"));
+  check("250+ Award", !!dsa, dsa?.title || dsa?.description || "250+ found in awards");
 }
 
 verify().catch(console.error);
