@@ -1,0 +1,90 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": [
+			"ESNext",
+			"DOM",
+			"DOM.Iterable"
+		],
+		"verbatimModuleSyntax": true,
+		"strict": true,
+		"exactOptionalPropertyTypes": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"noUncheckedIndexedAccess": true,
+		"noUncheckedSideEffectImports": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"types": [
+			"node"
+		],
+		"jsx": "react-jsx",
+		"paths": {
+			"@reactive-resume/ui/*": [
+				"../ui/src/*"
+			],
+			"@reactive-resume/schema": [
+				"../schema/src/index",
+				"../schema/src/index.ts",
+				"../schema/src"
+			],
+			"@reactive-resume/schema/*": [
+				"../schema/src/*"
+			],
+			"@reactive-resume/utils": [
+				"../utils/src/index",
+				"../utils/src/index.ts",
+				"../utils/src"
+			],
+			"@reactive-resume/utils/*": [
+				"../utils/src/*"
+			],
+			"@reactive-resume/fonts": [
+				"../fonts/src/index",
+				"../fonts/src/index.ts",
+				"../fonts/src"
+			],
+			"@reactive-resume/fonts/*": [
+				"../fonts/src/*"
+			],
+			"@reactive-resume/resume": [
+				"../resume/src/index",
+				"../resume/src/index.ts",
+				"../resume/src"
+			],
+			"@reactive-resume/resume/*": [
+				"../resume/src/*"
+			],
+			"@reactive-resume/pdf": [
+				"../pdf/src/index",
+				"../pdf/src/index.ts",
+				"../pdf/src"
+			],
+			"@reactive-resume/pdf/*": [
+				"../pdf/src/*"
+			],
+			"@reactive-resume/ui": [
+				"../ui/src/index",
+				"../ui/src/index.ts",
+				"../ui/src"
+			]
+		}
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"src/**/*.d.ts"
+	],
+	"exclude": [
+		"src/**/*.test.ts",
+		"src/**/*.test.tsx",
+		"vitest.config.ts"
+	]
+}

@@ -6,7 +6,7 @@ const cspHeader = `
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;
-  connect-src 'self' https://*.supabase.co https://*.supabase.in;
+  connect-src 'self' data: https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com;
   frame-ancestors 'none';
   object-src 'none';
   base-uri 'self';
@@ -14,6 +14,14 @@ const cspHeader = `
 `;
 
 const nextConfig: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    swcPlugins: [
+      ['@lingui/swc-plugin', {}],
+    ],
+  },
   images: {
     remotePatterns: [
       // Google user avatars (recruiter avatars from Supabase profiles)

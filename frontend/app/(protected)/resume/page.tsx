@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function ResumeToolkitPrototype() {
   return (
@@ -13,24 +14,26 @@ export default function ResumeToolkitPrototype() {
         </h2>
 
         {/* Card 1: Build from Scratch */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: '8px',
-          padding: '16px', borderRadius: '12px',
-          backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
-        }}>
+        <Link href="/resume/builder" style={{ textDecoration: 'none' }}>
           <div style={{
-            width: '40px', height: '40px', borderRadius: '8px',
-            backgroundColor: '#dbe1ff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+            padding: '16px', borderRadius: '12px',
+            backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#004ac6' }}>architecture</span>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '8px',
+              backgroundColor: '#dbe1ff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#004ac6' }}>architecture</span>
+            </div>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>Build from Scratch</span>
+            <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.5 }}>
+              Guided workflow to create a modern, professional resume.
+            </span>
           </div>
-          <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>Build from Scratch</span>
-          <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.5 }}>
-            Guided workflow to create a modern, professional resume.
-          </span>
-        </div>
+        </Link>
 
         {/* Card 2: Extract & Edit */}
         <div style={{

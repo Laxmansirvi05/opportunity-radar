@@ -1,0 +1,28 @@
+{
+	"name": "@reactive-resume/schema",
+	"version": "0.0.0",
+	"type": "module",
+	"private": true,
+	"exports": {
+		"./icons": "./src/icons.ts",
+		"./page": "./src/page.ts",
+		"./resume/*": "./src/resume/*.ts",
+		"./schema.json": "./schema.json",
+		"./templates": "./src/templates.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run --passWithNoTests",
+		"test:coverage": "vitest run --coverage --passWithNoTests",
+		"test:ci": "vitest run --coverage --reporter=default --reporter=github-actions --reporter=json --reporter=junit --outputFile.json=reports/vitest-results.json --outputFile.junit=reports/vitest-junit.xml --passWithNoTests",
+		"test:agent": "vitest run --reporter=agent --reporter=json --outputFile.json=reports/vitest-results.json --passWithNoTests"
+	},
+	"dependencies": {
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@typescript/native-preview": "7.0.0-dev.20260519.1",
+		"typescript": "^6.0.3",
+		"vitest": "^2.1.8"
+	}
+}

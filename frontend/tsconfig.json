@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -19,7 +19,19 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@reactive-resume/schema": ["./packages/schema/src/index.ts"],
+      "@reactive-resume/schema/*": ["./packages/schema/src/*"],
+      "@reactive-resume/utils": ["./packages/utils/src/index.ts"],
+      "@reactive-resume/utils/*": ["./packages/utils/src/*"],
+      "@reactive-resume/fonts": ["./packages/fonts/src/index.ts"],
+      "@reactive-resume/fonts/*": ["./packages/fonts/src/*"],
+      "@reactive-resume/resume": ["./packages/resume/src/index.ts"],
+      "@reactive-resume/resume/*": ["./packages/resume/src/*"],
+      "@reactive-resume/pdf": ["./packages/pdf/src/index.ts"],
+      "@reactive-resume/pdf/*": ["./packages/pdf/src/*"],
+      "@reactive-resume/ui": ["./packages/ui/src/index.ts"],
+      "@reactive-resume/ui/*": ["./packages/ui/src/*"]
     }
   },
   "include": [
@@ -30,5 +42,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts", ".next"]
+  "exclude": [
+    "node_modules",
+    "scripts",
+    ".next",
+    "packages/**/*.test.ts",
+    "packages/**/*.test.tsx",
+    "packages/**/vitest.config.ts"
+  ]
 }
