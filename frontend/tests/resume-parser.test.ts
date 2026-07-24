@@ -48,7 +48,7 @@ describe('validatePDFBuffer', () => {
   it('rejects empty buffer', () => {
     const result = validatePDFBuffer(new ArrayBuffer(0))
     expect(result.valid).toBe(false)
-    expect(result.error).toContain('empty')
+    expect(result.error?.toLowerCase()).toContain('empty')
   })
 
   it('rejects buffer without PDF magic bytes', () => {

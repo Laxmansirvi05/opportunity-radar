@@ -5,6 +5,9 @@
 export type AIFeature =
   | 'resume_parser'
   | 'resume_ats'
+  | 'resume_ats_jd_extract'
+  | 'resume_ats_coaching'
+  | 'resume_ats_general_coaching'
   | 'resume_optimizer'
   | 'skill_extraction'
 
