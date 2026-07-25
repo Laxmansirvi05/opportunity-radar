@@ -3,63 +3,96 @@
 ## Operational Directives
 Every Ralph iteration MUST execute the following sequence:
 
-1. Read `PRD.md` completely to understand the current engineering objective and tasks.
-2. Read `docs/tasks/progress.txt` to establish context and verified baseline.
-3. Inspect `git status` and recent `git log` history to understand the active work state.
-4. Select the highest-priority incomplete task from `PRD.md` whose dependencies are fully satisfied.
-5. Inspect relevant existing implementation thoroughly before editing any code. MUST VERIFY BEFORE MODIFYING. If existing code satisfies a criterion, do not rewrite it; record existing evidence.
-6. **CHANGE BUDGET:** Make the smallest possible change required to achieve the task objective. Ralph MUST NOT refactor unrelated code. Ralph MUST NOT modify a file unless it is absolutely necessary for the active acceptance criterion.
-7. Run targeted unit/integration tests for the modified files.
-8. **REGRESSION RULE:** Run appropriate regression tests. The known baseline is 155 passing / 8 skipped. Ralph MUST NOT introduce NEW test failures. Existing legacy TypeScript errors are baseline debt. Ralph MUST NOT introduce NEW TypeScript errors in files it changes.
-9. Build the application when appropriate to verify compilation.
-10. **NEVER** weaken tests, schemas, validation logic, security rules, or scoring algorithms merely to obtain a PASS.
-11. **NEVER** fabricate successful external-provider results if the real service failed.
-12. **NEVER** modify `.env` files or expose credentials/secrets.
-13. **NEVER** deploy to production.
-14. **NEVER** perform destructive database operations.
-15. **NEVER** rewrite unrelated working code.
-16. **NEVER** silently change ATS scoring constants.
-17. **NEVER** delete failing tests simply to make the suite pass.
-18. Update `docs/tasks/progress.txt` with concrete evidence of execution and results.
-19. Commit only verified, tested work.
+1. Read `PRD.md`, `docs/tasks/prompt.md`, `docs/tasks/progress.txt`.
+2. Inspect `git status`.
+3. Select the HIGHEST priority unresolved task from `PRD.md`.
+4. Reproduce the problem BEFORE changing code.
+5. Make the smallest justified change.
+6. Run focused tests.
+7. Run relevant recruiter/adversarial tests.
+8. Run type-check for modified scope.
+9. If verified, create a checkpoint commit.
+10. Update progress.txt with:
+    ITERATION
+    TASK
+    HYPOTHESIS
+    FILES CHANGED
+    TESTS
+    RESULT
+    FAILURE CATEGORY
+    COMMIT
+    NEXT ACTION
+11. End the iteration cleanly so Ralph can start the next iteration.
 
-## Git Rule
-- **NEVER** force push.
-- **NEVER** reset or rewrite existing history.
-- **NEVER** commit secrets.
-- **NEVER** merge into the production/main branch.
-- Work **ONLY** on the Ralph-created branch.
+## Absolute Destructive Command Ban
+RALPH MUST NEVER EXECUTE:
+- `git reset`
+- `git reset --hard`
+- `git clean`
+- `git restore`
+- `git checkout`
+- `git checkout --`
+- `git stash`
+- `git rebase`
+- `git switch`
+
+No equivalent destructive command may be used.
+If an edit is incorrect: FIX IT FORWARD.
+Never destroy working-tree state to undo it.
+
+## Safety Rules
+- NEVER delete tests to obtain PASS.
+- NEVER weaken schemas.
+- NEVER weaken hallucination protection.
+- NEVER fabricate provider responses.
+- NEVER modify `.env` or expose secrets.
+- NEVER push or deploy.
+- NEVER perform destructive database operations.
+
+## Checkpoint Policy
+After each independently verified improvement:
+`git add` ONLY relevant files, then commit.
+Use descriptive commits such as `fix(ats-v2): ...` or `test(ats-v2): ...`.
+Do not bundle unrelated changes.
 
 ## Loop Escape Rule
-If the same failure occurs in 2 consecutive iterations without meaningful new evidence or progress, Ralph MUST mark the task **BLOCKED** and move to another independent task.
-Do NOT repeatedly modify code attempting to solve an external failure.
+If the SAME root failure occurs in TWO consecutive iterations without meaningful improvement:
+DO NOT attempt the same fix again.
+Record `BLOCKED` with evidence and continue to another independently solvable priority.
+External provider failures (quota/rate-limit/network) are `PROVIDER_FAILURE`, not application failures.
 
-## Blocker Policy
-If execution is blocked by API quota limits, invalid credentials, unavailable provider, external service outage, or missing user decision, Ralph MUST explicitly record the state as **BLOCKED** in `progress.txt` and continue ONLY if another independent task from `PRD.md` is safely executable. 
+## Efficiency
+- Do not repeatedly reread the entire repository.
+- Use `progress.txt` as persistent loop memory.
+- Use targeted searches.
+- Use focused tests before full test suite.
+- Use Sequential Thinking only for ambiguous architectural/root-cause problems.
+- Use Playwright only after relevant backend/UI state is ready.
+- Prefer existing infrastructure over creating new abstractions.
+- Do not refactor unrelated Opportunity Radar features.
 
-Do NOT attempt to solve external quota/credential problems by weakening validation. Do not treat infrastructure failures as justification for redesigning working code.
+## Loop Budget
+Configure this work for approximately 8 Ralph iterations.
+If all completion gates pass before iteration 8: STOP EARLY.
+Do NOT continue changing working code just because iterations remain.
 
-### Failure Classification
-Ralph MUST explicitly distinguish and log failures according to these categories:
-- `CODE_FAILURE`: Logical error or bug in the implemented code.
-- `TEST_FAILURE`: Regressions or failing assertions in the test suite.
-- `ENVIRONMENT_FAILURE`: Local setup, Node version, or internal tooling issues.
-- `PROVIDER_FAILURE` / `PROVIDER_UNAVAILABLE`: External AI provider returned errors (e.g., 500, quota exceeded, invalid auth).
-- `SCHEMA_FAILURE`: The response from the external provider violated the enforced Zod/JSON schema.
-- `EXTERNAL_SERVICE_FAILURE`: General external API outage.
-- `APPLICATION_FAILURE`: An actual UI/implementation failure (distinguished from provider unavailability).
-
-## Playwright Policy
-Use Playwright for verifying user-visible changes. Playwright should **verify**, not silently repair.
-For relevant UI tasks, Ralph MUST:
-- Start and use the application on localhost.
-- Exercise the feature through actual UI interactions in the browser simulator.
-- Inspect the browser console for runtime exceptions and warnings.
-- Inspect failed network requests.
-- Distinguish `APPLICATION_FAILURE` from `PROVIDER_UNAVAILABLE`. A provider outage/quota/credential problem MUST NOT be reported as a UI implementation failure.
-- Record PASS/FAIL evidence.
-- A Playwright failure MUST return the loop to implementation rather than being ignored.
-
-## Completion Policy
-A task may be marked `COMPLETE` ONLY when its explicit acceptance criteria defined in `PRD.md` are demonstrably satisfied by concrete output.
-"Agent believes it works" is **NOT** completion evidence. Passing tests, successful build logs, and Playwright verification output constitute valid evidence.
+## Completion Gates
+ATS V2.1 may be marked COMPLETE only when:
+- [ ] Evidence strength differentiates claim vs demonstrated experience
+- [ ] Quantified impact is recognised when grounded
+- [ ] Keyword stuffing does not outperform demonstrated evidence
+- [ ] Semantic equivalents receive appropriate credit
+- [ ] Related-but-different technologies are not hallucinated
+- [ ] Hard requirements are grounded
+- [ ] Unknown requirements remain unknown
+- [ ] Same input produces acceptably stable result
+- [ ] Marker manipulation has no meaningful effect
+- [ ] Three profession-specific benchmarks are reasonable
+- [ ] Cross-profession sanity checks behave appropriately
+- [ ] ATS V2 tests pass
+- [ ] Schema-aware fallback tests pass
+- [ ] No new TypeScript errors
+- [ ] Playwright E2E passes
+- [ ] No production auth bypass exists from test infrastructure
+- [ ] Working tree is clean
+- [ ] All completed work is committed

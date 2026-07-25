@@ -1,19 +1,18 @@
 # RALPH LOOP PROGRESS LOG
 
 ## INITIAL BASELINE
-**Date:** 2026-07-25
-**Baseline Commit:** 3ddce5f - feat(ats-v2): Phase 3C schema-aware AI fallback and E2E validation setup
+**Date:** 2026-07-26
+**Baseline Commit:** 1781cb1
 **Verification State:**
-- Unit Tests: 155 PASS, 8 SKIPPED
-- TypeScript: Known unrelated/legacy TS errors present in repository
+- ATS V2 Tests: 17/17 test files PASS, 122/122 tests PASS
+- TypeScript: No new ATS V2 TypeScript errors
 - Playwright E2E: Smoke test PASS
 - Local Application: http://localhost:3000 running
-- Features: /dashboard works, /resume works, browser automation works
+- Current Primary Provider: Cloudflare (@cf/meta/llama-3.1-8b-instruct)
 
 **Known Unresolved Issues (Non-Blocking):**
-- placeholder_logo.svg returns 404
-- bookmarks Supabase requests return repeated 406 responses
-- ATS external-provider limitations (Gemini provider credentials/access failed previously; Groq quota exhausted during calibration; OpenRouter lacked sufficient credits; Ollama gpt-oss:120b produced schema-invalid evidence output)
+- Evidence semantics and impact require stabilization (P0-P3).
+- Some provider volatility (e.g., marker tests showing score manipulation up to +13).
 
 ---
 ## ITERATION LOG

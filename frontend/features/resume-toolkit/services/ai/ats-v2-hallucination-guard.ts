@@ -14,7 +14,18 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
 
   if (resume.skills && Array.isArray(resume.skills)) {
     for (const skill of resume.skills) {
-      if (skill) snippets.push(skill.toLowerCase())
+      if (typeof skill === 'string') {
+        snippets.push(skill.toLowerCase())
+      } else if (skill && typeof skill === 'object') {
+        if ((skill as any).name && typeof (skill as any).name === 'string') {
+          snippets.push((skill as any).name.toLowerCase())
+        }
+        if (Array.isArray((skill as any).keywords)) {
+          for (const kw of (skill as any).keywords) {
+            if (typeof kw === 'string') snippets.push(kw.toLowerCase())
+          }
+        }
+      }
     }
   }
 

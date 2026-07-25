@@ -63,7 +63,8 @@ export async function callCloudflare(
       throw new Error(`Cloudflare API returned success: false. Errors: ${JSON.stringify(json.errors)}`)
     }
 
-    const content = json.result?.response ?? ''
+    const rawRes = json.result?.response ?? json.result?.choices?.[0]?.message?.content ?? ''
+    const content = typeof rawRes === 'string' ? rawRes : String(rawRes || '')
 
     if (!content || content.trim().length === 0) {
       return {
