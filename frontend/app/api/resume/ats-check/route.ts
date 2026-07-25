@@ -6,6 +6,8 @@ import { buildJDExtractionPrompt, buildAtsCoachingPrompt } from '@/features/resu
 import { atsCheckResponseSchema, atsCoachingSchema, jdExtractionSchema } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 import { calculateAtsReadiness } from '@/lib/ats-checker/readiness'
 import { calculateJobMatch } from '@/lib/ats-checker/job-match'
+import { extractJDIntelligence, evaluateResumeEvidence } from '@/features/resume-toolkit/services/ai/ats-v2-intelligence'
+import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
 import { jsonrepair } from 'jsonrepair'
 import type { ParsedResume } from '@/types/resume'
 
@@ -90,12 +92,13 @@ export async function POST(req: NextRequest) {
     let coachingResult = undefined
     let aiFailed = false
     let jdExtraction = undefined
+    let atsV2Data = undefined
 
     // 2. TARGETED JOB MATCH
     // Step 2A: Extract JD Requirements via AI
     const { systemPrompt: jdSys, userPrompt: jdUser } = buildJDExtractionPrompt(jobDescription, companyName, targetRole)
 
-        const jdAiResult = await callAI(
+    const jdAiResult = await callAI(
       { systemPrompt: jdSys, userPrompt: jdUser, maxTokens: 2000, temperature: 0.1, outputFormat: 'json' },
       { feature: 'resume_ats_jd_extract', userId: user.id }
     )
@@ -127,6 +130,20 @@ export async function POST(req: NextRequest) {
         } else {
           aiFailed = true
         }
+
+        // Step 2D: ATS V2 Intelligence Pipeline
+        const v2JdRes = await extractJDIntelligence(jobDescription, companyName, targetRole, user.id)
+        if (v2JdRes.success && v2JdRes.data) {
+          const v2EvalRes = await evaluateResumeEvidence(parsedResumeData, v2JdRes.data, user.id)
+          if (v2EvalRes.success && v2EvalRes.data) {
+            const v2Score = calculateAtsV2Score(v2JdRes.data, v2EvalRes.data, parsedResumeData)
+            atsV2Data = {
+              score: v2Score,
+              evidenceMatrix: v2EvalRes.data,
+              structuredJd: v2JdRes.data,
+            }
+          }
+        }
       } catch (e) {
         console.error('[ATS] AI parsing or validation error:', e)
         aiFailed = true
@@ -140,6 +157,7 @@ export async function POST(req: NextRequest) {
       jobMatch: jobMatchResult,
       coaching: coachingResult,
       aiFailed,
+      atsV2: atsV2Data,
     })
 
     // Store in DB only if this is a saved resume

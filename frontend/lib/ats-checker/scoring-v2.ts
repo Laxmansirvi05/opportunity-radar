@@ -20,9 +20,10 @@ export function calculateQualityScore(resume: ParsedResume): ResumeQualityScore 
   let hasQuantifiedBullets = false
   if (resume.experience) {
     for (const exp of resume.experience) {
-      if (exp.highlights) {
-        for (const h of exp.highlights) {
-          if (/\b\d+(?:%|\+|k|M|B|x|\s?percent|\s?hrs|\s?hours)?\b/i.test(h)) {
+      const bullets = (exp as any).bullets || (exp as any).highlights || []
+      if (Array.isArray(bullets)) {
+        for (const h of bullets) {
+          if (typeof h === 'string' && /\b\d+(?:%|\+|k|M|B|x|\s?percent|\s?hrs|\s?hours)?\b/i.test(h)) {
             hasQuantifiedBullets = true
             break
           }

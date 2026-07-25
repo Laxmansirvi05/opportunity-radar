@@ -1,5 +1,5 @@
 import type { ParsedResume } from '@/types/resume'
-import type { StructuredJD } from '../lib/schema/resume/ats-v2'
+import type { StructuredJD } from '../../lib/schema/resume/ats-v2'
 
 export function buildJDExtractionPrompt(
   jobDescription: string,

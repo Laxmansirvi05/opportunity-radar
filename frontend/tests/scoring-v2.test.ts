@@ -13,9 +13,9 @@ const mockResume: ParsedResume = {
     {
       company: 'Tech Corp',
       role: 'Senior Frontend Engineer',
-      startDate: '2021-01',
-      endDate: '2023-12',
-      highlights: [
+      start_date: '2021-01',
+      end_date: '2023-12',
+      bullets: [
         'Built scalable UI components in React and TypeScript reducing load time by 40%.',
         'Managed state using Redux and optimized render cycles.',
       ],
@@ -25,8 +25,9 @@ const mockResume: ParsedResume = {
     {
       institution: 'State University',
       degree: 'B.S.',
+      degree_level: 'bachelors',
       field: 'Computer Science',
-      endDate: '2020-05',
+      graduation_year: 2020,
     },
   ],
   projects: [

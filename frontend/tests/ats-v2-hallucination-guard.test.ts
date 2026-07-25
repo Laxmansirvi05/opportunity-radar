@@ -12,9 +12,12 @@ const mockResume: ParsedResume = {
     {
       company: 'Acme Corp',
       role: 'Software Engineer',
-      highlights: ['Designed REST APIs using Node.js and Express.', 'Improved application performance by 30%.'],
+      start_date: '2021-01',
+      bullets: ['Designed REST APIs using Node.js and Express.', 'Improved application performance by 30%.'],
     },
   ],
+  projects: [],
+  education: [],
 }
 
 describe('ATS V2 Hallucination Guard', () => {

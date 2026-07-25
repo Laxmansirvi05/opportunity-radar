@@ -13,8 +13,8 @@ const mockResume: ParsedResume = {
     {
       company: 'Tech Corp',
       role: 'Frontend Lead',
-      startDate: '2022-01',
-      highlights: [
+      start_date: '2022-01',
+      bullets: [
         'Spearheaded React migration improving metrics by 25%.',
         'Built micro-frontends and REST endpoints.',
       ],
@@ -24,9 +24,11 @@ const mockResume: ParsedResume = {
     {
       institution: 'Tech University',
       degree: 'B.S.',
+      degree_level: 'bachelors',
       field: 'Software Engineering',
     },
   ],
+  projects: [],
 }
 
 describe('ATS V2 Evidence Unit Extraction & Retrieval', () => {

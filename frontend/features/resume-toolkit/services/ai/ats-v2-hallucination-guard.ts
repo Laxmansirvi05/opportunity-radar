@@ -1,5 +1,5 @@
 import type { ParsedResume } from '@/types/resume'
-import type { EvidenceReference, EvidenceMatrix } from '../lib/schema/resume/ats-v2'
+import type { EvidenceReference, EvidenceMatrix } from '../../lib/schema/resume/ats-v2'
 
 export interface VerificationResult {
   isValid: boolean
@@ -22,9 +22,10 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
     for (const exp of resume.experience) {
       if (exp.company) snippets.push(exp.company.toLowerCase())
       if (exp.role) snippets.push(exp.role.toLowerCase())
-      if (exp.highlights && Array.isArray(exp.highlights)) {
-        for (const h of exp.highlights) {
-          if (h) snippets.push(h.toLowerCase())
+      const bullets = (exp as any).bullets || (exp as any).highlights || []
+      if (Array.isArray(bullets)) {
+        for (const h of bullets) {
+          if (typeof h === 'string') snippets.push(h.toLowerCase())
         }
       }
     }
@@ -39,9 +40,10 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
           if (t) snippets.push(t.toLowerCase())
         }
       }
-      if (proj.highlights && Array.isArray(proj.highlights)) {
-        for (const h of proj.highlights) {
-          if (h) snippets.push(h.toLowerCase())
+      const projHighlights = (proj as any).highlights || []
+      if (Array.isArray(projHighlights)) {
+        for (const h of projHighlights) {
+          if (typeof h === 'string') snippets.push(h.toLowerCase())
         }
       }
     }
@@ -79,13 +81,13 @@ export function verifyEvidence(
   }
 
   // Token overlap check
-  const words = exactLower.split(/\s+/).filter((w) => w.length > 2)
+  const words = exactLower.split(/\s+/).filter((w: string) => w.length > 2)
   if (words.length === 0) {
     return { isValid: false, reason: 'Exact text contains no meaningful words' }
   }
 
   const matchesAnySnippet = allSnippets.some((snippet) => {
-    const matchCount = words.filter((w) => snippet.includes(w)).length
+    const matchCount = words.filter((w: string) => snippet.includes(w)).length
     return matchCount / words.length >= 0.6
   })
 
@@ -105,8 +107,8 @@ export function sanitizeEvidenceMatrix(
 ): { sanitizedMatrix: EvidenceMatrix; rejectedCount: number } {
   let rejectedCount = 0
 
-  const sanitizedEvaluations = matrix.evaluations.map((evaluation) => {
-    const validReferences = (evaluation.evidenceReferences || []).filter((ref) => {
+  const sanitizedEvaluations = matrix.evaluations.map((evaluation: any) => {
+    const validReferences = (evaluation.evidenceReferences || []).filter((ref: EvidenceReference) => {
       const v = verifyEvidence(resume, ref)
       if (!v.isValid) {
         rejectedCount++

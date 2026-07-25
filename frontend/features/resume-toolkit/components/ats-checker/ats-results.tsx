@@ -8,8 +8,18 @@ import { Target, RotateCcw, Lightbulb, Rocket, CheckCircle2, AlertTriangle, XCir
 import { cn } from "@/lib/utils"
 import type { AtsCheckResponse, AtsCategoryScore } from "../../lib/schema/resume/ats-check"
 
-export function AtsResults({ result, onReset }: { result: AtsCheckResponse; onReset: () => void }) {
-  const { readiness, jobMatch, coaching, aiFailed } = result
+export function AtsResults({
+  result,
+  targetRole,
+  companyName,
+  onReset,
+}: {
+  result: AtsCheckResponse
+  targetRole?: string
+  companyName?: string
+  onReset: () => void
+}) {
+  const { readiness, jobMatch, coaching, aiFailed, atsV2 } = result
 
   return (
     <div className="space-y-6">
@@ -25,8 +35,10 @@ export function AtsResults({ result, onReset }: { result: AtsCheckResponse; onRe
       )}
 
       {/* Top Row: Scores */}
-      <div className="flex justify-center">
-        {jobMatch ? (
+      <div className="flex justify-center gap-4 flex-wrap">
+        {atsV2 ? (
+          <ScoreCard title="ATS V2 Capability Score" score={atsV2.score.overallScore} />
+        ) : jobMatch ? (
           <ScoreCard title="Targeted ATS Match Score" score={jobMatch.score} />
         ) : (
           <ScoreCard title="ATS Readiness Score" score={readiness.score} />

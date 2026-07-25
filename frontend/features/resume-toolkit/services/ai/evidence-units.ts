@@ -11,9 +11,10 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
       const company = exp.company || ''
       const role = exp.role || ''
       const title = role ? `${role} at ${company}` : company
+      const bullets = (exp as any).bullets || (exp as any).highlights || []
 
-      if (exp.highlights && Array.isArray(exp.highlights)) {
-        for (const highlight of exp.highlights) {
+      if (Array.isArray(bullets)) {
+        for (const highlight of bullets) {
           if (!highlight || !highlight.trim()) continue
 
           // Detect metric / quantified impact
@@ -27,7 +28,7 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
             context: title,
             technologiesDemonstrated: [],
             quantifiedImpact: hasMetric ? highlight.trim() : null,
-            recency: exp.startDate || null,
+            recency: (exp as any).start_date || (exp as any).startDate || null,
             confidence: 0.95,
           })
         }
@@ -57,8 +58,9 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
         })
       }
 
-      if (proj.highlights && Array.isArray(proj.highlights)) {
-        for (const highlight of proj.highlights) {
+      const projHighlights = (proj as any).highlights || []
+      if (Array.isArray(projHighlights)) {
+        for (const highlight of projHighlights) {
           if (!highlight || !highlight.trim()) continue
           const hasMetric = /\b\d+(?:%|\+|k|M|B|x|\s?percent)?\b/i.test(highlight)
 
@@ -113,7 +115,7 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
           context: institution,
           technologiesDemonstrated: [],
           quantifiedImpact: null,
-          recency: edu.endDate || null,
+          recency: (edu as any).end_date || (edu as any).endDate || (edu as any).graduation_year?.toString() || null,
           confidence: 1.0,
         })
       }
