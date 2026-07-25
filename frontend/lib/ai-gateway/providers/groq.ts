@@ -1,19 +1,27 @@
 import Groq from 'groq-sdk'
 import type { AIRequest, AIResult } from '@/types/ai'
 
-const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY! })
+let _groqClient: Groq | null = null
+function getGroqClient(): Groq {
+  if (!_groqClient) {
+    _groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY! })
+  }
+  return _groqClient
+}
 
 export async function callGroq(
   request: AIRequest,
-  timeoutMs: number
+  timeoutMs: number,
+  overrideModel?: string
 ): Promise<AIResult> {
   const start = Date.now()
 
   try {
     const tryModel = async (modelName: string) => {
-      return await groqClient.chat.completions.create(
+      const targetModel = overrideModel || modelName;
+      return await getGroqClient().chat.completions.create(
         {
-          model: modelName,
+          model: targetModel,
           messages: [
             { role: 'system', content: request.systemPrompt },
             { role: 'user', content: request.userPrompt },

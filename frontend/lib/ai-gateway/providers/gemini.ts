@@ -5,7 +5,8 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
 
 export async function callGemini(
   request: AIRequest,
-  timeoutMs: number
+  timeoutMs: number,
+  overrideModel?: string
 ): Promise<AIResult> {
   const start = Date.now()
   const controller = new AbortController()
@@ -13,7 +14,8 @@ export async function callGemini(
 
   try {
     const tryModel = async (modelName: string) => {
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const targetModel = overrideModel || modelName;
+      const model = genAI.getGenerativeModel({ model: targetModel });
       const fullPrompt = `${request.systemPrompt}\n\n${request.userPrompt}`;
       const result = await model.generateContent({
         contents: [{

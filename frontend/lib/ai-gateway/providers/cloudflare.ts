@@ -1,46 +1,44 @@
 import type { AIRequest, AIResult } from '@/types/ai'
 
-export async function callOpenRouter(
+export async function callCloudflare(
   request: AIRequest,
   timeoutMs: number,
-  overrideModel?: string
+  modelName: string = '@cf/meta/llama-3.1-8b-instruct'
 ): Promise<AIResult> {
   const start = Date.now()
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN
 
-  if (!apiKey) {
-    console.error('[OpenRouter Provider] Missing OPENROUTER_API_KEY environment variable.')
+  if (!accountId || !apiToken) {
+    console.error('[Cloudflare Provider] Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN')
     return {
       success: false,
-      provider: 'openrouter',
-      reason: 'provider_error',
+      provider: 'cloudflare',
+      reason: 'auth_failure',
       latencyMs: Date.now() - start,
     }
   }
-
-  const modelName = overrideModel || 'google/gemini-2.5-flash' 
 
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    // Using the Cloudflare REST API for Workers AI
+    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelName}`
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: modelName,
         messages: [
           { role: 'system', content: request.systemPrompt },
           { role: 'user', content: request.userPrompt },
         ],
-        max_tokens: request.maxTokens ?? 1500, // Make sure we have enough tokens for extraction
+        max_tokens: request.maxTokens ?? 1500,
         temperature: request.temperature ?? 0.3,
-        ...(request.outputFormat === 'json'
-          ? { response_format: { type: 'json_object' } }
-          : {}),
       }),
       signal: controller.signal,
     })
@@ -51,19 +49,26 @@ export async function callOpenRouter(
       if (response.status === 429) {
         throw new Error('429 rate limit')
       }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('401 auth failure')
+      }
       const errorText = await response.text().catch(() => 'unknown error')
       throw new Error(`${response.status} ${errorText}`)
     }
 
-    const completion = await response.json()
+    const json = await response.json()
     const elapsed = Date.now() - start
-    const content = completion.choices?.[0]?.message?.content ?? ''
-    const usage = completion.usage
+    
+    if (!json.success) {
+      throw new Error(`Cloudflare API returned success: false. Errors: ${JSON.stringify(json.errors)}`)
+    }
+
+    const content = json.result?.response ?? ''
 
     if (!content || content.trim().length === 0) {
       return {
         success: false,
-        provider: 'openrouter',
+        provider: 'cloudflare',
         reason: 'invalid_response',
         latencyMs: elapsed,
       }
@@ -72,33 +77,36 @@ export async function callOpenRouter(
     return {
       success: true,
       content,
-      provider: 'openrouter',
+      provider: 'cloudflare',
       model: modelName,
       tokensUsed: {
-        input: usage?.prompt_tokens ?? 0,
-        output: usage?.completion_tokens ?? 0,
-        total: usage?.total_tokens ?? 0,
+        // Cloudflare might not return tokens usage strictly in the same format depending on the model/endpoint
+        input: 0,
+        output: 0,
+        total: 0,
       },
       latencyMs: elapsed,
     }
   } catch (err: any) {
     const elapsed = Date.now() - start
     const isRateLimit = err?.message?.includes('429')
+    const isAuth = err?.message?.includes('401')
     const isTimeout = err?.name === 'AbortError' || err?.message?.includes('timeout')
 
     let errorMsg = err instanceof Error ? err.message : String(err)
-    // Strip API keys from logs just in case (sk-or-v1-...)
-    errorMsg = errorMsg.replace(/(sk-or-v1-[A-Za-z0-9]{40,})/g, '[REDACTED_API_KEY]')
+    // Redact tokens just in case
+    errorMsg = errorMsg.replace(/(cfut_[A-Za-z0-9_-]{30,})/g, '[REDACTED_API_TOKEN]')
 
-    let reason: 'rate_limit' | 'timeout' | 'provider_error' = 'provider_error'
+    let reason: 'rate_limit' | 'timeout' | 'auth_failure' | 'provider_error' = 'provider_error'
     if (isRateLimit) reason = 'rate_limit'
-    if (isTimeout) reason = 'timeout'
+    else if (isAuth) reason = 'auth_failure'
+    else if (isTimeout) reason = 'timeout'
 
-    console.error(`[AI Gateway Failure] provider -> openrouter -> model -> ${modelName} -> status -> ${err?.status || 'unknown'} -> reason -> ${errorMsg}`)
+    console.error(`[Cloudflare Provider Failure] -> status -> unknown -> reason -> ${errorMsg}`)
 
     return {
       success: false,
-      provider: 'openrouter',
+      provider: 'cloudflare',
       reason,
       latencyMs: elapsed,
     }

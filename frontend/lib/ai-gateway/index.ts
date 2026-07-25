@@ -4,38 +4,107 @@ import {
   type GatewayContext,
   isAIResponse,
   estimateCostUsd,
+  type AIProvider,
 } from '@/types/ai'
 import { callGemini } from './providers/gemini'
 import { callGroq } from './providers/groq'
 import { callOpenRouter } from './providers/openrouter'
+import { callCloudflare } from './providers/cloudflare'
+import { callOllama } from './providers/ollama'
 import { createClient } from '@supabase/supabase-js'
+import {
+  isProviderHealthy,
+  recordProviderFailure,
+  recordProviderSuccess,
+} from './health'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-const GEMINI_TIMEOUT_MS = 10_000
-const GROQ_TIMEOUT_MS   = 8_000
-const OPENROUTER_TIMEOUT_MS = 15_000
-const GEMINI_RETRY_WAIT = 1_000
-
-// ---------------------------------------------------------------------------
-// Rate limit configuration per feature
-// ---------------------------------------------------------------------------
-const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
-  resume_parser:    { max: 5,   windowMs: 3_600_000 },   // 5/hour
-  resume_ats:       { max: 10,  windowMs: 3_600_000 },
-  resume_optimizer: { max: 20,  windowMs: 86_400_000 },  // 20/day
-  skill_extraction: { max: 500, windowMs: 3_600_000 },   // 500/hour (server-side only)
+const TIMEOUTS: Record<AIProvider, number> = {
+  gemini: 25_000,
+  openrouter: 30_000,
+  groq: 15_000,
+  cloudflare: 10_000,
+  ollama: 40_000,
 }
 
-// ---------------------------------------------------------------------------
-// Internal: write log row to ai_usage_log
-// ---------------------------------------------------------------------------
+const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
+  resume_parser:    { max: 5,   windowMs: 3_600_000 },
+  resume_ats:       { max: 10,  windowMs: 3_600_000 },
+  resume_optimizer: { max: 20,  windowMs: 86_400_000 },
+  skill_extraction: { max: 500, windowMs: 3_600_000 },
+}
+
+interface ProviderConfig {
+  provider: AIProvider
+  model?: string
+}
+
+const STRONG_MODELS: ProviderConfig[] = [
+  { provider: 'gemini', model: 'gemini-2.5-flash' },
+  { provider: 'openrouter', model: 'google/gemini-2.5-flash' }
+]
+
+const FAST_CHEAP_MODELS: ProviderConfig[] = [
+  { provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct' },
+  { provider: 'gemini', model: 'gemini-2.5-flash' }
+]
+
+export function getProviderSequence(feature: string): ProviderConfig[] {
+  switch (feature) {
+    case 'evidence_evaluation':
+    case 'resume_ats_v2_evidence_eval':
+      return [
+        ...STRONG_MODELS,
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+        { provider: 'ollama', model: 'gpt-oss:120b' },
+        { provider: 'ollama', model: 'nemotron-3-super' }
+      ]
+    case 'jd_intelligence':
+    case 'resume_ats_v2_jd_extract':
+      return [
+        ...STRONG_MODELS,
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+        { provider: 'ollama', model: 'gpt-oss:120b' },
+        { provider: 'ollama', model: 'nemotron-3-super' }
+      ]
+    case 'resume_extraction':
+    case 'resume_parser':
+      return [
+        ...STRONG_MODELS,
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+        { provider: 'ollama', model: 'gpt-oss:120b' },
+        { provider: 'ollama', model: 'nemotron-3-super' }
+      ]
+    case 'schema_repair':
+      return [
+        ...FAST_CHEAP_MODELS,
+        ...STRONG_MODELS
+      ]
+    case 'hr_coaching':
+    case 'resume_ats_coaching':
+    case 'resume_ats_general_coaching':
+      return [
+        ...FAST_CHEAP_MODELS,
+        ...STRONG_MODELS
+      ]
+    case 'resume_optimization':
+    case 'resume_optimizer':
+      return [
+        ...STRONG_MODELS,
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' }
+      ]
+    default:
+      return STRONG_MODELS
+  }
+}
+
 async function logUsage(result: AIResult, context: GatewayContext): Promise<void> {
-  // Use service role client for writes — this runs server-side only
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("[AI Gateway] Missing Supabase credentials. Skipping usage log.")
+    return
+  }
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
   const costUsd =
@@ -51,7 +120,7 @@ async function logUsage(result: AIResult, context: GatewayContext): Promise<void
     feature:        context.feature,
     user_id:        context.userId ?? null,
     opportunity_id: context.opportunityId ?? null,
-    provider:       isAIResponse(result) ? result.provider : result.provider,
+    provider:       result.provider,
     model:          isAIResponse(result) ? result.model : null,
     tokens_input:   isAIResponse(result) ? result.tokensUsed.input : 0,
     tokens_output:  isAIResponse(result) ? result.tokensUsed.output : 0,
@@ -63,20 +132,21 @@ async function logUsage(result: AIResult, context: GatewayContext): Promise<void
   })
 }
 
-// ---------------------------------------------------------------------------
-// Internal: check rate limit via DB RPC
-// ---------------------------------------------------------------------------
 async function checkRateLimit(
   userId: string | undefined,
   feature: string
 ): Promise<boolean> {
-  if (!userId) return true  // Server-side calls (extraction pipeline) are not rate-limited
+  if (!userId) return true
   const limit = RATE_LIMITS[feature]
   if (!limit) return true
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return true
+  }
+
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
   const { data, error } = await supabase.rpc('check_ai_rate_limit', {
@@ -88,29 +158,16 @@ async function checkRateLimit(
 
   if (error) {
     console.error('[RateLimit] RPC Error:', error)
-    return true // Default to allowed if RPC is missing
+    return true
   }
 
   return (data as { allowed: boolean }[])?.[0]?.allowed ?? false
 }
 
-// ---------------------------------------------------------------------------
-// Internal: sleep helper
-// ---------------------------------------------------------------------------
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-// ---------------------------------------------------------------------------
-// Main Gateway Entry Point
-// All AI calls across the platform MUST use this function.
-// No feature module may call Gemini or Groq directly.
-// ---------------------------------------------------------------------------
 export async function callAI(
   request: AIRequest,
   context: GatewayContext
 ): Promise<AIResult> {
-  // 1. Rate limit check
   const allowed = await checkRateLimit(context.userId, context.feature)
   if (!allowed) {
     const err: AIResult = {
@@ -124,55 +181,86 @@ export async function callAI(
     return err
   }
 
-  // 2. Try Gemini Flash (primary)
-  console.log(`[AI Gateway] Attempting Primary Provider: Gemini (gemini-2.5-flash) for feature: ${context.feature}`)
-  const geminiResult = await callGemini(request, GEMINI_TIMEOUT_MS)
-  if (geminiResult.success) {
-    console.log(`[AI Gateway] SUCCESS: Gemini (gemini-2.5-flash)`)
-    await logUsage(geminiResult, context)
-    return geminiResult
-  }
+  const sequence = getProviderSequence(context.feature)
+  let totalLatency = 0
 
-  // 3. Retry Gemini ONLY if appropriate
-  let geminiRetry = geminiResult
-  if (geminiResult.reason !== 'rate_limit') {
-    console.warn(`[AI Gateway] Gemini failed (reason: ${geminiResult.reason}). Retrying once…`)
-    await sleep(GEMINI_RETRY_WAIT)
-    geminiRetry = await callGemini(request, GEMINI_TIMEOUT_MS)
-    if (geminiRetry.success) {
-      console.log(`[AI Gateway] SUCCESS (after retry): Gemini (gemini-2.5-flash)`)
-      await logUsage(geminiRetry, context)
-      return geminiRetry
+  for (const config of sequence) {
+    if (!isProviderHealthy(config.provider, config.model!)) {
+      console.warn(`[AI Gateway] Skipping ${config.provider} (${config.model}) due to health backoff.`)
+      continue
     }
-  } else {
-    console.warn(`[AI Gateway] Gemini failed with rate_limit (429 Quota Exceeded). Skipping retry.`)
+
+    console.log(`[AI Gateway] Attempting ${config.provider} (${config.model}) for task: ${context.feature}`)
+    
+    let result: AIResult
+    const timeout = TIMEOUTS[config.provider]
+
+    switch (config.provider) {
+      case 'gemini':
+        result = await callGemini(request, timeout, config.model!)
+        if (isAIResponse(result)) result.model = config.model!
+        break
+      case 'groq':
+        result = await callGroq(request, timeout, config.model!)
+        break
+      case 'openrouter':
+        result = await callOpenRouter(request, timeout, config.model!)
+        if (isAIResponse(result)) result.model = config.model!
+        break
+      case 'cloudflare':
+        result = await callCloudflare(request, timeout, config.model!)
+        break
+      case 'ollama':
+        result = await callOllama(request, timeout, config.model!)
+        break
+      default:
+        throw new Error(`Unsupported provider: ${config.provider}`)
+    }
+
+    totalLatency += result.latencyMs
+
+    if (result.success) {
+      if (context.validator) {
+        try {
+          const validationResult = await Promise.resolve(context.validator(result.content))
+          if (!validationResult.valid) {
+            console.warn(`[AI Gateway] SCHEMA_FAILURE: ${config.provider} (${config.model}) - Reason: ${validationResult.reason}`)
+            result = {
+              success: false,
+              provider: config.provider,
+              reason: 'schema_failure',
+              latencyMs: result.latencyMs
+            }
+          }
+        } catch (error: any) {
+          console.warn(`[AI Gateway] SCHEMA_FAILURE: ${config.provider} (${config.model}) - Exception: ${error.message}`)
+          result = {
+            success: false,
+            provider: config.provider,
+            reason: 'schema_failure',
+            latencyMs: result.latencyMs
+          }
+        }
+      }
+
+      if (result.success) {
+        console.log(`[AI Gateway] SUCCESS: ${config.provider} (${config.model})`)
+        recordProviderSuccess(config.provider, config.model!)
+        await logUsage(result, context)
+        return result
+      }
+    }
+
+    console.warn(`[AI Gateway] Failed: ${config.provider} (${config.model}) - Reason: ${!result.success ? result.reason : 'provider_error'}`)
+    recordProviderFailure(config.provider, config.model!, !result.success ? result.reason : 'provider_error')
   }
 
-  // 4. Fallback to Groq
-  console.warn(`[AI Gateway] Primary provider exhausted (reason: ${geminiRetry.reason}). Falling back to Groq…`)
-  const groqResult = await callGroq(request, GROQ_TIMEOUT_MS)
-  if (groqResult.success) {
-    console.log(`[AI Gateway] SUCCESS (Fallback): Groq (${groqResult.model})`)
-    await logUsage(groqResult, context)
-    return groqResult
-  }
-
-  // 5. Fallback to OpenRouter
-  console.warn(`[AI Gateway] Groq fallback exhausted (reason: ${groqResult.reason}). Falling back to OpenRouter…`)
-  const openRouterResult = await callOpenRouter(request, OPENROUTER_TIMEOUT_MS)
-  if (openRouterResult.success) {
-    console.log(`[AI Gateway] SUCCESS (Fallback): OpenRouter (${openRouterResult.model})`)
-    await logUsage(openRouterResult, context)
-    return openRouterResult
-  }
-
-  // 6. All providers failed
-  console.error(`[AI Gateway] FATAL: All providers failed for feature: ${context.feature}. Gemini: ${geminiRetry.reason}, Groq: ${groqResult.reason}, OpenRouter: ${openRouterResult.reason}`)
+  console.error(`[AI Gateway] FATAL: All qualified providers failed for task: ${context.feature}`)
   const allFailed: AIResult = {
     success:   false,
     provider:  'all',
     reason:    'all_failed',
-    latencyMs: geminiRetry.latencyMs + groqResult.latencyMs + openRouterResult.latencyMs,
+    latencyMs: totalLatency,
   }
   await logUsage(allFailed, context)
   return allFailed

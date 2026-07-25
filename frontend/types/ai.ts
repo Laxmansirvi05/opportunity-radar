@@ -8,10 +8,19 @@ export type AIFeature =
   | 'resume_ats_jd_extract'
   | 'resume_ats_coaching'
   | 'resume_ats_general_coaching'
+  | 'resume_ats_v2_jd_extract'
+  | 'resume_ats_v2_evidence_eval'
   | 'resume_optimizer'
   | 'skill_extraction'
+  // Phase 2.7 Tasks
+  | 'resume_extraction'
+  | 'jd_intelligence'
+  | 'evidence_evaluation'
+  | 'schema_repair'
+  | 'hr_coaching'
+  | 'resume_optimization'
 
-export type AIProvider = 'gemini' | 'groq' | 'openrouter'
+export type AIProvider = 'gemini' | 'groq' | 'openrouter' | 'cloudflare' | 'ollama'
 
 // ---------------------------------------------------------------------------
 // Request
@@ -47,6 +56,10 @@ export interface AIResponse {
 export type AIFailureReason =
   | 'timeout'
   | 'rate_limit'
+  | 'auth_failure'
+  | 'schema_failure'
+  | 'context_limit'
+  | 'server_error'
   | 'invalid_response'
   | 'provider_error'
   | 'all_failed'
@@ -60,6 +73,10 @@ export interface AIError {
 
 export type AIResult = AIResponse | AIError
 
+export type ValidationResult = 
+  | { valid: true }
+  | { valid: false; reason: string }
+
 // ---------------------------------------------------------------------------
 // Gateway call context (for logging)
 // ---------------------------------------------------------------------------
@@ -67,6 +84,7 @@ export interface GatewayContext {
   feature: AIFeature
   userId?: string
   opportunityId?: string
+  validator?: (response: string) => ValidationResult | Promise<ValidationResult>
 }
 
 // ---------------------------------------------------------------------------
