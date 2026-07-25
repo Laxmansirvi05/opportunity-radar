@@ -185,6 +185,9 @@ export function AtsCheckerDashboard() {
                       <SelectValue placeholder="Choose a resume to analyze..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="sample-frontend-dev">
+                        Sample Candidate (Frontend Developer)
+                      </SelectItem>
                       {resumes?.map((r) => (
                         <SelectItem key={r.id} value={r.id}>
                           {r.title || "Untitled Resume"}
