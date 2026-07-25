@@ -300,7 +300,7 @@ export function AtsCheckerDashboard() {
           </CardContent>
         </Card>
       ) : (
-        <AtsResults result={result} onReset={onReset} />
+        <AtsResults result={result} targetRole={targetRole} companyName={companyName} onReset={onReset} />
       )}
     </div>
   )

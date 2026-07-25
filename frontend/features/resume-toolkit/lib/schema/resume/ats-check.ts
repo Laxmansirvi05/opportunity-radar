@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { importanceEnum, structuredJDSchema, evidenceMatrixSchema } from "./ats-v2";
 
 // ---------------------------------------------------------------------------
 // Shared / UI Schemas
@@ -100,6 +101,75 @@ export const jobMatchResultSchema = z.object({
 export type JobMatchResult = z.infer<typeof jobMatchResultSchema>;
 
 // ---------------------------------------------------------------------------
+// V2 Scoring Schemas
+// ---------------------------------------------------------------------------
+export const requirementScoreSchema = z.object({
+  requirementId: z.string(),
+  requirementName: z.string(),
+  category: z.string(),
+  importance: importanceEnum,
+  weight: z.number(),
+  satisfactionFactor: z.number(),
+  evidenceStrengthFactor: z.number(),
+  evidenceTypeBonus: z.number(),
+  quantifiedImpactBonus: z.number(),
+  rawScore: z.number(),
+  cappedScore: z.number(),
+  weightedScore: z.number(),
+  maxWeightedScore: z.number(),
+  satisfaction: z.string(),
+  evidenceStrength: z.string(),
+  bestEvidenceType: z.string().nullable(),
+  hasQuantifiedImpact: z.boolean(),
+  gapReason: z.string().nullable().optional(),
+  semanticReasoning: z.string(),
+});
+
+export const resumeQualityScoreSchema = z.object({
+  total: z.number(),
+  hasSummary: z.boolean(),
+  hasExperience: z.boolean(),
+  hasEducation: z.boolean(),
+  hasSkills: z.boolean(),
+  hasProjects: z.boolean(),
+  hasQuantifiedBullets: z.boolean(),
+  hasContactInfo: z.boolean(),
+});
+
+export const hardRequirementResultSchema = z.object({
+  passed: z.boolean(),
+  cap: z.number().nullable(),
+  failedRequirements: z.array(z.string()),
+  reason: z.string().optional(),
+});
+
+export const scoreConfidenceSchema = z.object({
+  confidenceLevel: z.enum(['full', 'high', 'moderate', 'low']),
+  evaluationCoverage: z.number(),
+  retrievalDegraded: z.boolean(),
+  meanAIConfidence: z.number(),
+  unevaluatedRequirements: z.array(z.string()),
+});
+
+export const atsV2ScoreSchema = z.object({
+  overallScore: z.number(),
+  capabilityScore: z.number(),
+  qualityScore: z.number(),
+  band: z.enum(['exceptional', 'strong', 'moderate', 'partial', 'weak', 'poor']),
+  requirements: z.array(requirementScoreSchema),
+  quality: resumeQualityScoreSchema,
+  hardRequirements: hardRequirementResultSchema,
+  confidence: scoreConfidenceSchema,
+  scoreCappedReason: z.string().optional(),
+});
+
+export type RequirementScore = z.infer<typeof requirementScoreSchema>;
+export type ResumeQualityScore = z.infer<typeof resumeQualityScoreSchema>;
+export type HardRequirementResult = z.infer<typeof hardRequirementResultSchema>;
+export type ScoreConfidence = z.infer<typeof scoreConfidenceSchema>;
+export type AtsV2Score = z.infer<typeof atsV2ScoreSchema>;
+
+// ---------------------------------------------------------------------------
 // Full Output for UI
 // ---------------------------------------------------------------------------
 export const atsCheckResponseSchema = z.object({
@@ -107,5 +177,10 @@ export const atsCheckResponseSchema = z.object({
   jobMatch: jobMatchResultSchema.optional(), // Only present if JD is provided
   coaching: atsCoachingSchema.optional(), // Qualitative feedback (always present unless AI fails)
   aiFailed: z.boolean().default(false), // True if AI failed but deterministic ran
+  atsV2: z.object({
+    score: atsV2ScoreSchema,
+    evidenceMatrix: evidenceMatrixSchema,
+    structuredJd: structuredJDSchema,
+  }).optional(),
 });
 export type AtsCheckResponse = z.infer<typeof atsCheckResponseSchema>;
