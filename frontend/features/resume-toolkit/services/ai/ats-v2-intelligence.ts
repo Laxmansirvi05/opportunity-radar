@@ -107,7 +107,7 @@ export async function evaluateResumeEvidence(
       systemPrompt,
       userPrompt,
       maxTokens: 3500,
-      temperature: 0.2,
+      temperature: 0.0,
       outputFormat: 'json',
     },
     {

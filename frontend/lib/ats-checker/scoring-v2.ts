@@ -23,7 +23,10 @@ export function calculateQualityScore(resume: ParsedResume): ResumeQualityScore 
       const bullets = (exp as any).bullets || (exp as any).highlights || []
       if (Array.isArray(bullets)) {
         for (const h of bullets) {
-          if (typeof h === 'string' && /\b\d+(?:%|\+|k|M|B|x|\s?percent|\s?hrs|\s?hours)?\b/i.test(h)) {
+          if (
+            typeof h === 'string' &&
+            /(?:\$\d+|\b\d+(?:,\d{3})+|\b\d+(?:\.\d+)?\s*(?:%|\+|k|M|B|x|percent|hrs|hours|users|clients|records|ms|sec|seconds|min|minutes))/i.test(h)
+          ) {
             hasQuantifiedBullets = true
             break
           }
@@ -58,18 +61,19 @@ export function evaluateHardRequirements(
   structuredJd: StructuredJD,
   resume: ParsedResume
 ): HardRequirementResult {
-  const hardReqs = structuredJd.requirements.filter((r) => r.category === 'hard_requirement')
+  const hardReqs = structuredJd.requirements.filter(
+    (r) => r.category === 'hard_requirement'
+  )
   if (hardReqs.length === 0) {
     return { passed: true, cap: null, failedRequirements: [] }
   }
 
   const failed: string[] = []
-  // Check hard requirements against resume
+
   for (const req of hardReqs) {
-    const text = req.name.toLowerCase() + ' ' + (req.description || '').toLowerCase()
-    
-    // Check graduation year / eligibility if mentioned
-    if (text.includes('graduat') || text.includes('degree')) {
+    const text = (req.name + ' ' + (req.description || '')).toLowerCase()
+
+    if (text.includes('graduat') || text.includes('degree') || text.includes('bachelor') || text.includes('b.s.') || text.includes('b.tech')) {
       const eduPresent = resume.education && resume.education.length > 0
       if (!eduPresent) {
         failed.push(req.name)

@@ -30,11 +30,19 @@ export function buildATSv2EvidenceMatrixPrompt(
 ): { systemPrompt: string; userPrompt: string } {
   const systemPrompt = `You are an evidence-based ATS Evaluation Engine.
 Your task is to evaluate the candidate's resume evidence against each requirement in the structured Job Description.
-For each requirement, find exact quote evidenceReferences from the resume.
-Evidence Types: learning, listed_skill, coursework, certification, education, project, professional_experience, achievement, leadership.
-Requirement Satisfaction: none, insufficient, partial, substantial, complete.
-Evidence Strength: none, weak, moderate, strong, exceptional.
-Do NOT fabricate evidence text. Use exactText snippets from the resume.`
+
+EVALUATION RULES:
+1. Grounding & Anti-Hallucination: Use exactText snippets from the resume. Do NOT fabricate or alter quote text.
+2. Semantic Matching:
+   - Accept legitimate category matching (e.g. "Integrated Stripe, OpenWeather, GitHub APIs" supports "REST APIs" or "API Integration").
+   - DO NOT substitute distinct specific technologies! (e.g. Vue is NOT React; Vercel is NOT AWS; Docker is NOT Kubernetes; Power BI is NOT Tableau; MySQL is NOT PostgreSQL).
+3. Evidence Strength & Types:
+   - Evidence Types: learning, listed_skill, coursework, certification, education, project, professional_experience, achievement, leadership.
+   - If a skill is ONLY listed in the Skills list with no project or work experience bullet, set evidenceType to "listed_skill" and evidenceStrength to "moderate" or "weak".
+   - Requirement Satisfaction: none, insufficient, partial, substantial, complete.
+   - Evidence Strength: none, weak, moderate, strong, exceptional.
+4. Quantified Impact:
+   - If exactText contains a quantified metric (e.g., "30% reduction", "85,000+ records", "2x faster"), populate quantifiedImpact with that exact metric phrase. Otherwise set quantifiedImpact to null.`
 
   const userPrompt = `CANDIDATE RESUME DATA:
 ${JSON.stringify(resume, null, 2)}

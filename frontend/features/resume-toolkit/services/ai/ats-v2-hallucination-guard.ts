@@ -82,16 +82,16 @@ export function verifyEvidence(
   const exactLower = reference.exactText.trim().toLowerCase()
   const allSnippets = extractAllResumeTextSnippets(resume)
 
-  // Direct inclusion match in any snippet
+  // Direct inclusion match: exact text must be present within a resume snippet
   const directMatch = allSnippets.some(
-    (snippet) => snippet.includes(exactLower) || exactLower.includes(snippet)
+    (snippet) => snippet.includes(exactLower)
   )
 
   if (directMatch) {
     return { isValid: true }
   }
 
-  // Token overlap check
+  // Token overlap check against individual snippets
   const words = exactLower.split(/\s+/).filter((w: string) => w.length > 2)
   if (words.length === 0) {
     return { isValid: false, reason: 'Exact text contains no meaningful words' }
@@ -99,7 +99,7 @@ export function verifyEvidence(
 
   const matchesAnySnippet = allSnippets.some((snippet) => {
     const matchCount = words.filter((w: string) => snippet.includes(w)).length
-    return matchCount / words.length >= 0.6
+    return matchCount / words.length >= 0.75
   })
 
   if (matchesAnySnippet) {
@@ -119,14 +119,28 @@ export function sanitizeEvidenceMatrix(
   let rejectedCount = 0
 
   const sanitizedEvaluations = matrix.evaluations.map((evaluation: any) => {
-    const validReferences = (evaluation.evidenceReferences || []).filter((ref: EvidenceReference) => {
-      const v = verifyEvidence(resume, ref)
-      if (!v.isValid) {
-        rejectedCount++
-        return false
-      }
-      return true
-    })
+    const validReferences = (evaluation.evidenceReferences || [])
+      .filter((ref: EvidenceReference) => {
+        const v = verifyEvidence(resume, ref)
+        if (!v.isValid) {
+          rejectedCount++
+          return false
+        }
+        return true
+      })
+      .map((ref: EvidenceReference) => {
+        // Ensure quantifiedImpact is actually supported by the exactText
+        if (ref.quantifiedImpact && ref.quantifiedImpact.trim()) {
+          const impactLower = ref.quantifiedImpact.trim().toLowerCase()
+          const exactLower = (ref.exactText || '').toLowerCase()
+          const impactNumbers = impactLower.match(/\d+(?:\.\d+)?/g) || []
+          const hasMetricInText = impactNumbers.some((num) => exactLower.includes(num))
+          if (!hasMetricInText && !exactLower.includes(impactLower)) {
+            return { ...ref, quantifiedImpact: null }
+          }
+        }
+        return ref
+      })
 
     if (validReferences.length === 0 && evaluation.satisfaction !== 'none') {
       return {

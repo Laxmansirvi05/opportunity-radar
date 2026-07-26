@@ -37,7 +37,11 @@ export function AtsResults({
       {/* Top Row: Scores */}
       <div className="flex justify-center gap-4 flex-wrap">
         {atsV2 ? (
-          <ScoreCard title="ATS V2 Capability Score" score={atsV2.score.overallScore} />
+          <ScoreCard
+            title="ATS V2 Recruiter Evaluation Score"
+            score={atsV2.score.overallScore}
+            subtext={`Band: ${atsV2.score.band.toUpperCase()} (Capability: ${atsV2.score.capabilityScore}/100, Quality: ${atsV2.score.qualityScore}/100)`}
+          />
         ) : jobMatch ? (
           <ScoreCard title="Targeted ATS Match Score" score={jobMatch.score} />
         ) : (
@@ -46,8 +50,77 @@ export function AtsResults({
       </div>
 
       {/* Hard Requirements */}
-      {jobMatch?.hardRequirements && jobMatch.hardRequirements.length > 0 && (
+      {atsV2?.score.hardRequirements && !atsV2.score.hardRequirements.passed && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-md text-sm flex items-start gap-3">
+          <ShieldAlert className="h-5 w-5 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold">Hard Requirement Warning</p>
+            <p>{atsV2.score.hardRequirements.reason || 'One or more mandatory requirements were not met.'}</p>
+          </div>
+        </div>
+      )}
+      {!atsV2 && jobMatch?.hardRequirements && jobMatch.hardRequirements.length > 0 && (
         <HardRequirementsCard requirements={jobMatch.hardRequirements} />
+      )}
+
+      {/* ATS V2 Requirements & Evidence Matrix */}
+      {atsV2 && (
+        <Card className="border shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span>Recruiter Requirement Evidence Matrix</span>
+              <Badge variant="outline" className="capitalize">
+                Confidence: {atsV2.score.confidence.confidenceLevel} ({Math.round(atsV2.score.confidence.evaluationCoverage * 100)}% coverage)
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Demonstrated capability evidence evaluated against target job description requirements.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="divide-y rounded-md border">
+              {atsV2.score.requirements.map((req) => (
+                <div key={req.requirementId} className="p-3 text-sm space-y-1 bg-card">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{req.requirementName}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs uppercase">
+                        {req.importance}
+                      </Badge>
+                      <Badge
+                        className={cn(
+                          "text-xs capitalize",
+                          req.satisfaction === "complete" || req.satisfaction === "substantial"
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                            : req.satisfaction === "partial"
+                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                            : "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"
+                        )}
+                      >
+                        {req.satisfaction}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                    <span>
+                      Evidence: <strong className="capitalize">{req.evidenceStrength}</strong>
+                      {req.bestEvidenceType && ` (${req.bestEvidenceType.replace(/_/g, ' ')})`}
+                      {req.hasQuantifiedImpact && ` • Quantified Impact (+10%)`}
+                    </span>
+                    <span>
+                      {req.weightedScore} / {req.maxWeightedScore} pts
+                    </span>
+                  </div>
+                  {req.gapReason && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 pt-0.5">
+                      Gap: {req.gapReason}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Skills Analysis */}
@@ -61,38 +134,40 @@ export function AtsResults({
       )}
 
       {/* Categories */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {jobMatch ? (
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">Score Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-              <CategoryItem label="Required Skills & Tech" cat={jobMatch.categories.requiredSkills} />
-              <CategoryItem label="Role Alignment" cat={jobMatch.categories.roleAlignment} />
-              <CategoryItem label="Experience Relevance" cat={jobMatch.categories.experienceRelevance} />
-              <CategoryItem label="Project Evidence" cat={jobMatch.categories.projectEvidence} />
-              <CategoryItem label="Keyword Coverage" cat={jobMatch.categories.keywordCoverage} />
-              <CategoryItem label="Education Alignment" cat={jobMatch.categories.educationAlignment} />
-              <CategoryItem label="ATS Structure & Machine Readability" cat={jobMatch.categories.atsStructure} />
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">Readiness Metrics</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-              <CategoryItem label="Core Sections" cat={readiness.categories.coreSections} />
-              <CategoryItem label="Structure & Machine Readability" cat={readiness.categories.parsability} />
-              <CategoryItem label="Content Quality" cat={readiness.categories.contentQuality} />
-              <CategoryItem label="Impact & Achievements" cat={readiness.categories.impact} />
-              <CategoryItem label="Skills Presentation" cat={readiness.categories.skills} />
-              <CategoryItem label="Professional Quality" cat={readiness.categories.professionalQuality} />
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {!atsV2 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {jobMatch ? (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg">Score Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-6 md:grid-cols-2">
+                <CategoryItem label="Required Skills & Tech" cat={jobMatch.categories.requiredSkills} />
+                <CategoryItem label="Role Alignment" cat={jobMatch.categories.roleAlignment} />
+                <CategoryItem label="Experience Relevance" cat={jobMatch.categories.experienceRelevance} />
+                <CategoryItem label="Project Evidence" cat={jobMatch.categories.projectEvidence} />
+                <CategoryItem label="Keyword Coverage" cat={jobMatch.categories.keywordCoverage} />
+                <CategoryItem label="Education Alignment" cat={jobMatch.categories.educationAlignment} />
+                <CategoryItem label="ATS Structure & Machine Readability" cat={jobMatch.categories.atsStructure} />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg">Readiness Metrics</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-6 md:grid-cols-2">
+                <CategoryItem label="Core Sections" cat={readiness.categories.coreSections} />
+                <CategoryItem label="Structure & Machine Readability" cat={readiness.categories.parsability} />
+                <CategoryItem label="Content Quality" cat={readiness.categories.contentQuality} />
+                <CategoryItem label="Impact & Achievements" cat={readiness.categories.impact} />
+                <CategoryItem label="Skills Presentation" cat={readiness.categories.skills} />
+                <CategoryItem label="Professional Quality" cat={readiness.categories.professionalQuality} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Coaching */}
       {coaching && (
@@ -142,7 +217,7 @@ function CategoryItem({ label, cat }: { label: string; cat: AtsCategoryScore }) 
   )
 }
 
-function ScoreCard({ title, score }: { title: string; score: number }) {
+function ScoreCard({ title, score, subtext }: { title: string; score: number; subtext?: string }) {
   const color = score >= 75 ? "text-emerald-500" : score >= 50 ? "text-amber-500" : "text-red-500"
   const bgRing = score >= 75 ? "from-emerald-500/10 to-transparent" : score >= 50 ? "from-amber-500/10 to-transparent" : "from-red-500/10 to-transparent"
 
@@ -152,6 +227,7 @@ function ScoreCard({ title, score }: { title: string; score: number }) {
         <CardTitle className="font-semibold text-xl tracking-tight">
           {title}
         </CardTitle>
+        {subtext && <CardDescription className="text-xs">{subtext}</CardDescription>}
       </CardHeader>
       <CardContent className="flex items-center justify-center pb-8 pt-4">
         <div className="relative flex h-40 w-40 items-center justify-center">
