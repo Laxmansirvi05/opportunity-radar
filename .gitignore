@@ -29,3 +29,6 @@ coverage/
 *.tmp
 *.cache
 .vercel
+
+# Playwright MCP Artifacts
+.playwright-mcp/
