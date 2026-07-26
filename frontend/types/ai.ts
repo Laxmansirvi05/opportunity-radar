@@ -84,7 +84,7 @@ export interface GatewayContext {
   feature: AIFeature
   userId?: string
   opportunityId?: string
-  validator?: (response: string) => ValidationResult | Promise<ValidationResult>
+  validator?: (response: string, provider?: string) => ValidationResult | Promise<ValidationResult>
 }
 
 // ---------------------------------------------------------------------------

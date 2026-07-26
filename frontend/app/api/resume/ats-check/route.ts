@@ -10,6 +10,7 @@ import { extractJDIntelligence, evaluateResumeEvidence } from '@/features/resume
 import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
 import { jsonrepair } from 'jsonrepair'
 import type { ParsedResume } from '@/types/resume'
+import type { AtsCoaching } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 
 export async function POST(req: NextRequest) {
   try {
@@ -154,6 +155,58 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const normalizeAtsCoaching = (parsed: any): AtsCoaching => {
+      if (!parsed || typeof parsed !== 'object') {
+        return {
+          suggestions: [],
+          suggestedProjects: [],
+          powerWords: [],
+          missingKeywordExplanations: [],
+        }
+      }
+
+      const suggestionsArr = parsed.suggestions || parsed.recommendations || parsed.advice || []
+      const suggestions = Array.isArray(suggestionsArr)
+        ? suggestionsArr
+            .map((s: any) => ({
+              title: String(s.title || s.name || s.suggestion || 'Recommendation'),
+              description: String(s.description || s.details || s.reason || 'Actionable recommendation for improving ATS compatibility.'),
+              impact: ['high', 'medium', 'low'].includes(String(s.impact).toLowerCase()) ? (String(s.impact).toLowerCase() as any) : 'medium',
+            }))
+            .slice(0, 10)
+        : []
+
+      const projectsArr = parsed.suggestedProjects || parsed.projects || parsed.projectIdeas || []
+      const suggestedProjects = Array.isArray(projectsArr)
+        ? projectsArr
+            .map((p: any) => ({
+              title: String(p.title || p.name || 'Suggested Project'),
+              description: String(p.description || p.details || 'Project idea to demonstrate key JD skills.'),
+            }))
+            .slice(0, 5)
+        : []
+
+      const wordsArr = parsed.powerWords || parsed.actionVerbs || parsed.keywords || []
+      const powerWords = Array.isArray(wordsArr) ? wordsArr.map(String).slice(0, 20) : []
+
+      const missingArr = parsed.missingKeywordExplanations || parsed.missingKeywords || []
+      const missingKeywordExplanations = Array.isArray(missingArr)
+        ? missingArr
+            .map((m: any) => ({
+              keyword: String(m.keyword || m.name || m.skill || ''),
+              reason: String(m.reason || m.explanation || 'Recommended skill for role alignment.'),
+            }))
+            .filter((m) => m.keyword.length > 0)
+        : []
+
+      return atsCoachingSchema.parse({
+        suggestions,
+        suggestedProjects,
+        powerWords,
+        missingKeywordExplanations,
+      })
+    }
+
     // 1. DETERMINISTIC ATS READINESS (Used internally for Structure points & coaching)
     const readiness = calculateAtsReadiness(normalizedResume as any)
 
@@ -219,7 +272,8 @@ export async function POST(req: NextRequest) {
           try {
             const repaired = jsonrepair(content)
             const parsed = JSON.parse(repaired)
-            atsCoachingSchema.parse(parsed)
+            const normalized = normalizeAtsCoaching(parsed)
+            atsCoachingSchema.parse(normalized)
             return { valid: true as const }
           } catch (e: any) {
             return { valid: false as const, reason: e.message }
@@ -233,10 +287,54 @@ export async function POST(req: NextRequest) {
 
         if (coachAiResult.success) {
           const parsedCoach = JSON.parse(jsonrepair(coachAiResult.content))
-          coachingResult = atsCoachingSchema.parse(parsedCoach)
+          coachingResult = normalizeAtsCoaching(parsedCoach)
+        } else {
+          // Deterministic coaching fallback derived from readiness deductions & missing skills
+          const deterministicSuggestions = (jobMatchResult?.missingRequiredSkills || []).map((skill: string) => ({
+            title: `Add ${skill} experience`,
+            description: `Demonstrate hands-on experience or projects involving ${skill} to satisfy job requirements.`,
+            impact: 'high' as const,
+          })).slice(0, 5)
+
+          coachingResult = {
+            suggestions: deterministicSuggestions.length > 0 ? deterministicSuggestions : [
+              {
+                title: 'Quantify impact in experience bullets',
+                description: 'Include measurable outcomes, metrics, or performance improvements in project bullets.',
+                impact: 'medium' as const,
+              }
+            ],
+            suggestedProjects: [
+              {
+                title: 'Full-Stack Project',
+                description: 'Build and deploy a responsive web application highlighting core technologies.',
+              }
+            ],
+            powerWords: ['Developed', 'Engineered', 'Optimized', 'Integrated', 'Implemented'],
+            missingKeywordExplanations: (jobMatchResult?.missingRequiredSkills || []).map((skill: string) => ({
+              keyword: skill,
+              reason: 'Required by position description.',
+            })),
+          }
         }
       } catch (e) {
         console.error('[ATS] Legacy V3 parsing or validation error:', e)
+      }
+    }
+
+    // Default coaching if not set yet
+    if (!coachingResult) {
+      coachingResult = {
+        suggestions: [
+          {
+            title: 'Align resume content with job requirements',
+            description: 'Ensure skills and project descriptions explicitly reference requested technical competencies.',
+            impact: 'high',
+          }
+        ],
+        suggestedProjects: [],
+        powerWords: ['Developed', 'Built', 'Implemented', 'Designed'],
+        missingKeywordExplanations: []
       }
     }
 

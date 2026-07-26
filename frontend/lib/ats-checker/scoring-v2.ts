@@ -61,8 +61,13 @@ export function evaluateHardRequirements(
   structuredJd: StructuredJD,
   resume: ParsedResume
 ): HardRequirementResult {
-  const hardReqs = structuredJd.requirements.filter(
-    (r) => r.category === 'hard_requirement'
+  const reqs = Array.isArray(structuredJd?.requirements)
+    ? structuredJd.requirements
+    : Array.isArray((structuredJd as any)?.capabilities)
+      ? (structuredJd as any).capabilities
+      : []
+  const hardReqs = reqs.filter(
+    (r: any) => r.category === 'hard_requirement'
   )
   if (hardReqs.length === 0) {
     return { passed: true, cap: null, failedRequirements: [] }
@@ -107,9 +112,14 @@ export function calculateAtsV2Score(
   let totalMaxWeight = 0
   let evaluatedCount = 0
   let confidenceSum = 0
+  const reqs = Array.isArray(structuredJd?.requirements)
+    ? structuredJd.requirements
+    : Array.isArray((structuredJd as any)?.capabilities)
+      ? (structuredJd as any).capabilities
+      : []
   const unevaluated: string[] = []
 
-  for (const req of structuredJd.requirements) {
+  for (const req of reqs) {
     const ev = evaluationsMap.get(req.id)
     if (ev) {
       evaluatedCount++

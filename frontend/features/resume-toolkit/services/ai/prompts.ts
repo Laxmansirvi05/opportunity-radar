@@ -221,7 +221,7 @@ function buildResumeText(resumeData: any, limit = 6000): string {
     lines.push('--- Skills ---')
     for (const item of sec.skills.items) {
       if (item.hidden) continue
-      const kw = Array.isArray(item.keywords) ? item.keywords.join(', ') : ''
+      const kw = Array.isArray(item.keywords) && item.keywords.length > 0 ? item.keywords.join(', ') : (item.description ? stripHtml(item.description) : '')
       lines.push(`${item.name || ''}: ${kw}`)
     }
     lines.push('')

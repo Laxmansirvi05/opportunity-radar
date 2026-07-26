@@ -239,7 +239,7 @@ export async function callAI(
     if (result.success) {
       if (context.validator) {
         try {
-          const validationResult = await Promise.resolve(context.validator(result.content))
+          const validationResult = await Promise.resolve(context.validator(result.content, config.provider))
           if (!validationResult.valid) {
             console.warn(`[AI Gateway] SCHEMA_FAILURE: ${config.provider} (${config.model}) - Reason: ${validationResult.reason}`)
             result = {

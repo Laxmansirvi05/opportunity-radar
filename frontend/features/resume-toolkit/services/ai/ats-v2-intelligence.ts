@@ -18,11 +18,32 @@ export interface IntelligenceResult<T> {
 }
 
 export function normalizeStructuredJd(parsed: any): StructuredJD {
+  if (Array.isArray(parsed)) {
+    parsed = { requirements: parsed }
+  }
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('Invalid StructuredJD object')
   }
-  if (parsed.requirements && Array.isArray(parsed.requirements)) {
-    parsed.requirements = parsed.requirements.map((r: any, idx: number) => ({
+
+  if (!parsed.roleTitle) {
+    parsed.roleTitle = parsed.title || parsed.role || 'Target Role'
+  }
+  if (!parsed.companyName) {
+    parsed.companyName = parsed.company || null
+  }
+  if (!parsed.hardRequirements || !Array.isArray(parsed.hardRequirements)) {
+    parsed.hardRequirements = []
+  }
+  if (!parsed.technicalCapabilities || !Array.isArray(parsed.technicalCapabilities)) {
+    parsed.technicalCapabilities = []
+  }
+  if (!parsed.responsibilities || !Array.isArray(parsed.responsibilities)) {
+    parsed.responsibilities = []
+  }
+
+  const rawReqs = parsed.requirements || parsed.capabilities || parsed.reqs || parsed.jobRequirements || []
+  if (Array.isArray(rawReqs)) {
+    parsed.requirements = rawReqs.map((r: any, idx: number) => ({
       id: r.id || `req_${idx + 1}`,
       name: r.name || r.title || r.requirement || `Requirement ${idx + 1}`,
       category:
@@ -53,6 +74,8 @@ export function normalizeStructuredJd(parsed: any): StructuredJD {
         context: r.provenance?.context || r.context || null,
       },
     }))
+  } else {
+    parsed.requirements = []
   }
   return structuredJDSchema.parse(parsed)
 }

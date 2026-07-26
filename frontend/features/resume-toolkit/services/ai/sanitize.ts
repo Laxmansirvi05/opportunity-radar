@@ -289,11 +289,11 @@ function mapAiParserVariations(data: Record<string, unknown>): Record<string, un
 					if (item.title && !item.name) item.name = item.title;
 					if (item.date && !item.period) item.period = item.date;
 				}
-				// ── Skills: handle keywords array ──
+				// ── Skills: handle keywords array (keywords, list, items, values) ──
 				if (mappedKey === "skills") {
-					// If skills have a 'list' or 'items' array, convert to keywords
 					if (Array.isArray(item.list) && !item.keywords) item.keywords = item.list.map(String);
 					if (Array.isArray(item.items) && !item.keywords) item.keywords = item.items.map(String);
+					if (Array.isArray(item.values) && !item.keywords) item.keywords = item.values.map(String);
 				}
 
 				// ── Convert url string → website object for any section that has website ──

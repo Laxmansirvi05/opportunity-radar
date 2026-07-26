@@ -37,10 +37,11 @@ export const jdRequirementSchema = z.object({
 })
 
 export const structuredJDSchema = z.object({
-  jobTitle: z.string().optional(),
-  companyName: z.string().optional(),
-  roleFamily: z.string().optional().describe('Broad category e.g., "Software Engineering", "Data", "Design"'),
-  seniority: z.string().optional().describe('e.g., "Intern", "Junior", "Senior", "Staff"'),
+  roleTitle: z.string().nullable().optional(),
+  jobTitle: z.string().nullable().optional(),
+  companyName: z.string().nullable().optional(),
+  roleFamily: z.string().nullable().optional().describe('Broad category e.g., "Software Engineering", "Data", "Design"'),
+  seniority: z.string().nullable().optional().describe('e.g., "Intern", "Junior", "Senior", "Staff"'),
   requirements: z.array(jdRequirementSchema)
 })
 

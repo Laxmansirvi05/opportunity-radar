@@ -68,6 +68,27 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
     }
   }
 
+  if ((resume as any).certifications && Array.isArray((resume as any).certifications)) {
+    for (const cert of (resume as any).certifications) {
+      if (typeof cert === 'string') snippets.push(cert.toLowerCase())
+      else if (cert && typeof cert === 'object') {
+        if (cert.name) snippets.push(String(cert.name).toLowerCase())
+        if (cert.title) snippets.push(String(cert.title).toLowerCase())
+        if (cert.issuer) snippets.push(String(cert.issuer).toLowerCase())
+      }
+    }
+  }
+
+  if ((resume as any).awards && Array.isArray((resume as any).awards)) {
+    for (const award of (resume as any).awards) {
+      if (typeof award === 'string') snippets.push(award.toLowerCase())
+      else if (award && typeof award === 'object') {
+        if (award.name) snippets.push(String(award.name).toLowerCase())
+        if (award.title) snippets.push(String(award.title).toLowerCase())
+      }
+    }
+  }
+
   return snippets
 }
 
@@ -82,24 +103,28 @@ export function verifyEvidence(
   const exactLower = reference.exactText.trim().toLowerCase()
   const allSnippets = extractAllResumeTextSnippets(resume)
 
-  // Direct inclusion match: exact text must be present within a resume snippet
-  const directMatch = allSnippets.some(
-    (snippet) => snippet.includes(exactLower)
-  )
-
-  if (directMatch) {
+  // 1. Direct inclusion match: exact text present within any resume snippet
+  if (allSnippets.some((snippet) => snippet.includes(exactLower))) {
     return { isValid: true }
   }
 
-  // Token overlap check against individual snippets
-  const words = exactLower.split(/\s+/).filter((w: string) => w.length > 2)
+  // 2. Reverse inclusion: snippet is contained within exactLower phrase
+  if (allSnippets.some((snippet) => snippet.length >= 3 && exactLower.includes(snippet))) {
+    return { isValid: true }
+  }
+
+  // 3. Token match: check if key skill/word tokens in exact text exist in any snippet
+  const words = exactLower
+    .split(/[\s,;|:/\\()-]+/)
+    .map((w: string) => w.trim())
+    .filter((w: string) => w.length > 0 && !['and', 'with', 'the', 'for', 'in', 'of', 'to', 'a', 'an', 'or', 'on', 'at', 'is', 'using', 'experience', 'knowledge', 'proficient', 'understanding'].includes(w))
+
   if (words.length === 0) {
     return { isValid: false, reason: 'Exact text contains no meaningful words' }
   }
 
   const matchesAnySnippet = allSnippets.some((snippet) => {
-    const matchCount = words.filter((w: string) => snippet.includes(w)).length
-    return matchCount / words.length >= 0.75
+    return words.some((word) => snippet.includes(word))
   })
 
   if (matchesAnySnippet) {

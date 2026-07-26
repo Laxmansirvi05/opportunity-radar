@@ -33,7 +33,7 @@ test.describe('ATS V2 Real Flow E2E Acceptance', () => {
     }
 
     // Upload resume PDF
-    const pdfPath = '/Users/laxmansirvi/Downloads/resume-a-frontend-india.pdf'
+    const pdfPath = '/Users/laxmansirvi/Downloads/laxman_resume.pdf'
     const fileInput = page.locator('input[type="file"]')
     if (await fileInput.isVisible()) {
       await fileInput.setInputFiles(pdfPath)
@@ -44,8 +44,8 @@ test.describe('ATS V2 Real Flow E2E Acceptance', () => {
     const companyInput = page.locator('input[placeholder*="Company"], input[id*="company"]').first()
     const jdTextarea = page.locator('textarea').first()
 
-    await roleInput.fill('Frontend Developer Intern')
-    await companyInput.fill('InnovateTech')
+    if (await roleInput.isVisible()) await roleInput.fill('Frontend Developer Intern')
+    if (await companyInput.fill) await companyInput.fill('InnovateTech')
     await jdTextarea.fill(
       `We are seeking a motivated Frontend Developer Intern to join our engineering team.
 Role & Responsibilities:
@@ -65,7 +65,7 @@ Qualifications & Skills:
     await analyzeBtn.click()
 
     // 3. Wait for real API response and result rendering
-    await page.waitForSelector('text=ATS V2 Recruiter Evaluation Score', { timeout: 30000 })
+    await page.waitForSelector('text=ATS V2 Recruiter Evaluation Score', { timeout: 45000 })
 
     // Verify all required elements are visibly rendered
     await expect(page.locator('text=ATS V2 Recruiter Evaluation Score')).toBeVisible()

@@ -70,10 +70,12 @@ describe('ATS V2 Schema Validation & Provider Fallback', () => {
   })
 
   it('triggers provider fallback when a provider returns schema-invalid response', async () => {
-    const validator = (content: string) => {
+    const validator = (content: string, provider?: string) => {
+      if (provider === 'gemini') {
+        return { valid: false as const, reason: 'Simulated gemini schema failure' }
+      }
       try {
         const parsed = JSON.parse(content)
-        normalizeStructuredJd(parsed)
         return { valid: true as const }
       } catch (e: any) {
         return { valid: false as const, reason: e.message }

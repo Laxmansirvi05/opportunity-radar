@@ -78,14 +78,46 @@ export function normalizeToAtsResume(rawData: any) {
 
   // Process skills: structured items -> flattened string array
   let skills: string[] = []
-  if (Array.isArray(rawData?.skills)) {
-    skills = rawData.skills.map(String)
-  } else if (Array.isArray(rawData?.sections?.skills?.items)) {
-    for (const item of rawData.sections.skills.items) {
-      if (Array.isArray(item.keywords)) {
-        skills.push(...item.keywords.map(String))
+
+  const extractSkillsFromItem = (item: any) => {
+    if (typeof item === 'string') {
+      item.split(/[,;\n]/).forEach((s) => {
+        const cleaned = s.replace(/^[-\s•*:-]+/, '').trim()
+        if (cleaned) skills.push(cleaned)
+      })
+    } else if (item && typeof item === 'object') {
+      const kwArrays = [item.keywords, item.values, item.list, item.items].filter(Array.isArray)
+      kwArrays.forEach((arr) => {
+        arr.forEach((kw: any) => {
+          if (typeof kw === 'string') {
+            kw.split(/[,;\n]/).forEach((s) => {
+              const cleaned = s.replace(/^[-\s•*:-]+/, '').trim()
+              if (cleaned) skills.push(cleaned)
+            })
+          }
+        })
+      })
+      if (typeof item.description === 'string' && item.description.trim()) {
+        const cleanDesc = item.description.replace(/<[^>]*>?/gm, '').trim()
+        cleanDesc.split(/[,;\n]/).forEach((s: string) => {
+          const cleaned = s.replace(/^[-\s•*:-]+/, '').trim()
+          if (cleaned && cleaned.length < 50) skills.push(cleaned)
+        })
+      }
+      if (typeof item.name === 'string' && item.name.trim()) {
+        const cleanName = item.name.trim()
+        if (!['programming', 'web', 'tools', 'languages', 'skills', 'ai / data', 'frameworks', 'frontend', 'backend', 'databases', 'cloud', 'libraries'].includes(cleanName.toLowerCase())) {
+          skills.push(cleanName)
+        }
       }
     }
+  }
+
+  if (Array.isArray(rawData?.skills)) {
+    rawData.skills.forEach(extractSkillsFromItem)
+  }
+  if (Array.isArray(rawData?.sections?.skills?.items)) {
+    rawData.sections.skills.items.forEach(extractSkillsFromItem)
   }
   skills = [...new Set(skills.map(s => s.trim()).filter(s => s.length > 0))]
 
@@ -98,7 +130,7 @@ export function normalizeToAtsResume(rawData: any) {
       company: item.company || '',
       role: item.position || '',
       start_date: item.period || '',
-      bullets: item.description ? item.description.split(/<br\s*\/?>/).map((s: string) => s.replace(/<[^>]*>?/gm, '').trim()).filter(Boolean) : []
+      bullets: item.description ? item.description.split(/<br\s*\/?>|\n/).map((s: string) => s.replace(/<[^>]*>?/gm, '').trim()).filter(Boolean) : []
     }))
   }
 
@@ -107,11 +139,26 @@ export function normalizeToAtsResume(rawData: any) {
   if (Array.isArray(rawData?.projects)) {
     projects = rawData.projects
   } else if (Array.isArray(rawData?.sections?.projects?.items)) {
-    projects = rawData.sections.projects.items.map((item: any) => ({
-      name: item.name || '',
-      description: item.description ? item.description.replace(/<[^>]*>?/gm, '').trim() : '',
-      technologies: []
-    }))
+    projects = rawData.sections.projects.items.map((item: any) => {
+      const projName = item.name || ''
+      const cleanDesc = item.description ? item.description.replace(/<[^>]*>?/gm, '').trim() : ''
+      let technologies: string[] = []
+      if (Array.isArray(item.keywords)) {
+        technologies = item.keywords.map(String)
+      } else if (projName.includes('|')) {
+        const parts = projName.split('|')
+        if (parts.length > 1) {
+          technologies = parts[1].split(/[,;]/).map((t: string) => t.trim()).filter(Boolean)
+        }
+      }
+      return {
+        name: projName,
+        title: projName,
+        description: cleanDesc,
+        technologies,
+        bullets: cleanDesc ? cleanDesc.split(/[\n•]/).map((s: string) => s.trim()).filter(Boolean) : []
+      }
+    })
   }
 
   // Process education
@@ -126,6 +173,18 @@ export function normalizeToAtsResume(rawData: any) {
     }))
   }
 
+  // Process certifications
+  let certifications: any[] = []
+  if (Array.isArray(rawData?.certifications)) {
+    certifications = rawData.certifications
+  } else if (Array.isArray(rawData?.sections?.certifications?.items)) {
+    certifications = rawData.sections.certifications.items.map((item: any) => ({
+      name: item.name || item.title || '',
+      issuer: item.issuer || item.organization || '',
+      date: item.date || item.period || ''
+    }))
+  }
+
   return {
     name,
     email,
@@ -134,6 +193,7 @@ export function normalizeToAtsResume(rawData: any) {
     skills,
     experience,
     projects,
-    education
+    education,
+    certifications
   }
 }
