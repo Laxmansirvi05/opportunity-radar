@@ -123,6 +123,37 @@ export async function POST(req: NextRequest) {
     const { normalizeToAtsResume } = await import('@/lib/ats-checker/normalization')
     const normalizedResume = normalizeToAtsResume(parsedResumeData)
 
+    // Helper to normalize legacy JD extraction safely
+    const normalizeLegacyJd = (parsed: any) => {
+      if (!parsed || typeof parsed !== 'object') throw new Error('Invalid JSON')
+      const hardReqs = Array.isArray(parsed.hardRequirements)
+        ? parsed.hardRequirements.map((h: any) => ({
+            rule: typeof h === 'string' ? h : h?.rule || String(h),
+            type: h?.type === 'Eligibility' ? 'Eligibility' : 'Required',
+          }))
+        : []
+      let edu = String(parsed.educationRequirements || 'none').toLowerCase()
+      if (edu.includes('bachelor')) edu = 'bachelors'
+      else if (edu.includes('master')) edu = 'masters'
+      else if (edu.includes('doctor') || edu.includes('phd')) edu = 'doctorate'
+      else if (edu.includes('diploma')) edu = 'diploma'
+      else if (!['doctorate', 'masters', 'bachelors', 'diploma', 'other', 'none'].includes(edu)) {
+        edu = 'other'
+      }
+      return jdExtractionSchema.parse({
+        targetRole: String(parsed.targetRole || targetRole || 'Target Role'),
+        company: parsed.company ? String(parsed.company) : companyName,
+        roleFamily: String(parsed.roleFamily || 'General'),
+        requiredSkills: Array.isArray(parsed.requiredSkills) ? parsed.requiredSkills.map(String) : [],
+        preferredSkills: Array.isArray(parsed.preferredSkills) ? parsed.preferredSkills.map(String) : [],
+        keywords: Array.isArray(parsed.keywords) ? parsed.keywords.map(String) : [],
+        responsibilities: Array.isArray(parsed.responsibilities) ? parsed.responsibilities.map(String) : [],
+        minimumExperienceMonths: typeof parsed.minimumExperienceMonths === 'number' ? parsed.minimumExperienceMonths : null,
+        educationRequirements: edu as any,
+        hardRequirements: hardReqs,
+      })
+    }
+
     // 1. DETERMINISTIC ATS READINESS (Used internally for Structure points & coaching)
     const readiness = calculateAtsReadiness(normalizedResume as any)
 
@@ -132,24 +163,51 @@ export async function POST(req: NextRequest) {
     let jdExtraction = undefined
     let atsV2Data = undefined
 
-    // 2. TARGETED JOB MATCH
-    // Step 2A: Extract JD Requirements via AI
+    // 2. ATS V2 INTELLIGENCE PIPELINE (PRIMARY)
+    try {
+      const v2JdRes = await extractJDIntelligence(jobDescription, companyName, targetRole, userId)
+      if (v2JdRes.success && v2JdRes.data) {
+        const v2EvalRes = await evaluateResumeEvidence(parsedResumeData, v2JdRes.data, userId)
+        if (v2EvalRes.success && v2EvalRes.data) {
+          const v2Score = calculateAtsV2Score(v2JdRes.data, v2EvalRes.data, parsedResumeData)
+          atsV2Data = {
+            score: v2Score,
+            evidenceMatrix: v2EvalRes.data,
+            structuredJd: v2JdRes.data,
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[ATS] ATS V2 intelligence pipeline error:', e)
+    }
+
+    // 3. TARGETED JOB MATCH (LEGACY V3 ENGINE & COACHING)
     const { systemPrompt: jdSys, userPrompt: jdUser } = buildJDExtractionPrompt(jobDescription, companyName, targetRole)
+    const jdValidator = (content: string) => {
+      try {
+        const repaired = jsonrepair(content)
+        const parsed = JSON.parse(repaired)
+        normalizeLegacyJd(parsed)
+        return { valid: true as const }
+      } catch (e: any) {
+        return { valid: false as const, reason: e.message }
+      }
+    }
 
     const jdAiResult = await callAI(
       { systemPrompt: jdSys, userPrompt: jdUser, maxTokens: 2000, temperature: 0.1, outputFormat: 'json' },
-      { feature: 'resume_ats_jd_extract', userId: userId }
+      { feature: 'resume_ats_jd_extract', userId: userId, validator: jdValidator }
     )
 
     if (jdAiResult.success) {
       try {
         const parsedJd = JSON.parse(jsonrepair(jdAiResult.content))
-        jdExtraction = jdExtractionSchema.parse(parsedJd)
+        jdExtraction = normalizeLegacyJd(parsedJd)
 
-        // Step 2B: DETERMINISTIC Job Match (V3 Engine)
+        // DETERMINISTIC Job Match (V3 Engine)
         jobMatchResult = calculateJobMatch(normalizedResume as any, jdExtraction)
 
-        // Step 2C: AI Coaching Feedback
+        // AI Coaching Feedback
         const { systemPrompt: coachSys, userPrompt: coachUser } = buildAtsCoachingPrompt(
           normalizedResume as any,
           readiness,
@@ -157,36 +215,32 @@ export async function POST(req: NextRequest) {
           jdExtraction
         )
 
+        const coachValidator = (content: string) => {
+          try {
+            const repaired = jsonrepair(content)
+            const parsed = JSON.parse(repaired)
+            atsCoachingSchema.parse(parsed)
+            return { valid: true as const }
+          } catch (e: any) {
+            return { valid: false as const, reason: e.message }
+          }
+        }
+
         const coachAiResult = await callAI(
           { systemPrompt: coachSys, userPrompt: coachUser, maxTokens: 2000, temperature: 0.3, outputFormat: 'json' },
-          { feature: 'resume_ats_coaching', userId: userId }
+          { feature: 'resume_ats_coaching', userId: userId, validator: coachValidator }
         )
 
         if (coachAiResult.success) {
           const parsedCoach = JSON.parse(jsonrepair(coachAiResult.content))
           coachingResult = atsCoachingSchema.parse(parsedCoach)
-        } else {
-          aiFailed = true
-        }
-
-        // Step 2D: ATS V2 Intelligence Pipeline
-        const v2JdRes = await extractJDIntelligence(jobDescription, companyName, targetRole, userId)
-        if (v2JdRes.success && v2JdRes.data) {
-          const v2EvalRes = await evaluateResumeEvidence(parsedResumeData, v2JdRes.data, userId)
-          if (v2EvalRes.success && v2EvalRes.data) {
-            const v2Score = calculateAtsV2Score(v2JdRes.data, v2EvalRes.data, parsedResumeData)
-            atsV2Data = {
-              score: v2Score,
-              evidenceMatrix: v2EvalRes.data,
-              structuredJd: v2JdRes.data,
-            }
-          }
         }
       } catch (e) {
-        console.error('[ATS] AI parsing or validation error:', e)
-        aiFailed = true
+        console.error('[ATS] Legacy V3 parsing or validation error:', e)
       }
-    } else {
+    }
+
+    if (!atsV2Data && !jobMatchResult && !coachingResult) {
       aiFailed = true
     }
 

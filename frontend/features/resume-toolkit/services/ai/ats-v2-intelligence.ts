@@ -17,6 +17,100 @@ export interface IntelligenceResult<T> {
   provider?: string
 }
 
+export function normalizeStructuredJd(parsed: any): StructuredJD {
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid StructuredJD object')
+  }
+  if (parsed.requirements && Array.isArray(parsed.requirements)) {
+    parsed.requirements = parsed.requirements.map((r: any, idx: number) => ({
+      id: r.id || `req_${idx + 1}`,
+      name: r.name || r.title || r.requirement || `Requirement ${idx + 1}`,
+      category:
+        r.category &&
+        [
+          'hard_requirement',
+          'technical_capability',
+          'responsibility',
+          'experience_level',
+          'education',
+          'certification',
+          'domain_knowledge',
+          'tooling_environment',
+          'soft_skill',
+          'location_auth',
+          'preferred_qualification',
+          'other',
+        ].includes(r.category)
+          ? r.category
+          : 'technical_capability',
+      importance:
+        r.importance && ['critical', 'high', 'medium', 'low'].includes(r.importance)
+          ? r.importance
+          : 'medium',
+      description: r.description || null,
+      provenance: {
+        exactQuote: r.provenance?.exactQuote || r.exactQuote || r.name || null,
+        context: r.provenance?.context || r.context || null,
+      },
+    }))
+  }
+  return structuredJDSchema.parse(parsed)
+}
+
+export function normalizeEvidenceMatrix(parsed: any): EvidenceMatrix {
+  if (!parsed) {
+    throw new Error('Invalid EvidenceMatrix object')
+  }
+  if (Array.isArray(parsed)) {
+    parsed = { evaluations: parsed }
+  }
+  if (parsed.evaluations && Array.isArray(parsed.evaluations)) {
+    parsed.evaluations = parsed.evaluations.map((e: any, idx: number) => ({
+      capabilityId: e.capabilityId || e.id || `req_${idx + 1}`,
+      satisfaction:
+        e.satisfaction &&
+        ['none', 'insufficient', 'partial', 'substantial', 'complete'].includes(e.satisfaction)
+          ? e.satisfaction
+          : 'none',
+      evidenceStrength:
+        e.evidenceStrength &&
+        ['none', 'weak', 'moderate', 'strong', 'exceptional'].includes(e.evidenceStrength)
+          ? e.evidenceStrength
+          : 'none',
+      evidenceReferences: Array.isArray(e.evidenceReferences)
+        ? e.evidenceReferences.map((ref: any, refIdx: number) => ({
+            evidenceId: ref.evidenceId || `ref_${refIdx + 1}`,
+            sourceSection: ref.sourceSection || 'skills',
+            exactText: ref.exactText || ref.snippet || 'Evidence text',
+            evidenceType:
+              ref.evidenceType &&
+              [
+                'learning',
+                'listed_skill',
+                'coursework',
+                'certification',
+                'education',
+                'project',
+                'professional_experience',
+                'achievement',
+                'leadership',
+              ].includes(ref.evidenceType)
+                ? ref.evidenceType
+                : 'listed_skill',
+            quantifiedImpact: ref.quantifiedImpact || null,
+            recency: ref.recency || null,
+            confidence: typeof ref.confidence === 'number' ? ref.confidence : 0.8,
+          }))
+        : [],
+      confidence: typeof e.confidence === 'number' ? e.confidence : 0.8,
+      semanticReasoning: e.semanticReasoning || e.reasoning || 'Evaluated requirement evidence.',
+      gapReason: e.gapReason || null,
+      uncertaintyReason: e.uncertaintyReason || null,
+    }))
+  }
+  return evidenceMatrixSchema.parse(parsed)
+}
+
 export async function extractJDIntelligence(
   jobDescription: string,
   companyName?: string,
@@ -29,13 +123,10 @@ export async function extractJDIntelligence(
     try {
       const repaired = jsonrepair(responseContent)
       const parsed = JSON.parse(repaired)
-      const res = structuredJDSchema.safeParse(parsed)
-      if (res.success) {
-        return { valid: true as const }
-      }
-      return { valid: false as const, reason: `Zod Validation Error: ${res.error.message}` }
+      normalizeStructuredJd(parsed)
+      return { valid: true as const }
     } catch (e: any) {
-      return { valid: false as const, reason: `JSON Parse Error: ${e.message}` }
+      return { valid: false as const, reason: `Validation Error: ${e.message}` }
     }
   }
 
@@ -58,7 +149,7 @@ export async function extractJDIntelligence(
     try {
       const repaired = jsonrepair(aiResult.content)
       const parsed = JSON.parse(repaired)
-      const structuredJd = structuredJDSchema.parse(parsed)
+      const structuredJd = normalizeStructuredJd(parsed)
       return {
         success: true,
         data: structuredJd,
@@ -88,17 +179,11 @@ export async function evaluateResumeEvidence(
   const validator = (responseContent: string) => {
     try {
       const repaired = jsonrepair(responseContent)
-      let parsed = JSON.parse(repaired)
-      if (Array.isArray(parsed)) {
-        parsed = { evaluations: parsed }
-      }
-      const res = evidenceMatrixSchema.safeParse(parsed)
-      if (res.success) {
-        return { valid: true as const }
-      }
-      return { valid: false as const, reason: `Zod Validation Error: ${res.error.message}` }
+      const parsed = JSON.parse(repaired)
+      normalizeEvidenceMatrix(parsed)
+      return { valid: true as const }
     } catch (e: any) {
-      return { valid: false as const, reason: `JSON Parse Error: ${e.message}` }
+      return { valid: false as const, reason: `Validation Error: ${e.message}` }
     }
   }
 
@@ -120,11 +205,8 @@ export async function evaluateResumeEvidence(
   if (aiResult.success) {
     try {
       const repaired = jsonrepair(aiResult.content)
-      let parsed = JSON.parse(repaired)
-      if (Array.isArray(parsed)) {
-        parsed = { evaluations: parsed }
-      }
-      const rawMatrix = evidenceMatrixSchema.parse(parsed)
+      const parsed = JSON.parse(repaired)
+      const rawMatrix = normalizeEvidenceMatrix(parsed)
 
       // Run hallucination guard
       const { sanitizedMatrix } = sanitizeEvidenceMatrix(resume, rawMatrix)
@@ -147,3 +229,4 @@ export async function evaluateResumeEvidence(
     error: `AI provider sequence failed: ${aiResult.reason}`,
   }
 }
+

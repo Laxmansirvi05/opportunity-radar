@@ -45,13 +45,13 @@ describe('AI Gateway Task-Based Routing (Phase 2.7)', () => {
 
   it('evidence evaluation never reaches 8B judge', () => {
     const sequence = getProviderSequence('evidence_evaluation')
-    const has8B = sequence.some(s => s.model.includes('8b') || s.model.includes('8B'))
+    const has8B = sequence.some(s => s.model?.includes('8b') || s.model?.includes('8B'))
     expect(has8B).toBe(false)
   })
 
   it('Ollama qualified judge routing works and Nemotron is a deep fallback', async () => {
     const sequence = getProviderSequence('evidence_evaluation')
-    expect(sequence.some(s => (s.provider as string) === 'ollama' && s.model! === 'gpt-oss:120b')).toBe(true)
+    expect(sequence.some(s => (s.provider as string) === 'ollama' && s.model === 'gpt-oss:120b')).toBe(true)
     
     const nemotronIndex = sequence.findIndex(s => s.provider === 'ollama' && s.model === 'nemotron-3-super')
     expect(nemotronIndex).toBeGreaterThan(0)
@@ -135,7 +135,7 @@ describe('AI Gateway Task-Based Routing (Phase 2.7)', () => {
     ]
     for (const task of tasks) {
       const sequence = getProviderSequence(task)
-      const hasSemantic = sequence.some(s => s.provider === 'voyage' || s.provider === 'jina' as any)
+      const hasSemantic = sequence.some(s => (s.provider as string) === 'voyage' || (s.provider as string) === 'jina')
       expect(hasSemantic).toBe(false)
     }
   })

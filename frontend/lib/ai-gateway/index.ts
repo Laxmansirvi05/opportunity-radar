@@ -135,6 +135,8 @@ async function logUsage(result: AIResult, context: GatewayContext): Promise<void
   })
 }
 
+const inMemoryRateLimits = new Map<string, number[]>()
+
 async function checkRateLimit(
   userId: string | undefined,
   feature: string
@@ -143,28 +145,40 @@ async function checkRateLimit(
   const limit = RATE_LIMITS[feature]
   if (!limit) return true
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return true
+  const now = Date.now()
+  const key = `${userId}:${feature}`
+  const userTimestamps = (inMemoryRateLimits.get(key) || []).filter(ts => now - ts < limit.windowMs)
+
+  if (userTimestamps.length >= limit.max) {
+    return false
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      )
 
-  const { data, error } = await supabase.rpc('check_ai_rate_limit', {
-    p_user_id:   userId,
-    p_feature:   feature,
-    p_max:       limit.max,
-    p_window_ms: limit.windowMs,
-  })
+      const { data, error } = await supabase.rpc('check_ai_rate_limit', {
+        p_user_id:   userId,
+        p_feature:   feature,
+        p_max:       limit.max,
+        p_window_ms: limit.windowMs,
+      })
 
-  if (error) {
-    console.error('[RateLimit] RPC Error:', error)
-    return true
+      if (!error && data) {
+        const allowed = (data as any)?.[0]?.allowed ?? (typeof data === 'boolean' ? data : true)
+        if (!allowed) return false
+      }
+    } catch {
+      // RPC missing or failed; fall back to in-memory check below
+    }
   }
 
-  return (data as { allowed: boolean }[])?.[0]?.allowed ?? false
+  userTimestamps.push(now)
+  inMemoryRateLimits.set(key, userTimestamps)
+  return true
 }
 
 export async function callAI(
