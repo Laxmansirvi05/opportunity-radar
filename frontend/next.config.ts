@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
       ['@lingui/swc-plugin', {}],
     ],
   },
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       // Google user avatars (recruiter avatars from Supabase profiles)
