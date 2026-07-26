@@ -24,17 +24,17 @@ export const STRENGTH_FACTORS: Record<string, number> = {
   none: 0.0,
   weak: 0.25,
   moderate: 0.5,
-  strong: 0.8,
+  strong: 0.75,
   exceptional: 1.0,
 }
 
 export const TYPE_BONUSES: Record<string, number> = {
-  professional_experience: 0.15,
-  achievement: 0.15,
-  project: 0.10,
-  certification: 0.10,
-  education: 0.08,
-  leadership: 0.08,
+  professional_experience: 0.12,
+  achievement: 0.12,
+  project: 0.08,
+  certification: 0.08,
+  education: 0.06,
+  leadership: 0.06,
   listed_skill: 0.03,
   coursework: 0.02,
   learning: 0.0,
@@ -96,7 +96,8 @@ export function scoreRequirement(
   // Base score combines satisfaction and evidence strength
   const baseFactor = satFactor * 0.6 + strFactor * 0.4
   const rawScore = (baseFactor + bestTypeBonus + impactBonus) * 100
-  const cappedScore = Math.min(100, Math.max(0, Math.round(rawScore)))
+  const maxScoreCap = hasImpact ? 100 : 90
+  const cappedScore = Math.min(maxScoreCap, Math.max(0, Math.round(rawScore)))
   const weightedScore = (cappedScore / 100) * (weight * 100)
   const maxWeightedScore = weight * 100
 

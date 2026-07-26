@@ -217,19 +217,25 @@ async function runBenchmarkForCandidate(pdfPath: string, name: string, mainJd: a
 
   // 2. Marker Manipulation Test
   console.log(`\n--- MARKER MANIPULATION TEST ---`);
-  const textWithoutMarker = rawText.replace(/Nimbus Cedar \d+|Quartz Finch \d+|Aurora Maple \d+/gi, "Standard Reference");
-  const parseResNoMarker = await callAI(
-    { systemPrompt: pdfParserSystemPrompt, userPrompt: `${pdfParserUserPrompt}\n\n${textWithoutMarker.slice(0, 15000)}`, maxTokens: 4000, temperature: 0.1, outputFormat: "json" },
-    { feature: "resume_parser", userId: "benchmark-agent" }
-  );
-  let parsedNoMarker = JSON.parse(jsonrepair(parseResNoMarker.content));
-  if (parsedNoMarker.data) parsedNoMarker = parsedNoMarker.data;
-  
-  const evMatrixNoMarker = await getEvidenceMatrix(parsedNoMarker, structJd);
-  const v2ScoreNoMarker = calculateAtsV2Score(structJd, evMatrixNoMarker!, parsedNoMarker);
-  console.log(`Score WITH marker: ${v2Score.overallScore}`);
-  console.log(`Score WITHOUT marker: ${v2ScoreNoMarker.overallScore}`);
-  console.log(`MARKER DELTA: ${v2Score.overallScore - v2ScoreNoMarker.overallScore}`);
+  const stripMarkers = (obj: any): any => {
+    if (!obj) return obj
+    if (typeof obj === 'string') return obj.replace(/Nimbus Cedar \d+|Quartz Finch \d+|Aurora Maple \d+/gi, '').trim()
+    if (Array.isArray(obj)) return obj.map(stripMarkers)
+    if (typeof obj === 'object') {
+      const res: any = {}
+      for (const k of Object.keys(obj)) res[k] = stripMarkers(obj[k])
+      return res
+    }
+    return obj
+  }
+  const parsedNoMarker = stripMarkers(parsedResume)
+  const evMatrixNoMarker = await getEvidenceMatrix(parsedNoMarker, structJd)
+  if (evMatrixNoMarker) {
+    const v2ScoreNoMarker = calculateAtsV2Score(structJd, evMatrixNoMarker, parsedNoMarker)
+    console.log(`Score WITH marker: ${v2Score.overallScore}`)
+    console.log(`Score WITHOUT marker: ${v2ScoreNoMarker.overallScore}`)
+    console.log(`MARKER DELTA: ${v2Score.overallScore - v2ScoreNoMarker.overallScore}`)
+  }
 
   // 3. Cross-Profession Sanity Tests
   console.log(`\n--- CROSS-PROFESSION SANITY TESTS ---`);
