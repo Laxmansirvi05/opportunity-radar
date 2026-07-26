@@ -110,8 +110,19 @@ function coerceValueAgainstTemplate(
 	path: string,
 	diagnostics: ResumeSanitizationDiagnostics,
 ): unknown {
-	if (value === undefined || value === null) return value;
-	if (template === undefined || template === null) return value;
+	if (typeof template === "string") {
+		if (typeof value === "string") return value;
+		if (isObject(value)) {
+			diagnostics.coercions.push({ path, fromType: "object", toType: "string" });
+			const strVal = (value.url || value.name || value.label || value.text || "") as string;
+			return String(strVal);
+		}
+		if (typeof value === "number" || typeof value === "boolean") {
+			diagnostics.coercions.push({ path, fromType: getValueType(value), toType: "string" });
+			return String(value);
+		}
+		return value;
+	}
 
 	if (typeof template === "boolean") {
 		const coerced = coerceBoolean(value);

@@ -356,11 +356,12 @@ function evaluateProfessionalQuality(resume: ParsedResume): AtsCategoryScore {
   const deductions: string[] = []
 
   // Summary quality
-  if (resume.summary && resume.summary.trim().length > 0) {
-    if (resume.summary.length < 40) {
+  const summaryStr = typeof resume.summary === 'string' ? resume.summary : (typeof (resume.summary as any)?.content === 'string' ? (resume.summary as any).content : '')
+  if (summaryStr && summaryStr.trim().length > 0) {
+    if (summaryStr.length < 40) {
       score -= 3
       deductions.push('Professional summary is too brief to be impactful.')
-    } else if (resume.summary.length > 600) {
+    } else if (summaryStr.length > 600) {
       score -= 3
       deductions.push('Professional summary is overly long and may not be read.')
     } else {

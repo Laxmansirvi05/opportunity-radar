@@ -67,7 +67,14 @@ export function normalizeToAtsResume(rawData: any) {
   const name = rawData?.name || rawData?.basics?.name || ''
   const email = rawData?.email || rawData?.basics?.email
   const phone = rawData?.phone || rawData?.basics?.phone
-  const summary = rawData?.summary?.content || rawData?.summary || rawData?.basics?.summary || ''
+  let summary = ''
+  if (typeof rawData?.summary === 'string') {
+    summary = rawData.summary
+  } else if (typeof rawData?.summary?.content === 'string') {
+    summary = rawData.summary.content
+  } else if (typeof rawData?.basics?.summary === 'string') {
+    summary = rawData.basics.summary
+  }
 
   // Process skills: structured items -> flattened string array
   let skills: string[] = []

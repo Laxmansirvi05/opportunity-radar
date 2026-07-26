@@ -95,6 +95,16 @@ describe('calculateAtsReadiness', () => {
 })
 
 describe('ATS Gaming Resistance & Edge Cases', () => {
+  it('handles non-string summary objects without throwing TypeError', () => {
+    const objectSummaryResume = {
+      ...baseResume,
+      summary: { content: 'Full stack developer with 3 years experience building cloud applications.' } as any,
+    }
+    expect(() => calculateAtsReadiness(objectSummaryResume as any)).not.toThrow()
+    const result = calculateAtsReadiness(objectSummaryResume as any)
+    expect(result.score).toBeGreaterThan(0)
+  })
+
   it('penalizes keyword-stuffed resumes', () => {
     const keywordStuffed: ParsedResume = {
       ...baseResume,
