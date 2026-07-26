@@ -66,6 +66,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const parserValidator = (content: string) => {
+      try {
+        sanitizeAndParseResumeJson(content)
+        return { valid: true as const }
+      } catch (e: any) {
+        return { valid: false as const, reason: `Sanitization Error: ${e.message}` }
+      }
+    }
+
     // Generate AI JSON
     const aiResult = await callAI(
       {
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
         outputFormat: 'json',
         media: isImage ? { data: Buffer.from(buffer).toString('base64'), mimeType: file.type } : undefined,
       },
-      { feature: 'resume_parser', userId: user.id }
+      { feature: 'resume_parser', userId: user.id, validator: parserValidator }
     )
 
     if (!aiResult.success) {

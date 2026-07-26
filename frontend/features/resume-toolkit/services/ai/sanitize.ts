@@ -399,7 +399,7 @@ function mapAiParserVariations(data: Record<string, unknown>): Record<string, un
 				}
 				basics.headline = "";
 			}
-			if (typeof basics.summary === "string" && basics.headline.trim() === basics.summary.trim()) {
+			if (typeof basics.summary === "string" && (basics.headline as string).trim() === basics.summary.trim()) {
 				basics.headline = ""; // Exact duplicate
 			}
 		}
