@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { denyIfNotCron } from '@/lib/cron-auth';
 
 /**
  * GET /api/cron/maintenance
@@ -16,10 +17,8 @@ import { createClient } from '@supabase/supabase-js';
  */
 export async function GET(request: Request) {
   // ── Security ──────────────────────────────────────────────────────────────
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const denied = denyIfNotCron(request);
+  if (denied) return denied;
 
   try {
     // ── Supabase client (service-role bypasses RLS) ────────────────────────
