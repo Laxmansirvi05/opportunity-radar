@@ -64,6 +64,7 @@ export interface QueryChain {
   lt: (col: string, val: unknown) => QueryChain
   or: (filter: string) => QueryChain
   in: (col: string, vals: readonly unknown[]) => QueryChain
+  range: (from: number, to: number) => QueryChain
   then: (resolve: (value: QueryResult) => void) => void
 }
 
@@ -83,6 +84,7 @@ export async function getProtectedOpportunityIds(db: Db): Promise<Set<string> | 
     .from('application_tracker')
     .select('opportunity_id, status')
     .in('status', PROTECTED_TRACKER_STAGES as unknown as string[])
+    .range(0, 9999)
 
   if (error) {
     console.error(
@@ -98,6 +100,31 @@ export async function getProtectedOpportunityIds(db: Db): Promise<Set<string> | 
     if (row?.opportunity_id) ids.add(row.opportunity_id as string)
   }
   return ids
+}
+
+/**
+ * Read every matching id, page by page.
+ *
+ * PostgREST caps an unbounded select at 1000 rows and gives no indication that
+ * it truncated. A single-shot select here silently deleted only the first 1000
+ * matches per run, so a backlog of 4,478 expired listings would have taken five
+ * nights to clear — and any source with more than 1000 stale rows would never
+ * fully reconcile.
+ */
+const PAGE = 1000
+
+async function selectAllIds(
+  build: (from: number, to: number) => QueryChain
+): Promise<{ ids: string[]; error: QueryError | null }> {
+  const ids: string[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1)
+    if (error) return { ids, error }
+    const rows = data ?? []
+    for (const r of rows) ids.push(String(r.id))
+    if (rows.length < PAGE) break
+  }
+  return { ids, error: null }
 }
 
 /** Delete in chunks — a URL carrying hundreds of uuids exceeds PostgREST limits. */
@@ -146,17 +173,18 @@ export async function deleteExpiredOpportunities(db: Db, now = new Date().toISOS
     }
   }
 
-  const { data, error } = await db
-    .from('opportunities')
-    .select('id')
-    .not('deadline', 'is', null)
-    .lt('deadline', now)
+  const { ids: all, error } = await selectAllIds((from, to) =>
+    db.from('opportunities')
+      .select('id')
+      .not('deadline', 'is', null)
+      .lt('deadline', now)
+      .range(from, to)
+  )
 
   if (error) {
     return { deleted: 0, preserved: 0, skipped: true, reason: `select failed: ${error.message ?? error}` }
   }
 
-  const all = (data ?? []).map((r) => String(r.id))
   const toDelete = all.filter((id) => !protectedIds.has(id))
   const toKeep = all.filter((id) => protectedIds.has(id))
 
@@ -209,17 +237,18 @@ export async function reconcileUnseen(
     }
   }
 
-  const { data, error } = await db
-    .from('opportunities')
-    .select('id')
-    .eq('source', source)
-    .or(`last_seen_at.is.null,last_seen_at.lt.${runStartedAt}`)
+  const { ids: stale, error } = await selectAllIds((from, to) =>
+    db.from('opportunities')
+      .select('id')
+      .eq('source', source)
+      .or(`last_seen_at.is.null,last_seen_at.lt.${runStartedAt}`)
+      .range(from, to)
+  )
 
   if (error) {
     return { deleted: 0, preserved: 0, skipped: true, reason: `select failed: ${error.message ?? error}` }
   }
 
-  const stale = (data ?? []).map((r) => String(r.id))
   const toDelete = stale.filter((id) => !protectedIds.has(id))
   const toKeep = stale.filter((id) => protectedIds.has(id))
 

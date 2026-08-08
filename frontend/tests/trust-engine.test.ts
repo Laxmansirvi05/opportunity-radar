@@ -213,6 +213,7 @@ function createDb(opts: {
         lt: () => b,
         or: () => b,
         in: (_col: string, vals: string[]) => { state.ids = vals; return b },
+        range: () => b,
         then: (res: (v: unknown) => void) => {
           if (table === 'application_tracker') {
             if (opts.trackerFails) return res({ data: null, error: { message: 'permission denied' } })
