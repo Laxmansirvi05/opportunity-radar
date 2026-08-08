@@ -234,18 +234,25 @@ export async function POST(req: NextRequest) {
       console.error('[ATS] ATS V2 intelligence pipeline error:', e)
     }
 
-    // 3. TARGETED JOB MATCH (LEGACY V3 ENGINE & COACHING)
-    const { systemPrompt: jdSys, userPrompt: jdUser } = buildJDExtractionPrompt(jobDescription, companyName, targetRole)
-    const jdValidator = (content: string) => {
-      try {
-        const repaired = jsonrepair(content)
-        const parsed = JSON.parse(repaired)
-        normalizeLegacyJd(parsed)
-        return { valid: true as const }
-      } catch (e: any) {
-        return { valid: false as const, reason: e.message }
+    if (!atsV2Data) {
+      aiFailed = true
+    } else {
+      // 3. TARGETED JOB MATCH (LEGACY V3 ENGINE & COACHING)
+      const { systemPrompt: jdSys, userPrompt: jdUser } = buildJDExtractionPrompt(jobDescription, companyName, targetRole)
+      const jdValidator = (content: string) => {
+        try {
+          const repaired = jsonrepair(content)
+          const parsed = JSON.parse(repaired)
+          const normalized = normalizeLegacyJd(parsed)
+          const validSkills = normalized.requiredSkills.filter(s => s.trim().length > 0)
+          if (jobDescription && jobDescription.trim().length > 50 && validSkills.length === 0) {
+             return { valid: false as const, reason: "JD contains content but zero required skills were extracted. Schema failure." }
+          }
+          return { valid: true as const }
+        } catch (e: any) {
+          return { valid: false as const, reason: e.message }
+        }
       }
-    }
 
     const jdAiResult = await callAI(
       { systemPrompt: jdSys, userPrompt: jdUser, maxTokens: 2000, temperature: 0.1, outputFormat: 'json' },
@@ -297,6 +304,7 @@ export async function POST(req: NextRequest) {
           })).slice(0, 5)
 
           coachingResult = {
+            recruiterVerdict: "The resume demonstrates some fundamental alignment with the role, but critical required skills are missing or lack strong evidence. Immediate improvement is needed in targeted experience areas.",
             suggestions: deterministicSuggestions.length > 0 ? deterministicSuggestions : [
               {
                 title: 'Quantify impact in experience bullets',
@@ -325,6 +333,7 @@ export async function POST(req: NextRequest) {
     // Default coaching if not set yet
     if (!coachingResult) {
       coachingResult = {
+        recruiterVerdict: "Basic assessment completed. Please provide a more detailed resume or job description for a comprehensive recruiter evaluation.",
         suggestions: [
           {
             title: 'Align resume content with job requirements',
@@ -337,9 +346,37 @@ export async function POST(req: NextRequest) {
         missingKeywordExplanations: []
       }
     }
+    }
 
-    if (!atsV2Data && !jobMatchResult && !coachingResult) {
+    // If ATS V2 failed, we set aiFailed to true.
+    if (!atsV2Data) {
       aiFailed = true
+    }
+
+    // Deterministic CGPA Improvement Rule
+    if (coachingResult && parsedResumeData.education && parsedResumeData.education.length > 0) {
+      const isCurrentlyPursuing = (edu: any) => {
+        if (!edu.graduation_year) return true;
+        const currentYear = new Date().getFullYear();
+        return edu.graduation_year >= currentYear;
+      };
+      
+      for (const edu of parsedResumeData.education) {
+        const degree = (edu.degree || '').toLowerCase();
+        if (degree.includes('b.tech') || degree.includes('btech') || degree.includes('b.e.') || degree.includes('bachelor of engineering') || degree.includes('bachelor of technology')) {
+          if (isCurrentlyPursuing(edu) && edu.gpa !== undefined && edu.gpa !== null) {
+            const cgpa = edu.gpa;
+            if (cgpa < 7.5) {
+              coachingResult.suggestions.push({
+                title: 'Improve Academic Standing',
+                description: `Your current CGPA is ${cgpa}. Aim to improve it to at least 7.5, as some internship and graduate recruitment processes use academic cutoffs.`,
+                impact: 'high',
+              });
+              break;
+            }
+          }
+        }
+      }
     }
 
     const finalResponse = atsCheckResponseSchema.parse({

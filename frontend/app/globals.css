@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/ibm-plex-sans";
 
+@source "../features";
+@source "../components";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -394,5 +397,24 @@
     --font-sans: var(--font-geist-sans), "Geist Fallback";
 
     color-scheme: dark;
+  }
+
+  .chat-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.6 0 0 / 0.3) transparent;
+  }
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background: oklch(0.6 0 0 / 0.3);
+    border-radius: 10px;
+  }
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.6 0 0 / 0.5);
   }
 }

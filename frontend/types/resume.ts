@@ -58,6 +58,7 @@ export const ParsedResumeSchema = z.object({
   experience: z.array(ResumeExperienceSchema).default([]),
   projects: z.array(ResumeProjectSchema).default([]),
   education: z.array(ResumeEducationSchema).default([]),
+  rawText: z.string().optional(),
 })
 export type ParsedResume = z.infer<typeof ParsedResumeSchema>
 

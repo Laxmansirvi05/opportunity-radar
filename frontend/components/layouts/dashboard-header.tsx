@@ -6,10 +6,15 @@ import { useState, useEffect } from 'react'
 
 interface DashboardHeaderProps {
   user: User
+  avatarUrl?: string | null
+  userName?: string | null
 }
 
-export function DashboardHeader({ user }: DashboardHeaderProps) {
-  const initial = user.email ? user.email.charAt(0).toUpperCase() : 'U'
+import Image from 'next/image'
+
+export function DashboardHeader({ user, avatarUrl, userName }: DashboardHeaderProps) {
+  const displayName = userName ?? user.user_metadata?.full_name ?? user.email ?? 'Student'
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
   const [unreadCount, setUnreadCount] = useState(0)
 
   const fetchUnread = async () => {
@@ -44,8 +49,12 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
           )}
         </Link>
         <Link href="/profile" aria-label="Profile">
-          <div className="w-8 h-8 rounded-full border border-outline-variant bg-primary-container text-on-primary-container flex items-center justify-center font-semibold text-sm select-none">
-            {initial}
+          <div className="relative w-8 h-8 rounded-full border border-outline-variant bg-primary-container text-on-primary-container flex items-center justify-center font-semibold text-sm select-none overflow-hidden">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt="Profile" fill className="object-cover" sizes="32px" />
+            ) : (
+              initial
+            )}
           </div>
         </Link>
       </div>

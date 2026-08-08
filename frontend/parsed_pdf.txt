@@ -1,0 +1,68 @@
+
+
+LAXMAN SIRVI
+Hyderabad, Telangana, India      laxmansirvi2203@gmail.com              linkedin.com/in/laxmansirvi
++91  8688137388           https://laxmansirvi.vercel.app/            https://github.com/Laxmansirvi05
+ABOUT ME
+First-year dual-degree student pursuing B.Tech in Computer Science Engineering (AI & ML) at Geethanjali College of Engineering and
+Technology and B.Sc in Data Science at IIT Madras. Strong academic foundation with hands-on experience in AI-powered web
+applications, data-driven problem solving, and modern web development. Passionate about Artificial Intelligence, Data Science, and
+building practical technology solutions through continuous learning, real-world projects, and internship opportunities.
+EXPERIENCE
+Data Analytics Job Simulation | Deloitte (Forage)
+ Completed hands-on virtual tasks in data analytics and business problem-solving.
+ Analyzed case-based scenarios and developed structured insights to support decision-making.
+Student Volunteer | Gatik Junior College, Hyderabad
+ Supported academic and student events through coordination, planning, and execution.
+ Collaborated with teams to ensure smooth operations and effective campus activities.
+Head Boy | St. Anthony’s Grammar High School, Hyderabad
+ Represented students and coordinated with faculty on school activities and initiatives.
+ Demonstrated leadership, communication, teamwork, and responsibility in student leadership roles.
+EDUCATION
+B.Tech in Al & Computer Science Engineering (AI & ML)
+Geethanjali College of Engineering & Technology  (Expected May 2029)
+SGPA: 9.5
+B.Sc in Data Science
+IIT Madras  (Expected May 2029 )
+SGPA: 7.17
+Intermediate (MPC)
+Gatik Junior College, Hyderabad (May 2025)
+Percentage: 96.5%
+Award: Academic Excellence (2024)
+SSC (10th Grade) 
+St. Anthony’s Grammar High School (April 2023)
+CGPA : 9.3
+Award: Academic Excellence (2023)
+Academic Topper (2023)
+PROJECTS
+AI Chatbox | React, Next.js, Tailwind CSS, Vercel
+ • Designed and developed a SaaS-style AI chat application with a modern dashboard, sidebar conversation history, and a polished
+responsive interface.
+ • Focused on delivering a product-like user experience with fast interaction, clean navigation, and strong visual clarity.
+ Live Demo: https://ai-saas-chat-app-three.vercel.app/chat
+AI Resume Generator | React, JavaScript, AI Integration
+ • Built an AI-powered resume builder that helps users create ATS-friendly resumes with structured editing and live preview support.
+ • Streamlined the resume creation process to improve usability, professional presentation, and overall workflow efficiency.
+ Git hub repo : https://github.com/Laxmansirvi05/ResumeAI
+Aether Weather App | HTML, CSS, JavaScript, Weather API, Vercel
+ • Developed a responsive weather application that displays real-time weather conditions, forecast insights, and location-based
+updates.
+ • Integrated API-driven data handling to create a fast, practical, and user-friendly experience.
+ Live Demo: https://aether-weather-dun.vercel.app/
+CERTIFICATIONS
+AWS Foundations: Machine Learning Basics
+Introduction to Generative AI — IBM SkillsBuild / Google Cloud
+Introduction to Prompt Engineering with GitHub Copilot
+Python Essentials 1 — Cisco Networking Academy / OpenEDG Python Institute
+AI for Beginners — HP LIFE
+Data Analytics Job Simulation — Deloitte / Forage
+Additional certifications completed in AI tools, cloud fundamentals, and technical skill development.
+SKILLS
+Programming :-  C, Python
+Web :-  HTML, CSS( Learning )
+AI / Data :- Data Science, Data Analysis, Machine Learning Fundamentals, Artificial Intelligence
+Tools :-  Git, GitHub, VS Code, PowerPoint, AutoCAD, Antigravity, Vercel, Claude Code , Google Stitch, Firebase.
+ACHIEVEMENTS
+Academic Topper — St. Anthony’s Grammar High School
+Academic Excellence Award — Intermediate (96.5%)
+Strong academic performance across dual-degree programs

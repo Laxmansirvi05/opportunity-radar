@@ -61,6 +61,7 @@
     "fuse.js": "^7.4.2",
     "groq-sdk": "^1.2.1",
     "immer": "^11.1.8",
+    "isomorphic-dompurify": "^3.19.0",
     "js-cookie": "^3.0.8",
     "jsonrepair": "^3.15.0",
     "lucide-react": "^1.17.0",
@@ -110,6 +111,7 @@
     "@types/sanitize-html": "^2.16.1",
     "@typescript/native-preview": "^7.0.0-dev.20260519.1",
     "@vitest/coverage-v8": "^4.1.9",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "eslint-config-prettier": "^10.1.8",
@@ -119,6 +121,7 @@
     "postcss": "^8.5.15",
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.11",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }

@@ -51,6 +51,16 @@ export function MobileBottomNav() {
         </li>
         <li>
           <Link
+            href="/assistant"
+            aria-label="AI Assistant"
+            className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/assistant' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}
+          >
+            <span className={`material-symbols-outlined mb-1 ${pathname === '/assistant' ? 'filled' : ''}`}>smart_toy</span>
+            <span className={`font-label-sm ${pathname === '/assistant' ? 'font-bold' : ''}`}>Assistant</span>
+          </Link>
+        </li>
+        <li>
+          <Link
             href="/resume"
             aria-label="Resume"
             className={`flex flex-col items-center justify-center text-on-surface-variant w-16 hover:text-primary transition-colors ${pathname === '/resume' ? 'text-primary border-t-2 border-primary pt-1' : ''}`}

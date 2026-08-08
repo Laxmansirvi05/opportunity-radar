@@ -1,0 +1,82 @@
+{
+  "readiness": {
+    "score": 76,
+    "categories": {
+      "coreSections": {
+        "score": 20,
+        "maxScore": 20,
+        "evidence": [
+          "Core contact info is complete.",
+          "Found 4 meaningful education entries.",
+          "Found both formal experience and meaningful projects.",
+          "Found technical/professional skills section."
+        ],
+        "deductions": []
+      },
+      "parsability": {
+        "score": 15,
+        "maxScore": 15,
+        "evidence": [
+          "Cleanly extracted structured data with no corrupted sections."
+        ],
+        "deductions": []
+      },
+      "contentQuality": {
+        "score": 20,
+        "maxScore": 20,
+        "evidence": [
+          "Analyzed 6 bullet points and descriptions."
+        ],
+        "deductions": []
+      },
+      "impact": {
+        "score": 1,
+        "maxScore": 15,
+        "evidence": [
+          "Evaluated 6 total points of evidence."
+        ],
+        "deductions": [
+          "Mostly missing action verbs at the start of sentences.",
+          "Severely lacking quantifiable outcomes/metrics."
+        ]
+      },
+      "skills": {
+        "score": 5,
+        "maxScore": 15,
+        "evidence": [
+          "Found 18 unique skills listed."
+        ],
+        "deductions": [
+          "Almost none of your listed skills are demonstrated in your experience/projects."
+        ]
+      },
+      "professionalQuality": {
+        "score": 15,
+        "maxScore": 15,
+        "evidence": [
+          "Professional summary is well-crafted."
+        ],
+        "deductions": []
+      }
+    }
+  },
+  "coaching": {
+    "recruiterVerdict": "Basic assessment completed. Please provide a more detailed resume or job description for a comprehensive recruiter evaluation.",
+    "suggestions": [
+      {
+        "title": "Align resume content with job requirements",
+        "description": "Ensure skills and project descriptions explicitly reference requested technical competencies.",
+        "impact": "high"
+      }
+    ],
+    "suggestedProjects": [],
+    "powerWords": [
+      "Developed",
+      "Built",
+      "Implemented",
+      "Designed"
+    ],
+    "missingKeywordExplanations": []
+  },
+  "aiFailed": true
+}

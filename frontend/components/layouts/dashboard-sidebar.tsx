@@ -5,8 +5,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 
+import Image from 'next/image'
+
 interface DashboardSidebarProps {
   user: User
+  avatarUrl?: string | null
+  userName?: string | null
 }
 
 // Navigation items matching the Stitch design
@@ -16,13 +20,14 @@ const NAV_ITEMS = [
   { href: '/tracker', icon: 'assignment_turned_in', label: 'Tracker' },
   { href: '/resume', icon: 'description', label: 'Resume' },
   { href: '/dashboard', icon: 'dashboard', label: 'Command Center' },
+  { href: '/assistant', icon: 'smart_toy', label: 'AI Assistant' },
   { href: '/profile', icon: 'person', label: 'Profile' },
 ]
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebarProps) {
   const pathname = usePathname()
-  const initial = user.email ? user.email.charAt(0).toUpperCase() : 'U'
-  const displayName = user.user_metadata?.full_name ?? user.email ?? 'Student'
+  const displayName = userName ?? user.user_metadata?.full_name ?? user.email ?? 'Student'
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
 
   return (
     <aside className="hidden lg:flex flex-col h-screen p-md overflow-y-auto bg-surface border-r border-outline-variant w-64 sticky top-0 z-40 shrink-0">
@@ -101,8 +106,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
         </div>
         {/* User info chip */}
         <div className="mt-md flex items-center gap-sm px-sm py-xs bg-surface-container rounded-xl">
-          <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-semibold text-sm shrink-0">
-            {initial}
+          <div className="relative w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-semibold text-sm shrink-0 overflow-hidden border-2 border-surface-container-lowest">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt="Profile" fill className="object-cover" sizes="40px" />
+            ) : (
+              initial
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-label-md text-label-md text-on-surface font-semibold truncate">{displayName}</span>

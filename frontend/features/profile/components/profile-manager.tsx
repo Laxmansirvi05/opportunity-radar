@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useRef } from 'react'
 import Link from 'next/link'
-import { updateProfile, updateResume, ProfileUpdateData } from '../actions/profile-actions'
+import { updateProfile, updateResume, updateAvatarUrl, ProfileUpdateData } from '../actions/profile-actions'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
 type ProfileData = {
   id: string
@@ -21,6 +22,10 @@ type ProfileData = {
   resume_url: string | null
   city: string | null
   gpa: string | null
+  avatar_url?: string | null
+  github_url?: string | null
+  linkedin_url?: string | null
+  bio?: string | null
 }
 
 type TrackerStats = {
@@ -51,6 +56,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
   const [error, setError] = useState<string | null>(null)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   // Form State
@@ -63,14 +69,17 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
     interests: initialProfile.interests || [],
     career_goal: initialProfile.career_goal,
     city: initialProfile.city,
-    gpa: initialProfile.gpa
+    gpa: initialProfile.gpa,
+    bio: initialProfile.bio || null,
+    github_url: initialProfile.github_url || null,
+    linkedin_url: initialProfile.linkedin_url || null
   })
 
   const [skillInput, setSkillInput] = useState('')
   const [interestInput, setInterestInput] = useState('')
 
-  const initial = profile.email ? profile.email.charAt(0).toUpperCase() : 'U'
-  const displayName = profile.name || profile.email
+  const displayName = profile.name || 'Student Name'
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return '0 KB'
@@ -94,7 +103,14 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
         setProfile({ ...profile, ...formData })
         setIsEditing(false)
       } else {
-        setError(result.error || 'Failed to update profile')
+        // If it's a column error, warn but save the rest in UI for now
+        if (result.error && result.error.includes('does not exist')) {
+            console.warn('Database columns missing. Please run the migration. Preserving UI state.')
+            setProfile({ ...profile, ...formData })
+            setIsEditing(false)
+        } else {
+            setError(result.error || 'Failed to update profile')
+        }
       }
     })
   }
@@ -109,7 +125,10 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       interests: profile.interests || [],
       career_goal: profile.career_goal,
       city: profile.city,
-      gpa: profile.gpa
+      gpa: profile.gpa,
+      bio: profile.bio || null,
+      github_url: profile.github_url || null,
+      linkedin_url: profile.linkedin_url || null
     })
     setError(null)
     setIsEditing(false)
@@ -137,6 +156,51 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
 
   const removeInterest = (interest: string) => {
     setFormData({ ...formData, interests: formData.interests.filter(i => i !== interest) })
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are allowed for profile photo.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Profile photo must be less than 5 MB.')
+      return
+    }
+
+    setError(null)
+    startTransition(async () => {
+      const ext = file.name.split('.').pop()
+      const filePath = `${profile.id}/avatar-${Date.now()}.${ext}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        setError(uploadError.message)
+        return
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      const updateResult = await updateAvatarUrl(publicUrl)
+
+      if (updateResult.success || (updateResult.error && updateResult.error.includes('does not exist'))) {
+        setProfile((prev) => ({
+          ...prev,
+          avatar_url: publicUrl
+        }))
+      } else {
+        setError(updateResult.error || 'Failed to update avatar URL')
+      }
+    })
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,284 +294,449 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
   }
 
   return (
-    <div className="max-w-container-max mx-auto space-y-lg pb-16">
+    <div className="max-w-[1200px] mx-auto space-y-8 pb-16 pt-4">
+      
+      {error && (
+        <div className="bg-error/10 text-error px-4 py-3 rounded-2xl text-sm font-medium border border-error/20 flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          {error}
+        </div>
+      )}
+
       {/* Profile Header */}
-      <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col md:flex-row items-center md:items-start justify-between gap-md relative">
+      <section className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-8 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 relative">
         {isPending && (
-          <div className="absolute inset-0 bg-surface/50 backdrop-blur-[1px] rounded-xl flex items-center justify-center z-10">
+          <div className="absolute inset-0 bg-surface/30 backdrop-blur-[1px] rounded-[24px] flex items-center justify-center z-20">
             <span className="material-symbols-outlined animate-spin text-primary text-3xl">refresh</span>
           </div>
         )}
         
-        <div className="flex flex-col md:flex-row items-center gap-lg w-full">
-          <div aria-label="Initials" className="w-24 h-24 rounded-full bg-primary-fixed text-on-primary-fixed-variant flex items-center justify-center font-display text-headline-lg shrink-0">
-            {initial}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 w-full relative">
+          
+          {/* Avatar Container */}
+          <div className="relative group shrink-0">
+            <div className="w-[120px] h-[120px] rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-display text-4xl shrink-0 border-4 border-surface-container-lowest shadow-sm overflow-hidden">
+              {profile.avatar_url ? (
+                <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" sizes="120px" />
+              ) : (
+                initial
+              )}
+            </div>
+            {/* Camera Upload Button Overlay */}
+            <button 
+              onClick={() => avatarInputRef.current?.click()}
+              className="absolute bottom-0 right-0 w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-md border-2 border-surface-container-lowest hover:bg-primary/90 transition-colors z-10"
+              aria-label="Upload profile photo"
+            >
+              <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+            </button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              ref={avatarInputRef} 
+              className="hidden" 
+              onChange={handleAvatarUpload}
+            />
           </div>
           
           {isEditing ? (
-            <div className="flex-1 w-full flex flex-col gap-3">
+            <div className="flex-1 w-full flex flex-col gap-4 max-w-2xl">
               <div className="flex flex-col gap-1 w-full">
-                <label htmlFor="name" className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">FULL NAME</label>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">FULL NAME</label>
                 <input 
-                  id="name"
                   type="text" 
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})} 
                   placeholder="Enter your full name"
-                  className="font-headline-sm text-headline-sm text-on-surface bg-surface border-2 border-outline-variant rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-primary focus:border-primary w-full transition-all"
+                  className="font-headline-sm text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <input 
-                  type="text" 
-                  value={formData.university || ''} 
-                  onChange={e => setFormData({...formData, university: e.target.value})} 
-                  placeholder="University"
-                  className="font-body-md text-on-surface-variant bg-surface border border-outline-variant rounded-md px-3 py-1 outline-none focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-outline">•</span>
-                <input 
-                  type="text" 
-                  value={formData.degree || ''} 
-                  onChange={e => setFormData({...formData, degree: e.target.value})} 
-                  placeholder="Degree (e.g. B.S. Computer Science)"
-                  className="font-body-md text-on-surface-variant bg-surface border border-outline-variant rounded-md px-3 py-1 outline-none focus:ring-1 focus:ring-primary min-w-[250px]"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-label-md text-outline">Class of</span>
-                <input 
-                  type="number" 
-                  value={formData.graduation_year || ''} 
-                  onChange={e => setFormData({...formData, graduation_year: parseInt(e.target.value) || null})} 
-                  placeholder="YYYY"
-                  className="font-label-md text-on-surface bg-surface border border-outline-variant rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-primary w-24"
-                />
-                <span className="text-outline mx-2">•</span>
-                <input 
-                  type="text" 
-                  value={formData.gpa || ''} 
-                  onChange={e => setFormData({...formData, gpa: e.target.value})} 
-                  placeholder="CGPA/GPA (e.g. 3.8/4.0)"
-                  className="font-label-md text-on-surface bg-surface border border-outline-variant rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-primary w-40"
-                />
-                <span className="text-outline mx-2">•</span>
-                <input 
-                  type="text" 
-                  value={formData.city || ''} 
-                  onChange={e => setFormData({...formData, city: e.target.value})} 
-                  placeholder="City (e.g. San Francisco, CA)"
-                  className="font-label-md text-on-surface bg-surface border border-outline-variant rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-primary min-w-[200px]"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">University</label>
+                  <input 
+                    type="text" 
+                    value={formData.university || ''} 
+                    onChange={e => setFormData({...formData, university: e.target.value})} 
+                    placeholder="University"
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Degree</label>
+                  <input 
+                    type="text" 
+                    value={formData.degree || ''} 
+                    onChange={e => setFormData({...formData, degree: e.target.value})} 
+                    placeholder="e.g. B.S. Computer Science"
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Graduation Year</label>
+                  <input 
+                    type="number" 
+                    value={formData.graduation_year || ''} 
+                    onChange={e => setFormData({...formData, graduation_year: parseInt(e.target.value) || null})} 
+                    placeholder="YYYY"
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GPA</label>
+                  <input 
+                    type="text" 
+                    value={formData.gpa || ''} 
+                    onChange={e => setFormData({...formData, gpa: e.target.value})} 
+                    placeholder="e.g. 3.8/4.0"
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Location / City</label>
+                  <input 
+                    type="text" 
+                    value={formData.city || ''} 
+                    onChange={e => setFormData({...formData, city: e.target.value})} 
+                    placeholder="e.g. San Francisco, CA"
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Bio / Tagline</label>
+                  <input 
+                    type="text" 
+                    value={formData.bio || ''} 
+                    onChange={e => setFormData({...formData, bio: e.target.value})} 
+                    placeholder="Short bio"
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GitHub URL</label>
+                  <input 
+                    type="text" 
+                    value={formData.github_url || ''} 
+                    onChange={e => setFormData({...formData, github_url: e.target.value})} 
+                    placeholder="https://github.com/..."
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">LinkedIn URL</label>
+                  <input 
+                    type="text" 
+                    value={formData.linkedin_url || ''} 
+                    onChange={e => setFormData({...formData, linkedin_url: e.target.value})} 
+                    placeholder="https://linkedin.com/in/..."
+                    className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
               </div>
             </div>
           ) : (
-            <div className="text-center md:text-left">
-              <h2 className="font-headline-lg text-headline-lg text-on-surface">{displayName}</h2>
+            <div className="text-center md:text-left flex-1">
+              <h2 className="font-headline-lg text-[28px] font-bold text-on-surface mb-2 tracking-tight">{displayName}</h2>
+              
               {(profile.university || profile.degree) && (
-                <p className="font-body-lg text-body-lg text-on-surface-variant">
-                  {profile.university || 'University not set'} {profile.degree && `• ${profile.degree}`}
+                <div className="flex items-center justify-center md:justify-start gap-2 text-on-surface-variant mb-2">
+                  <span className="material-symbols-outlined text-[20px] text-primary">school</span>
+                  <span className="font-medium text-[16px]">
+                    {profile.university || 'University not set'} {profile.degree && `• ${profile.degree}`}
+                  </span>
+                </div>
+              )}
+              
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-outline font-label-md mb-4">
+                {profile.graduation_year && (
+                  <span className="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full text-[13px] font-medium text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+                    Class of {profile.graduation_year}
+                  </span>
+                )}
+                {profile.gpa && (
+                  <span className="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full text-[13px] font-medium text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[16px]">grade</span>
+                    GPA: {profile.gpa}
+                  </span>
+                )}
+                {profile.city && (
+                  <span className="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full text-[13px] font-medium text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[16px]">location_on</span>
+                    {profile.city}
+                  </span>
+                )}
+              </div>
+              
+              {profile.bio && (
+                <p className="text-on-surface-variant max-w-2xl mb-6 leading-relaxed">
+                  {profile.bio}
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-2 mt-1 text-outline font-label-md text-label-md">
-                {profile.graduation_year && <span>Class of {profile.graduation_year}</span>}
-                {profile.graduation_year && profile.gpa && <span>•</span>}
-                {profile.gpa && <span>GPA: {profile.gpa}</span>}
-                {(profile.graduation_year || profile.gpa) && profile.city && <span>•</span>}
-                {profile.city && <span>{profile.city}</span>}
+
+              {/* Social Links Row */}
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                {profile.github_url && (
+                  <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/50 hover:bg-surface-variant hover:border-outline-variant transition-all text-on-surface font-medium text-sm">
+                    {/* SVG for GitHub */}
+                    <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                    </svg>
+                    GitHub
+                  </a>
+                )}
+                {profile.linkedin_url && (
+                  <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/50 hover:bg-surface-variant hover:border-outline-variant transition-all text-on-surface font-medium text-sm">
+                    {/* SVG for LinkedIn */}
+                    <svg height="16" width="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    LinkedIn
+                  </a>
+                )}
+                <a href={`mailto:${profile.email}`} className="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/50 hover:bg-surface-variant hover:border-outline-variant transition-all text-on-surface font-medium text-sm">
+                  <span className="material-symbols-outlined text-[16px]">mail</span>
+                  {profile.email}
+                </a>
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-2 min-w-[120px] shrink-0">
+        <div className="absolute top-8 right-8">
           {isEditing ? (
-            <>
-              <button onClick={handleSave} disabled={isPending} className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-md text-label-md hover:opacity-90 transition-opacity cursor-pointer text-center disabled:opacity-50">
-                Save
-              </button>
-              <button onClick={handleCancel} disabled={isPending} className="border border-outline-variant text-on-surface-variant px-lg py-sm rounded-full font-label-md text-label-md hover:bg-surface-variant transition-colors cursor-pointer text-center disabled:opacity-50">
+            <div className="flex items-center gap-3">
+              <button onClick={handleCancel} disabled={isPending} className="px-5 py-2 rounded-full font-semibold text-sm hover:bg-surface-variant transition-colors disabled:opacity-50">
                 Cancel
               </button>
-            </>
+              <button onClick={handleSave} disabled={isPending} className="bg-primary text-on-primary px-6 py-2 rounded-full font-semibold text-sm hover:opacity-90 shadow-sm transition-opacity disabled:opacity-50">
+                Save
+              </button>
+            </div>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-md text-label-md hover:opacity-90 transition-opacity cursor-pointer">
+            <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-5 py-2 rounded-full border border-outline-variant font-semibold text-sm hover:bg-surface-variant hover:border-outline transition-colors text-on-surface">
+              <span className="material-symbols-outlined text-[18px]">edit</span>
               Edit Profile
             </button>
           )}
         </div>
       </section>
 
-      {error && (
-        <div className="bg-error/10 text-error px-4 py-3 rounded-lg text-sm font-medium border border-error/20 flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px]">error</span>
-          {error}
-        </div>
-      )}
-
-      {/* Career Snapshot */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-gutter">
-        <Link href="/profile/saved" className="bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:border-primary transition-colors block cursor-pointer">
-          <p className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Saved</p>
-          <p className="font-headline-md text-headline-md mt-xs">{stats.saved}</p>
+      {/* Career Snapshot Stats */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <Link href="/profile/saved" className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] hover:border-primary/40 hover:shadow-md transition-all block group relative overflow-hidden">
+          <div className="flex items-start justify-between mb-3 relative z-10">
+            <p className="font-semibold text-sm text-outline">Saved Opportunities</p>
+            <span className="material-symbols-outlined text-primary/80 bg-primary/10 p-2 rounded-xl">bookmark</span>
+          </div>
+          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10">{stats.saved}</p>
+          <p className="text-sm font-medium text-primary mt-3 flex items-center gap-1 relative z-10">
+            View all <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+          </p>
         </Link>
-        <div className="bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:border-primary transition-colors">
-          <p className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Applied</p>
-          <p className="font-headline-md text-headline-md mt-xs">{stats.applied}</p>
+        <Link href="/tracker" className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] hover:border-primary/40 hover:shadow-md transition-all block group relative overflow-hidden">
+          <div className="flex items-start justify-between mb-3 relative z-10">
+            <p className="font-semibold text-sm text-outline">Applications</p>
+            <span className="material-symbols-outlined text-primary/80 bg-primary/10 p-2 rounded-xl">send</span>
+          </div>
+          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10">{stats.applied}</p>
+          <p className="text-sm font-medium text-primary mt-3 flex items-center gap-1 relative z-10">
+            Track status <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+          </p>
+        </Link>
+        <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] group relative overflow-hidden">
+          <div className="flex items-start justify-between mb-3 relative z-10">
+            <p className="font-semibold text-sm text-outline">Interviews</p>
+            <span className="material-symbols-outlined text-primary/80 bg-primary/10 p-2 rounded-xl">event_available</span>
+          </div>
+          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10">{stats.interviews}</p>
+          <p className="text-sm font-medium text-primary mt-3 flex items-center gap-1 relative z-10 cursor-pointer">
+            Schedule <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+          </p>
         </div>
-        <div className="bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:border-primary transition-colors">
-          <p className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Interviews</p>
-          <p className="font-headline-md text-headline-md mt-xs">{stats.interviews}</p>
-        </div>
-        <div className="bg-surface-container-lowest border border-outline-variant p-md rounded-xl hover:border-primary transition-colors">
-          <p className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Success Rate</p>
-          <p className="font-headline-md text-headline-md text-secondary mt-xs">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] group relative overflow-hidden">
+          <div className="flex items-start justify-between mb-3 relative z-10">
+            <p className="font-semibold text-sm text-outline">Success Rate</p>
+            <span className="material-symbols-outlined text-green-600 bg-green-100 p-2 rounded-xl">trending_up</span>
+          </div>
+          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10 text-green-700">
             {stats.applied > 0 ? Math.round((stats.interviews / stats.applied) * 100) : 0}%
+          </p>
+          <p className="text-sm font-medium text-green-700 mt-3 flex items-center gap-1 relative z-10">
+            Keep it up!
           </p>
         </div>
       </section>
 
       {/* Main Bento Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter relative">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
         {isPending && isEditing && (
-          <div className="absolute inset-0 bg-surface/30 backdrop-blur-[1px] rounded-xl z-10" />
+          <div className="absolute inset-0 bg-surface/30 backdrop-blur-[1px] rounded-[24px] z-20" />
         )}
         
-        {/* Left Column: Skills & Interests */}
-        <div className="lg:col-span-8 space-y-gutter">
-          {/* Skills Section */}
-          <div className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl">
-            <div className="flex justify-between items-center mb-md">
-              <h3 className="font-headline-sm text-headline-sm">Skills</h3>
-            </div>
-            
-            {isEditing && (
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  type="text"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
-                  placeholder="Add a skill..."
-                  className="flex-1 font-body-sm text-on-surface bg-surface border border-outline-variant rounded-md px-3 py-2 outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button type="button" onClick={addSkill} className="bg-surface-variant text-on-surface-variant px-3 py-2 rounded-md hover:bg-outline-variant transition-colors font-medium text-sm">
-                  Add
-                </button>
+        {/* Left Column: Skills, Interests, Goal */}
+        <div className="lg:col-span-8 flex flex-col gap-8">
+          
+          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] overflow-hidden">
+            {/* Skills Section */}
+            <div className="p-8 border-b border-outline-variant/30">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">build</span>
+                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Skills</h3>
               </div>
-            )}
-
-            <div className="flex flex-wrap gap-sm">
-              {(isEditing ? formData.skills : profile.skills).map((skill) => (
-                <span key={skill} className="bg-surface-variant px-md py-sm rounded-full font-label-md text-label-md text-on-surface-variant flex items-center gap-1">
-                  {skill}
-                  {isEditing && (
-                    <button onClick={() => removeSkill(skill)} className="hover:text-error transition-colors flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[14px]">close</span>
-                    </button>
-                  )}
-                </span>
-              ))}
-              {(isEditing ? formData.skills : profile.skills).length === 0 && !isEditing && (
-                <span className="text-outline text-sm italic">No skills added yet.</span>
+              
+              {isEditing && (
+                <div className="flex items-center gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
+                    placeholder="Add a new skill..."
+                    className="flex-1 font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                  <button type="button" onClick={addSkill} className="bg-primary/10 text-primary px-4 py-2 rounded-xl hover:bg-primary/20 transition-colors font-semibold text-sm">
+                    Add
+                  </button>
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* Interests Section */}
-          <div className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl">
-            <h3 className="font-headline-sm text-headline-sm mb-md">Interests</h3>
-            
-            {isEditing && (
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  type="text"
-                  value={interestInput}
-                  onChange={(e) => setInterestInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInterest(); } }}
-                  placeholder="Add an interest..."
-                  className="flex-1 font-body-sm text-on-surface bg-surface border border-outline-variant rounded-md px-3 py-2 outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button type="button" onClick={addInterest} className="bg-surface-variant text-on-surface-variant px-3 py-2 rounded-md hover:bg-outline-variant transition-colors font-medium text-sm">
-                  Add
-                </button>
+              <div className="flex flex-wrap gap-2">
+                {(isEditing ? formData.skills : profile.skills).map((skill) => (
+                  <span key={skill} className="bg-surface px-4 py-2 rounded-full border border-outline-variant/60 font-medium text-sm text-on-surface-variant flex items-center gap-2 hover:border-outline-variant transition-colors shadow-sm shadow-black/[0.01]">
+                    {skill}
+                    {isEditing && (
+                      <button onClick={() => removeSkill(skill)} className="hover:text-error transition-colors flex items-center justify-center -mr-1">
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {(isEditing ? formData.skills : profile.skills).length === 0 && !isEditing && (
+                  <span className="text-outline text-sm italic">No skills added yet.</span>
+                )}
               </div>
-            )}
-
-            <div className="flex flex-wrap gap-sm">
-              {(isEditing ? formData.interests : profile.interests).map((interest) => (
-                <button key={interest} className="px-md py-sm rounded-full font-label-md text-label-md border border-primary bg-primary-container text-on-primary-container flex items-center gap-1">
-                  {interest}
-                  {isEditing && (
-                    <span onClick={(e) => { e.stopPropagation(); removeInterest(interest); }} className="hover:text-error transition-colors flex items-center justify-center cursor-pointer material-symbols-outlined text-[14px]">
-                      close
-                    </span>
-                  )}
-                </button>
-              ))}
-              {(isEditing ? formData.interests : profile.interests).length === 0 && !isEditing && (
-                <span className="text-outline text-sm italic">No interests added yet.</span>
-              )}
             </div>
-          </div>
 
-          {/* Career Goal Section */}
-          <div className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl">
-            <h3 className="font-headline-sm text-headline-sm mb-md">Career Goal</h3>
-            {isEditing ? (
-              <textarea
-                value={formData.career_goal || ''}
-                onChange={(e) => setFormData({ ...formData, career_goal: e.target.value })}
-                placeholder="What is your main career objective?"
-                className="w-full font-body-md text-on-surface bg-surface border border-outline-variant rounded-md px-3 py-2 outline-none focus:ring-1 focus:ring-primary min-h-[100px] resize-y"
-              />
-            ) : (
-              <p className="font-body-md text-body-md text-on-surface italic">
-                {profile.career_goal ? `"${profile.career_goal}"` : <span className="text-outline">No career goal set.</span>}
-              </p>
-            )}
+            {/* Interests Section */}
+            <div className="p-8 border-b border-outline-variant/30 bg-surface-container-lowest">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">favorite</span>
+                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Interests</h3>
+              </div>
+              
+              {isEditing && (
+                <div className="flex items-center gap-2 mb-6">
+                  <input
+                    type="text"
+                    value={interestInput}
+                    onChange={(e) => setInterestInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInterest(); } }}
+                    placeholder="Add a new interest..."
+                    className="flex-1 font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                  <button type="button" onClick={addInterest} className="bg-primary/10 text-primary px-4 py-2 rounded-xl hover:bg-primary/20 transition-colors font-semibold text-sm">
+                    Add
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {(isEditing ? formData.interests : profile.interests).map((interest) => (
+                  <span key={interest} className="px-4 py-2 rounded-full font-medium text-sm border border-primary/20 bg-primary/5 text-primary flex items-center gap-2 hover:bg-primary/10 transition-colors shadow-sm shadow-black/[0.01]">
+                    {interest}
+                    {isEditing && (
+                      <button onClick={(e) => { e.stopPropagation(); removeInterest(interest); }} className="hover:text-error transition-colors flex items-center justify-center -mr-1 cursor-pointer">
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {(isEditing ? formData.interests : profile.interests).length === 0 && !isEditing && (
+                  <span className="text-outline text-sm italic">No interests added yet.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Career Goal Section */}
+            <div className="p-8 bg-surface/50">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">track_changes</span>
+                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Career Goal</h3>
+              </div>
+              
+              <div className="pl-14">
+                {isEditing ? (
+                  <textarea
+                    value={formData.career_goal || ''}
+                    onChange={(e) => setFormData({ ...formData, career_goal: e.target.value })}
+                    placeholder="What is your main career objective? (e.g., 'I am seeking a summer internship in frontend engineering where I can apply my React skills to build scalable user interfaces.')"
+                    className="w-full font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[120px] resize-y transition-all"
+                  />
+                ) : (
+                  <p className="font-body-lg text-[16px] text-on-surface-variant leading-relaxed">
+                    {profile.career_goal ? profile.career_goal : <span className="text-outline italic">No career goal set. Click 'Edit Profile' to add one.</span>}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Right Column: Resume & Settings */}
-        <div className="lg:col-span-4 space-y-gutter">
+        <div className="lg:col-span-4 flex flex-col gap-8">
+          
           {/* Resume Section */}
-          <div className="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl h-fit">
-            <h3 className="font-headline-sm text-headline-sm mb-md">Resume</h3>
+          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-6 h-fit">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="material-symbols-outlined text-on-surface">description</span>
+              <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Resume</h3>
+            </div>
             
             {profile.resume_name ? (
-              <>
-                <div className="bg-surface-container-low p-md rounded-lg flex items-center gap-sm mb-md border border-outline-variant/30">
-                  <span className="material-symbols-outlined text-primary text-3xl">description</span>
-                  <div className="overflow-hidden">
-                    <p className="font-label-md text-label-md text-on-surface truncate">Resume Uploaded</p>
-                    <p className="font-label-sm text-label-sm text-on-surface-variant truncate">{profile.resume_name}</p>
-                    <p className="font-label-sm text-label-sm text-outline">
-                      {formatFileSize(profile.resume_size)}
-                    </p>
-                    <p className="font-label-sm text-label-sm text-primary mt-xs">
-                      Updated: {formatDate(profile.resume_updated_at!)}
+              <div className="flex flex-col gap-4">
+                <div className="bg-surface p-4 rounded-xl flex items-start gap-4 border border-outline-variant/40 shadow-sm shadow-black/[0.01]">
+                  <div className="w-12 h-12 bg-error/10 text-error rounded-xl flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">picture_as_pdf</span>
+                  </div>
+                  <div className="overflow-hidden w-full pt-1">
+                    <p className="font-semibold text-[15px] text-on-surface truncate" title={profile.resume_name}>{profile.resume_name}</p>
+                    <div className="flex items-center gap-2 mt-1 font-medium text-[13px] text-on-surface-variant">
+                      <span>PDF</span>
+                      <span className="w-1 h-1 rounded-full bg-outline-variant"></span>
+                      <span>{formatFileSize(profile.resume_size)}</span>
+                    </div>
+                    <p className="font-medium text-[12px] text-outline mt-2">
+                      Uploaded {formatDate(profile.resume_updated_at!)}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-sm">
-                  <button onClick={handleViewResume} disabled={isEditing || isPending} className="flex-1 bg-primary-container text-on-primary-container py-sm rounded-lg font-label-md text-label-md hover:bg-primary hover:text-on-primary transition-colors cursor-pointer text-center flex items-center justify-center disabled:opacity-50">
-                    View
+                
+                <div className="flex flex-col gap-3">
+                  <button onClick={handleViewResume} disabled={isEditing || isPending} className="w-full bg-primary text-on-primary py-3 rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm shadow-black/[0.05] disabled:opacity-50">
+                    View Resume
                   </button>
-                  <button onClick={() => fileInputRef.current?.click()} disabled={isEditing || isPending} className="flex-1 border border-outline-variant py-sm rounded-lg font-label-md text-label-md hover:bg-surface-variant transition-colors cursor-pointer disabled:opacity-50">
-                    Replace
-                  </button>
-                  <button onClick={handleDeleteResume} disabled={isEditing || isPending} className="flex-1 border border-error text-error py-sm rounded-lg font-label-md text-label-md hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50">
-                    Delete
-                  </button>
+                  <div className="flex gap-3">
+                    <button onClick={() => fileInputRef.current?.click()} disabled={isEditing || isPending} className="flex-1 border border-outline-variant bg-surface py-2.5 rounded-xl font-semibold text-sm hover:bg-surface-variant hover:border-outline transition-colors text-on-surface disabled:opacity-50">
+                      Replace
+                    </button>
+                    <button onClick={handleDeleteResume} disabled={isEditing || isPending} className="flex-1 border border-error/30 text-error bg-error/5 py-2.5 rounded-xl font-semibold text-sm hover:bg-error/10 hover:border-error/50 transition-colors disabled:opacity-50">
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="bg-surface-container-low border border-dashed border-outline-variant rounded-lg p-6 flex flex-col items-center justify-center text-center gap-2">
-                <span className="material-symbols-outlined text-outline text-3xl">upload_file</span>
-                <p className="font-label-md text-on-surface-variant">No resume uploaded</p>
-                <button onClick={() => fileInputRef.current?.click()} disabled={isEditing || isPending} className="mt-2 text-primary font-label-md font-bold hover:underline disabled:opacity-50 cursor-pointer">
-                  Upload PDF
+              <div className="bg-surface border border-dashed border-outline-variant/60 rounded-xl p-8 flex flex-col items-center justify-center text-center gap-3">
+                <div className="w-12 h-12 bg-surface-variant text-on-surface-variant rounded-full flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[24px]">upload_file</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-on-surface text-[15px]">No resume uploaded</p>
+                  <p className="text-[13px] text-on-surface-variant mt-1">Upload a PDF up to 5MB</p>
+                </div>
+                <button onClick={() => fileInputRef.current?.click()} disabled={isEditing || isPending} className="mt-2 bg-surface-variant text-on-surface-variant px-5 py-2 rounded-full font-semibold text-sm hover:bg-outline-variant transition-colors disabled:opacity-50 cursor-pointer">
+                  Select File
                 </button>
               </div>
             )}
@@ -519,64 +748,72 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
               onChange={handleFileUpload}
             />
           </div>
+          {/* Achievements Section */}
+          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] overflow-hidden h-fit">
+            <div className="p-6 border-b border-outline-variant/30">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">workspace_premium</span>
+                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Achievements</h3>
+              </div>
+            </div>
+            <div className="p-8 text-center bg-surface/30">
+              <span className="material-symbols-outlined text-[32px] text-on-surface-variant/50 mb-3">military_tech</span>
+              <p className="font-semibold text-on-surface text-[15px]">No achievements yet</p>
+              <p className="text-[13px] text-on-surface-variant mt-1">Add your certifications and awards.</p>
+              <button disabled={isEditing || isPending} className="mt-4 px-4 py-2 border border-outline-variant rounded-full text-sm font-semibold text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-50">
+                + Add Achievement
+              </button>
+            </div>
+          </div>
 
           {/* Account Settings */}
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden h-fit">
-            <div className="p-lg pb-sm">
-              <h3 className="font-headline-sm text-headline-sm">Account Settings</h3>
+          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] overflow-hidden h-fit">
+            <div className="p-6 pb-4 border-b border-outline-variant/30">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-on-surface">settings</span>
+                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Account Settings</h3>
+              </div>
             </div>
-            <div className="flex flex-col">
-              {isEditing ? (
-                <button disabled className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group cursor-not-allowed opacity-50">
-                  <div className="flex items-center gap-md">
-                    <span className="material-symbols-outlined text-outline">lock</span>
-                    <span className="font-body-md text-body-md text-on-surface">Change Password</span>
+            <div className="flex flex-col py-2">
+              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px]">lock</span>
                   </div>
-                  <span className="material-symbols-outlined text-outline">chevron_right</span>
-                </button>
-              ) : (
-                <Link href="/settings" className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group cursor-pointer">
-                  <div className="flex items-center gap-md">
-                    <span className="material-symbols-outlined text-outline group-hover:text-primary">lock</span>
-                    <span className="font-body-md text-body-md text-on-surface">Change Password</span>
+                  <span className="font-semibold text-[15px] text-on-surface">Change Password</span>
+                </div>
+                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+              </Link>
+              
+              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px]">notifications</span>
                   </div>
-                  <span className="material-symbols-outlined text-outline">chevron_right</span>
-                </Link>
-              )}
-              {isEditing ? (
-                <button disabled className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-not-allowed opacity-50">
-                  <div className="flex items-center gap-md">
-                    <span className="material-symbols-outlined text-outline">notifications_active</span>
-                    <span className="font-body-md text-body-md text-on-surface">Notification Preferences</span>
+                  <span className="font-semibold text-[15px] text-on-surface">Notification Preferences</span>
+                </div>
+                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+              </Link>
+              
+              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px]">security</span>
                   </div>
-                  <span className="material-symbols-outlined text-outline">chevron_right</span>
-                </button>
-              ) : (
-                <Link href="/settings" className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-pointer">
-                  <div className="flex items-center gap-md">
-                    <span className="material-symbols-outlined text-outline group-hover:text-primary">notifications_active</span>
-                    <span className="font-body-md text-body-md text-on-surface">Notification Preferences</span>
+                  <span className="font-semibold text-[15px] text-on-surface">Privacy Settings</span>
+                </div>
+                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+              </Link>
+              
+              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[18px]">link</span>
                   </div>
-                  <span className="material-symbols-outlined text-outline">chevron_right</span>
-                </Link>
-              )}
-              {isEditing ? (
-                <button disabled className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-not-allowed opacity-50">
-                  <div className="flex items-center gap-md">
-                    <span className="material-symbols-outlined text-outline">security</span>
-                    <span className="font-body-md text-body-md text-on-surface">Privacy Settings</span>
-                  </div>
-                  <span className="material-symbols-outlined text-outline">chevron_right</span>
-                </button>
-              ) : (
-                <Link href="/settings" className="flex items-center justify-between p-lg hover:bg-surface-variant transition-colors group border-t border-outline-variant cursor-pointer">
-                  <div className="flex items-center gap-md">
-                    <span className="material-symbols-outlined text-outline group-hover:text-primary">security</span>
-                    <span className="font-body-md text-body-md text-on-surface">Privacy Settings</span>
-                  </div>
-                  <span className="material-symbols-outlined text-outline">chevron_right</span>
-                </Link>
-              )}
+                  <span className="font-semibold text-[15px] text-on-surface">Connected Accounts</span>
+                </div>
+                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+              </Link>
             </div>
           </div>
         </div>

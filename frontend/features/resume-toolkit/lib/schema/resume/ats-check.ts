@@ -41,6 +41,7 @@ export type JDExtraction = z.infer<typeof jdExtractionSchema>;
 // Qualitative Coaching Schema (AI)
 // ---------------------------------------------------------------------------
 export const atsCoachingSchema = z.object({
+  recruiterVerdict: z.string().optional().describe("A concise 2-4 sentence HR/Recruiter assessment of the candidate's fit for the role."),
   suggestions: z.array(atsSuggestionSchema).max(10),
   suggestedProjects: z.array(atsSuggestedProjectSchema).max(5),
   powerWords: z.array(z.string()).max(20),
@@ -161,6 +162,12 @@ export const atsV2ScoreSchema = z.object({
   hardRequirements: hardRequirementResultSchema,
   confidence: scoreConfidenceSchema,
   scoreCappedReason: z.string().optional(),
+  cgpaRecommendation: z.object({
+    visible: z.boolean(),
+    message: z.string(),
+    observed: z.string().optional(),
+    rule: z.string().optional()
+  }).optional()
 });
 
 export type RequirementScore = z.infer<typeof requirementScoreSchema>;

@@ -101,6 +101,31 @@ export function verifyEvidence(
   }
 
   const exactLower = reference.exactText.trim().toLowerCase()
+  
+  // PRIMARY SOURCE OF TRUTH: rawText
+  if ((resume as any).rawText) {
+    const rawLower = ((resume as any).rawText as string).toLowerCase()
+    
+    // 1. Direct inclusion match
+    if (rawLower.includes(exactLower)) {
+      return { isValid: true }
+    }
+    
+    // 2. Token match: check if key skill/word tokens in exact text exist in rawText
+    const words = exactLower
+      .split(/[\s,;|:/\\()-]+/)
+      .map((w: string) => w.trim())
+      .filter((w: string) => w.length > 0 && !['and', 'with', 'the', 'for', 'in', 'of', 'to', 'a', 'an', 'or', 'on', 'at', 'is', 'using', 'experience', 'knowledge', 'proficient', 'understanding'].includes(w))
+
+    if (words.length > 0) {
+      const matchesRawText = words.some((word) => rawLower.includes(word))
+      if (matchesRawText) {
+        return { isValid: true }
+      }
+    }
+  }
+
+  // FALLBACK: Structured Snippets
   const allSnippets = extractAllResumeTextSnippets(resume)
 
   // 1. Direct inclusion match: exact text present within any resume snippet

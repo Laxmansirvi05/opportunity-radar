@@ -21,7 +21,7 @@ export default async function ProfilePage() {
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, name, email, university, degree, graduation_year, skills, interests, career_goal, city, gpa, resume_name, resume_size, resume_updated_at, resume_url')
+      .select('id, name, email, university, degree, graduation_year, skills, interests, career_goal, city, gpa, resume_name, resume_size, resume_updated_at, resume_url, avatar_url, github_url, linkedin_url, bio')
       .eq('id', user.id)
       .single(),
     supabase
@@ -30,6 +30,7 @@ export default async function ProfilePage() {
       .eq('user_id', user.id)
   ])
 
+  console.log('PROFILE DATA:', profile);
   if (!profile) {
     // If profile is missing (e.g. trigger failed on signup), create an empty mock
     // so the page can load and the user can hit Save to trigger an upsert.
@@ -57,7 +58,7 @@ export default async function ProfilePage() {
 
   const initialProfileData = {
     id: profile?.id || user.id,
-    name: profile?.name || '',
+    name: profile?.name || user.user_metadata?.full_name || '',
     email: profile?.email || user.email || '',
     university: profile?.university || null,
     degree: profile?.degree || null,
@@ -70,7 +71,11 @@ export default async function ProfilePage() {
     resume_name: profile?.resume_name || null,
     resume_size: profile?.resume_size || null,
     resume_updated_at: profile?.resume_updated_at || null,
-    resume_url: profile?.resume_url || null
+    resume_url: profile?.resume_url || null,
+    avatar_url: profile?.avatar_url || null,
+    github_url: profile?.github_url || null,
+    linkedin_url: profile?.linkedin_url || null,
+    bio: profile?.bio || null
   }
 
   return <ProfileManager initialProfile={initialProfileData} stats={stats} />

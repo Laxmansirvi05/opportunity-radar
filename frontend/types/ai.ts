@@ -19,6 +19,7 @@ export type AIFeature =
   | 'schema_repair'
   | 'hr_coaching'
   | 'resume_optimization'
+  | 'assistant'
 
 export type AIProvider = 'gemini' | 'groq' | 'openrouter' | 'cloudflare' | 'ollama'
 

@@ -67,6 +67,7 @@ Output ONLY valid JSON matching the schema below.
 
 SCHEMA:
 {
+  "recruiterVerdict": "string (A concise 2-4 sentence HR/Recruiter assessment of the candidate's fit for the role. Be factual, objective, and grounded in the provided resume data)",
   "suggestions": [
     {
       "title": "string",
@@ -92,7 +93,8 @@ SCHEMA:
 Rules:
 - Max 10 suggestions, max 5 projects, max 20 power words.
 - Base your coaching on the "Deductions" and "Missing Skills" provided in the input context.
-- Focus heavily on bridging the missing required skills and hard requirements.`
+- Focus heavily on bridging the missing required skills and hard requirements.
+- The recruiterVerdict MUST evaluate the candidate holistically based on factual evidence provided. DO NOT manufacture evidence.`
 
   const userContext = {
     resume,

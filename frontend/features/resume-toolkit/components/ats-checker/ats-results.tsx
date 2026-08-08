@@ -28,30 +28,52 @@ export function AtsResults({
         <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-4 rounded-md text-sm flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
           <div>
-            <p className="font-semibold">AI Services Unavailable</p>
-            <p>The core deterministic scoring engine successfully evaluated your resume, but qualitative AI coaching (and advanced job extraction) could not be completed. You can still review the hard metrics below.</p>
+            <p className="font-semibold">ATS V2 Analysis Failure</p>
+            <p>The AI was unable to extract meaningful requirements from the provided job description after all fallback attempts. We cannot calculate a reliable Targeted Match Score without valid requirements.</p>
           </div>
         </div>
       )}
 
-      {/* Top Row: Scores */}
-      <div className="flex justify-center gap-4 flex-wrap">
+      {/* Top Row: Compact Score Summary */}
+      {!aiFailed && (
+      <div className="w-full">
         {atsV2 ? (
-          <ScoreCard
-            title="ATS V2 Recruiter Evaluation Score"
+          <CompactScoreSummary
+            title="Overall Match Score"
             score={atsV2.score.overallScore}
-            subtext={`Band: ${atsV2.score.band.toUpperCase()} (Capability: ${atsV2.score.capabilityScore}/100, Quality: ${atsV2.score.qualityScore}/100)`}
+            band={atsV2.score.band}
+            capabilityScore={atsV2.score.capabilityScore}
+            qualityScore={atsV2.score.qualityScore}
+            confidence={atsV2.score.confidence}
           />
         ) : jobMatch ? (
-          <ScoreCard title="Targeted ATS Match Score" score={jobMatch.score} />
+          <CompactScoreSummary title="Targeted ATS Match Score" score={jobMatch.score} />
         ) : (
-          <ScoreCard title="ATS Readiness Score" score={readiness.score} />
+          <CompactScoreSummary title="ATS Readiness Score" score={readiness.score} />
         )}
       </div>
+      )}
 
-      {/* Hard Requirements */}
+      {/* Recruiter Verdict */}
+      {coaching && coaching.recruiterVerdict && (
+        <Card className="border shadow-md bg-muted/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              Recruiter Verdict
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-foreground/90 leading-relaxed">
+              {coaching.recruiterVerdict}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Hard Requirements Warning */}
       {atsV2?.score.hardRequirements && !atsV2.score.hardRequirements.passed && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-md text-sm flex items-start gap-3">
+        <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-md text-sm flex items-start gap-3 shadow-sm">
           <ShieldAlert className="h-5 w-5 mt-0.5 shrink-0" />
           <div>
             <p className="font-semibold">Hard Requirement Warning</p>
@@ -63,68 +85,49 @@ export function AtsResults({
         <HardRequirementsCard requirements={jobMatch.hardRequirements} />
       )}
 
-      {/* ATS V2 Requirements & Evidence Matrix */}
+      {/* Requirements Breakdown (V2) */}
       {atsV2 && (
-        <Card className="border shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center justify-between">
-              <span>Recruiter Requirement Evidence Matrix</span>
-              <Badge variant="outline" className="capitalize">
-                Confidence: {atsV2.score.confidence.confidenceLevel} ({Math.round(atsV2.score.confidence.evaluationCoverage * 100)}% coverage)
-              </Badge>
-            </CardTitle>
-            <CardDescription>
-              Demonstrated capability evidence evaluated against target job description requirements.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="divide-y rounded-md border">
-              {atsV2.score.requirements.map((req) => (
-                <div key={req.requirementId} className="p-3 text-sm space-y-1 bg-card">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{req.requirementName}</span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs uppercase">
-                        {req.importance}
-                      </Badge>
-                      <Badge
-                        className={cn(
-                          "text-xs capitalize",
-                          req.satisfaction === "complete" || req.satisfaction === "substantial"
-                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
-                            : req.satisfaction === "partial"
-                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
-                            : "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"
-                        )}
-                      >
-                        {req.satisfaction}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                    <span>
-                      Evidence: <strong className="capitalize">{req.evidenceStrength}</strong>
-                      {req.bestEvidenceType && ` (${req.bestEvidenceType.replace(/_/g, ' ')})`}
-                      {req.hasQuantifiedImpact && ` • Quantified Impact (+10%)`}
-                    </span>
-                    <span>
-                      {req.weightedScore} / {req.maxWeightedScore} pts
-                    </span>
-                  </div>
-                  {req.gapReason && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 pt-0.5">
-                      Gap: {req.gapReason}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold tracking-tight">Requirement Evidence Matrix</h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            <RequirementsList 
+              title="Matched Requirements" 
+              type="success"
+              icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+              reqs={atsV2.score.requirements.filter(r => r.satisfaction === 'complete' || r.satisfaction === 'substantial')}
+            />
+            <RequirementsList 
+              title="Partial Matches" 
+              type="warning"
+              icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+              reqs={atsV2.score.requirements.filter(r => r.satisfaction === 'partial')}
+            />
+            <RequirementsList 
+              title="Critical Gaps" 
+              type="error"
+              icon={<XCircle className="h-4 w-4 text-red-500" />}
+              reqs={atsV2.score.requirements.filter(r => r.satisfaction === 'none' || r.satisfaction === 'insufficient')}
+            />
+          </div>
+        </div>
       )}
 
-      {/* Skills Analysis */}
-      {jobMatch && (
+      {/* CGPA Recommendation */}
+      {atsV2?.score.cgpaRecommendation?.visible && (
+        <div className="bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-md text-sm flex items-start gap-3 shadow-sm mt-4">
+          <Lightbulb className="h-5 w-5 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold">Academic Recommendation</p>
+            <p>{atsV2.score.cgpaRecommendation.message}</p>
+            <div className="mt-2 text-xs opacity-80 font-mono">
+              Observed: {atsV2.score.cgpaRecommendation.observed} | Rule: {atsV2.score.cgpaRecommendation.rule}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skills Analysis (Legacy) */}
+      {!atsV2 && jobMatch && (
         <SkillAnalysisCard 
           evidenced={jobMatch.evidencedSkills} 
           listed={jobMatch.listedSkills} 
@@ -133,7 +136,7 @@ export function AtsResults({
         />
       )}
 
-      {/* Categories */}
+      {/* Legacy Categories */}
       {!atsV2 && (
         <div className="grid gap-4 md:grid-cols-2">
           {jobMatch ? (
@@ -217,34 +220,92 @@ function CategoryItem({ label, cat }: { label: string; cat: AtsCategoryScore }) 
   )
 }
 
-function ScoreCard({ title, score, subtext }: { title: string; score: number; subtext?: string }) {
-  const color = score >= 75 ? "text-emerald-500" : score >= 50 ? "text-amber-500" : "text-red-500"
-  const bgRing = score >= 75 ? "from-emerald-500/10 to-transparent" : score >= 50 ? "from-amber-500/10 to-transparent" : "from-red-500/10 to-transparent"
+function CompactScoreSummary({ title, score, band, capabilityScore, qualityScore, confidence }: any) {
+  const colorText = score >= 75 ? "text-emerald-600 dark:text-emerald-400" : score >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
+  const bgRing = score >= 75 ? "bg-emerald-500/10 border-emerald-500/20" : score >= 50 ? "bg-amber-500/10 border-amber-500/20" : "bg-red-500/10 border-red-500/20"
 
   return (
-    <Card className="border shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden w-full max-w-sm">
-      <CardHeader className="pb-2 text-center">
-        <CardTitle className="font-semibold text-xl tracking-tight">
-          {title}
-        </CardTitle>
-        {subtext && <CardDescription className="text-xs">{subtext}</CardDescription>}
-      </CardHeader>
-      <CardContent className="flex items-center justify-center pb-8 pt-4">
-        <div className="relative flex h-40 w-40 items-center justify-center">
-          <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-            <circle className="stroke-muted" cx="50" cy="50" r="45" fill="none" strokeWidth="8" />
-            <circle
-              className={cn("transition-all duration-1000 ease-out", color.replace("text-", "stroke-"))}
-              cx="50" cy="50" r="45" fill="none" strokeWidth="8"
-              strokeDasharray="283"
-              strokeDashoffset={283 - (283 * score) / 100}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className={cn("flex h-32 w-32 flex-col items-center justify-center rounded-full bg-gradient-to-b", bgRing)}>
-            <span className={cn("font-bold text-5xl tabular-nums tracking-tighter", color)}>{score}</span>
+    <Card className={cn("border shadow-md overflow-hidden")}>
+      <CardContent className="p-0">
+        <div className="flex flex-col md:flex-row items-center p-6 gap-6">
+          <div className={cn("flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full border-4", bgRing, colorText.replace("text-", "border-"))}>
+            <span className={cn("font-bold text-4xl tabular-nums tracking-tighter", colorText)}>{score}</span>
           </div>
+          
+          <div className="flex-1 text-center md:text-left space-y-2">
+            <h2 className="font-semibold text-2xl tracking-tight">{title}</h2>
+            {band && (
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                <Badge variant="outline" className="text-xs font-medium uppercase tracking-wider">{band}</Badge>
+                {confidence && (
+                  <span className="text-xs text-muted-foreground">Confidence: {confidence.confidenceLevel} ({Math.round(confidence.evaluationCoverage * 100)}% coverage)</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {(capabilityScore !== undefined || qualityScore !== undefined) && (
+            <div className="flex gap-6 justify-center md:justify-end md:border-l pl-0 md:pl-6 pt-4 md:pt-0">
+              {capabilityScore !== undefined && (
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Capability</p>
+                  <p className="font-bold text-xl">{capabilityScore}</p>
+                </div>
+              )}
+              {qualityScore !== undefined && (
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Quality</p>
+                  <p className="font-bold text-xl">{qualityScore}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function RequirementsList({ title, type, icon, reqs }: { title: string, type: 'success' | 'warning' | 'error', icon: React.ReactNode, reqs: any[] }) {
+  const bgClasses = {
+    success: 'bg-emerald-500/5 border-emerald-500/20',
+    warning: 'bg-amber-500/5 border-amber-500/20',
+    error: 'bg-red-500/5 border-red-500/20',
+  }
+  const textClasses = {
+    success: 'text-emerald-700 dark:text-emerald-400',
+    warning: 'text-amber-700 dark:text-amber-400',
+    error: 'text-red-700 dark:text-red-400',
+  }
+
+  return (
+    <Card className={cn("border shadow-sm", bgClasses[type])}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          {icon}
+          {title} ({reqs.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {reqs.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">No items found.</p>
+        ) : (
+          reqs.map((req) => (
+            <div key={req.requirementId} className="space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <span className={cn("text-sm font-medium leading-tight", textClasses[type])}>{req.requirementName}</span>
+              </div>
+              <p className="text-xs text-muted-foreground/80 line-clamp-2" title={req.gapReason || req.semanticReasoning}>
+                {req.gapReason || req.semanticReasoning}
+              </p>
+              {req.bestEvidenceType && (
+                <Badge variant="outline" className="text-[0.65rem] capitalize mt-1 border-primary/20 text-primary/70">
+                  {req.bestEvidenceType.replace(/_/g, ' ')}
+                </Badge>
+              )}
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   )
@@ -258,15 +319,24 @@ function HardRequirementsCard({ requirements }: { requirements: Array<{ rule: st
           <ShieldAlert className="h-5 w-5 text-amber-500" />
           Hard Requirements Checker
         </CardTitle>
-        <CardDescription>Explicit disqualifying rules from the job description</CardDescription>
+        <CardDescription>
+          Explicit rules or constraints found in the job description.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {requirements.map((req, i) => (
-          <div key={i} className="flex items-start justify-between p-3 border rounded-md bg-muted/30">
-            <span className="text-sm font-medium">{req.rule}</span>
-            {req.status === 'Met' && <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20">MET</Badge>}
-            {req.status === 'Not Met' && <Badge className="bg-red-500/10 text-red-700 hover:bg-red-500/20">NOT MET</Badge>}
-            {req.status === 'Unknown' && <Badge className="bg-slate-500/10 text-slate-700 hover:bg-slate-500/20">UNKNOWN</Badge>}
+          <div key={i} className="flex items-center justify-between p-3 rounded-md bg-muted/50 text-sm">
+            <span>{req.rule}</span>
+            <Badge
+              variant="outline"
+              className={cn(
+                req.status === 'Met' ? 'text-emerald-500 border-emerald-500' :
+                req.status === 'Not Met' ? 'text-red-500 border-red-500' :
+                'text-amber-500 border-amber-500'
+              )}
+            >
+              {req.status}
+            </Badge>
           </div>
         ))}
       </CardContent>
@@ -274,29 +344,52 @@ function HardRequirementsCard({ requirements }: { requirements: Array<{ rule: st
   )
 }
 
-function SkillAnalysisCard({ evidenced, listed, missingRequired, missingPreferred }: { evidenced: string[]; listed: string[]; missingRequired: string[]; missingPreferred: string[] }) {
+function SkillAnalysisCard({ evidenced, listed, missingRequired, missingPreferred }: any) {
+  if (evidenced.length === 0 && listed.length === 0 && missingRequired.length === 0 && missingPreferred.length === 0) {
+    return (
+      <Card className="border shadow-md">
+        <CardContent className="p-6 text-center text-muted-foreground">
+          No structured skills data found for this analysis.
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border shadow-md">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-semibold text-lg tracking-tight">
-          <Search className="h-5 w-5 text-muted-foreground" />
-          Skills Gap Analysis
+          <Target className="h-5 w-5 text-primary" />
+          Targeted Keyword Analysis
         </CardTitle>
+        <CardDescription>
+          How well your resume covers the requested skills.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {(evidenced.length > 0 || listed.length > 0) && (
+      <CardContent className="grid gap-6 md:grid-cols-2">
+        {evidenced.length > 0 && (
           <div className="space-y-3">
             <p className="font-medium text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" /> Matched Skills
+              <CheckCircle2 className="h-4 w-4" /> Strong Evidence Matches
             </p>
             <div className="flex flex-wrap gap-2">
-              {evidenced.map((kw) => (
+              {evidenced.map((kw: string) => (
                 <Badge key={`ev-${kw}`} variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                  {kw} (Evidenced)
+                  {kw}
                 </Badge>
               ))}
-              {listed.map((kw) => (
-                <Badge key={`li-${kw}`} variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-500/40 border-dashed">
+            </div>
+          </div>
+        )}
+        
+        {listed.length > 0 && (
+          <div className="space-y-3">
+            <p className="font-medium text-amber-600 dark:text-amber-400 text-sm flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" /> Listed Only (Weak Evidence)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {listed.map((kw: string) => (
+                <Badge key={`li-${kw}`} variant="outline" className="border-amber-500/30 text-amber-600 dark:text-amber-400">
                   {kw} (Listed)
                 </Badge>
               ))}
@@ -310,7 +403,7 @@ function SkillAnalysisCard({ evidenced, listed, missingRequired, missingPreferre
               <XCircle className="h-4 w-4" /> Missing Required Skills
             </p>
             <div className="flex flex-wrap gap-2">
-              {missingRequired.map((kw) => (
+              {missingRequired.map((kw: string) => (
                 <Badge key={`mr-${kw}`} variant="secondary" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
                   {kw}
                 </Badge>
@@ -325,7 +418,7 @@ function SkillAnalysisCard({ evidenced, listed, missingRequired, missingPreferre
               <AlertTriangle className="h-4 w-4" /> Missing Preferred Skills
             </p>
             <div className="flex flex-wrap gap-2">
-              {missingPreferred.map((kw) => (
+              {missingPreferred.map((kw: string) => (
                 <Badge key={`mp-${kw}`} variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
                   {kw}
                 </Badge>
@@ -342,20 +435,24 @@ function SuggestionsCard({ suggestions }: { suggestions: any[] }) {
   const impactColor = {
     high: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
     medium: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    low: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    low: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   }
+
+  // Sort by impact: high -> medium -> low
+  const impactScore = { high: 3, medium: 2, low: 1 }
+  const sorted = [...suggestions].sort((a, b) => impactScore[b.impact as keyof typeof impactScore] - impactScore[a.impact as keyof typeof impactScore])
 
   return (
     <Card className="border shadow-md">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-semibold text-lg tracking-tight">
           <Lightbulb className="h-5 w-5 text-amber-500" />
-          AI Coaching
+          Top Improvements
         </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">
-        {suggestions.map((s, i) => (
-          <div key={i} className="space-y-1 rounded-lg border bg-card p-4">
+        {sorted.map((s, i) => (
+          <div key={i} className="space-y-1 rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="font-semibold text-sm">{s.title}</span>
               <Badge className={cn("text-[0.65rem] uppercase", impactColor[s.impact as keyof typeof impactColor])} variant="outline">{s.impact}</Badge>

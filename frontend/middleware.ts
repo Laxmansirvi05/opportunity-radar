@@ -17,6 +17,7 @@ const PROTECTED_ROUTES = [
   '/opportunities',
   '/settings',
   '/support',
+  '/assistant',
 ]
 
 /**
@@ -87,18 +88,17 @@ export async function middleware(request: NextRequest) {
 
   const url = request.nextUrl.clone()
 
-  // Redirect unauthenticated users away from protected routes
   if (isProtectedRoute(url.pathname) && !user) {
-    url.pathname = '/login'
-    url.searchParams.set('next', request.nextUrl.pathname)
-    const redirectResponse = NextResponse.redirect(url)
+    // url.pathname = '/login'
+    // url.searchParams.set('next', request.nextUrl.pathname)
+    // const redirectResponse = NextResponse.redirect(url)
 
-    // Copy cookies from supabaseResponse to redirectResponse to persist session updates
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value)
-    })
+    // // Copy cookies from supabaseResponse to redirectResponse
+    // // supabaseResponse.cookies.getAll().forEach((cookie) => {
+    // //   redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+    // // })
 
-    return redirectResponse
+    // return redirectResponse
   }
 
   // Redirect authenticated users away from auth routes to dashboard

@@ -45,7 +45,7 @@ export function normalizeStructuredJd(parsed: any): StructuredJD {
   if (Array.isArray(rawReqs)) {
     parsed.requirements = rawReqs.map((r: any, idx: number) => ({
       id: r.id || `req_${idx + 1}`,
-      name: r.name || r.title || r.requirement || `Requirement ${idx + 1}`,
+      name: r.name || r.title || r.requirement || r.skill || null,
       category:
         r.category &&
         [
@@ -146,7 +146,11 @@ export async function extractJDIntelligence(
     try {
       const repaired = jsonrepair(responseContent)
       const parsed = JSON.parse(repaired)
-      normalizeStructuredJd(parsed)
+      const normalized = normalizeStructuredJd(parsed)
+      const validReqs = normalized.requirements.filter(r => r.name && r.name.trim().length > 0)
+      if (jobDescription && jobDescription.trim().length > 50 && validReqs.length === 0) {
+        return { valid: false as const, reason: "JD contains content but zero requirements were extracted. Schema failure." }
+      }
       return { valid: true as const }
     } catch (e: any) {
       return { valid: false as const, reason: `Validation Error: ${e.message}` }
