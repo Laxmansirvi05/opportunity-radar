@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { OpportunityIngestionService } = await import('@/src/providers/opportunities/ingestion/OpportunityIngestionService');
+    const { OpportunityIngestionService, isPipelineDisabled } = await import('@/src/providers/opportunities/ingestion/OpportunityIngestionService');
     const { WellfoundProvider } = await import('@/src/providers/opportunities/providers/WellfoundProvider');
 
     const providers = [
@@ -26,6 +26,16 @@ export async function GET(request: Request) {
 
     const ingestionService = new OpportunityIngestionService(providers, supabase);
     const stats = await ingestionService.runPipeline();
+
+    // A disabled pipeline is a misconfiguration, not a successful run. Return a
+    // non-2xx so Vercel surfaces it as a failed cron instead of silently
+    // reporting success while nothing is being ingested.
+    if (isPipelineDisabled(stats)) {
+      return NextResponse.json(
+        { success: false, error: stats.reason, stats },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({ success: true, stats }, { status: 200 });
   } catch (error: any) {

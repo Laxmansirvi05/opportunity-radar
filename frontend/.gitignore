@@ -37,6 +37,9 @@ yarn-error.log*
 .env.local
 .env.production
 .env.development
+# ...but the placeholder template must be tracked, otherwise required vars
+# (e.g. ENABLE_OPP_INGESTION) stay undocumented and silently unset on deploy.
+!.env.example
 # vercel
 .vercel
 

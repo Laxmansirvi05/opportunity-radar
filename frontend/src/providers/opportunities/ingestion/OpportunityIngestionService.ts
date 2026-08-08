@@ -4,6 +4,39 @@ import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { SkillExtractor } from '../utils/SkillExtractor';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 
+export interface IngestionStats {
+  processed: number;
+  valid: number;
+  upserted: number;
+  skipped_dup: number;
+  errors: number;
+}
+
+/** A run that was refused before doing any work (kill switch off). */
+export interface PipelineDisabledResult {
+  status: 'disabled';
+  reason: string;
+}
+
+/** A run that actually executed, with its per-run counters. */
+export type PipelineCompletedResult = IngestionStats & { status: 'completed' };
+
+export type PipelineResult = PipelineDisabledResult | PipelineCompletedResult;
+
+export function isPipelineDisabled(
+  result: PipelineResult
+): result is PipelineDisabledResult {
+  return result.status === 'disabled';
+}
+
+const EMPTY_PROVIDER_STATS = {
+  processed: 0,
+  inserted: 0,
+  updated: 0,
+  skipped_dup: 0,
+  errors: 0,
+};
+
 export class OpportunityIngestionService {
   private providers: OpportunityProvider[];
   private db: any;
@@ -32,10 +65,35 @@ export class OpportunityIngestionService {
     return `${normalizeString(company)}:${normalizeString(title)}`;
   }
 
-  async runPipeline(dryRun: boolean = false) {
-    if (process.env.ENABLE_OPP_INGESTION !== 'true' && process.env.NODE_ENV === 'production' && !dryRun) {
-      console.warn('Ingestion disabled via feature flag ENABLE_OPP_INGESTION. Exiting.');
-      return { status: 'disabled' };
+  /**
+   * The ingestion kill switch.
+   *
+   * In production the pipeline refuses to run unless ENABLE_OPP_INGESTION is
+   * explicitly 'true'. This is deliberate — it stops a misconfigured deploy from
+   * scraping third-party sites. Outside production, and for dry runs, it is a
+   * no-op so local development and tests work without extra setup.
+   */
+  public static isIngestionEnabled(dryRun: boolean = false): boolean {
+    if (dryRun) return true;
+    if (process.env.NODE_ENV !== 'production') return true;
+    return process.env.ENABLE_OPP_INGESTION === 'true';
+  }
+
+  async runPipeline(dryRun: boolean = false): Promise<PipelineResult> {
+    if (!OpportunityIngestionService.isIngestionEnabled(dryRun)) {
+      const reason =
+        'Ingestion is disabled: ENABLE_OPP_INGESTION is not set to "true" in this environment. ' +
+        'No opportunities were fetched, added, updated or expired.';
+
+      console.error(`[Ingestion] ABORTED — ${reason}`);
+
+      // Record the skipped run so it is visible in /api/cron/health and in
+      // ingestion_logs. Previously this returned quietly and the cron endpoint
+      // still reported success, which is why the pipeline could sit switched
+      // off for weeks without anyone noticing.
+      await this.logRun('ConfigurationGuard', EMPTY_PROVIDER_STATS, 'DISABLED', reason, 0);
+
+      return { status: 'disabled', reason };
     }
 
     let globalStats = { processed: 0, valid: 0, upserted: 0, skipped_dup: 0, errors: 0 };
@@ -147,7 +205,7 @@ export class OpportunityIngestionService {
       await this.expireOpportunities();
     }
 
-    return globalStats;
+    return { status: 'completed', ...globalStats };
   }
 
   private async upsertCompany(companyName: string, logoUrl?: string): Promise<string | null> {
