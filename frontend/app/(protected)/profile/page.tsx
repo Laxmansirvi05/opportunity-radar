@@ -30,11 +30,8 @@ export default async function ProfilePage() {
       .eq('user_id', user.id)
   ])
 
-  console.log('PROFILE DATA:', profile);
-  if (!profile) {
-    // If profile is missing (e.g. trigger failed on signup), create an empty mock
-    // so the page can load and the user can hit Save to trigger an upsert.
-  }
+  // If profile is missing (e.g. the signup trigger failed), the page still
+  // renders from the auth user below so the student can hit Save and upsert one.
 
   const stats = {
     saved: 0,

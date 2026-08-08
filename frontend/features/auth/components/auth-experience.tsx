@@ -10,6 +10,18 @@ export function AuthExperience() {
   const searchParams = useSearchParams()
   const callbackError = searchParams.get('error')
 
+  // Where Proxy wanted to send the user before it bounced them to /login.
+  // Only same-origin relative paths are honoured, so a crafted ?next= cannot
+  // turn the login screen into an open redirect.
+  const requestedNext = searchParams.get('next')
+  const nextUrl =
+    requestedNext &&
+    requestedNext.startsWith('/') &&
+    !requestedNext.startsWith('//') &&
+    !requestedNext.startsWith('/\\')
+      ? requestedNext
+      : '/dashboard'
+
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(callbackError)
@@ -25,7 +37,7 @@ export function AuthExperience() {
       if (result?.error) {
         setError(result.error)
       } else {
-        router.push('/dashboard')
+        router.push(nextUrl)
       }
     } catch {
       setError('An unexpected error occurred.')
@@ -47,7 +59,7 @@ export function AuthExperience() {
         setActiveTab('login')
         ;(document.getElementById('signup-form') as HTMLFormElement)?.reset()
       } else {
-        router.push('/dashboard')
+        router.push(nextUrl)
       }
     } catch {
       setError('An unexpected error occurred.')
@@ -139,7 +151,7 @@ export function AuthExperience() {
             <div className="mb-8">
               <button 
                 onClick={async () => {
-                  const result = await oauthLoginAction('google', '/dashboard')
+                  const result = await oauthLoginAction('google', nextUrl)
                   if (result?.url) window.location.href = result.url
                 }}
                 className="w-full h-12 flex items-center justify-center gap-3 px-6 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 hover:shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all active:scale-[0.98] cursor-pointer"
@@ -205,7 +217,7 @@ export function AuthExperience() {
             <div className="mt-8 text-center">
               {activeTab === 'login' ? (
                 <p className="text-sm text-slate-600">
-                  Don't have an account? <button onClick={() => { setActiveTab('signup'); setError(null); setSuccessMessage(null); }} className="text-primary font-bold hover:underline cursor-pointer ml-1">Sign up for free</button>
+                  Don&apos;t have an account? <button onClick={() => { setActiveTab('signup'); setError(null); setSuccessMessage(null); }} className="text-primary font-bold hover:underline cursor-pointer ml-1">Sign up for free</button>
                 </p>
               ) : (
                 <p className="text-sm text-slate-600">

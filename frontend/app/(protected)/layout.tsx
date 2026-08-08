@@ -10,27 +10,28 @@ export default async function ProtectedLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  let { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
+  // This is the authoritative auth gate for every route in this group.
+  // Proxy performs the same check optimistically, but per the Next.js docs it
+  // must never be relied on alone — this is the one that actually protects data.
   if (!user) {
-    // redirect('/login')
-    user = { id: 'mock', email: 'test@example.com' } as any
+    redirect('/login')
   }
-  let avatarUrl: string | null = null
-  let userName: string | null = user?.user_metadata?.full_name || null
 
-  if (user && user.id !== 'mock') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('avatar_url, name')
-      .eq('id', user.id)
-      .single()
-    
-    if (profile) {
-      avatarUrl = profile.avatar_url
-      if (profile.name) {
-        userName = profile.name
-      }
+  let avatarUrl: string | null = null
+  let userName: string | null = user.user_metadata?.full_name || null
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('avatar_url, name')
+    .eq('id', user.id)
+    .single()
+
+  if (profile) {
+    avatarUrl = profile.avatar_url
+    if (profile.name) {
+      userName = profile.name
     }
   }
 

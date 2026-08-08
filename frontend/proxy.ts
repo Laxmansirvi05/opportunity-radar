@@ -3,8 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 /**
  * Protected route prefixes — any route starting with these paths
- * requires an authenticated session. Matches the (protected) route group
- * from the TRD routing structure.
+ * requires an authenticated session. Matches the (protected) and
+ * (protected-fullscreen) route groups.
+ *
+ * NOTE: This is an *optimistic* check only. Per the Next.js docs, Proxy must
+ * never be the sole authorization boundary. Every protected route group also
+ * re-verifies the session in its layout (the real gate); this exists purely so
+ * logged-out visitors get a clean redirect instead of an empty shell.
  */
 const PROTECTED_ROUTES = [
   '/dashboard',
@@ -15,6 +20,7 @@ const PROTECTED_ROUTES = [
   '/hub',
   '/search',
   '/opportunities',
+  '/resume',
   '/settings',
   '/support',
   '/assistant',
@@ -41,9 +47,9 @@ function isAuthRoute(pathname: string): boolean {
   )
 }
 
-export async function middleware(request: NextRequest) {
-  // Bypass middleware completely for the auth callback route
-  // to prevent supabase.auth.getUser() from prematurely consuming the PKCE code
+export async function proxy(request: NextRequest) {
+  // Bypass completely for the auth callback route to prevent
+  // supabase.auth.getUser() from prematurely consuming the PKCE code.
   if (request.nextUrl.pathname.startsWith('/auth/callback')) {
     return NextResponse.next()
   }
@@ -88,17 +94,24 @@ export async function middleware(request: NextRequest) {
 
   const url = request.nextUrl.clone()
 
+  // Redirect unauthenticated users away from protected routes, preserving
+  // where they were headed so login can send them back.
   if (isProtectedRoute(url.pathname) && !user) {
-    // url.pathname = '/login'
-    // url.searchParams.set('next', request.nextUrl.pathname)
-    // const redirectResponse = NextResponse.redirect(url)
+    const intendedPath = `${request.nextUrl.pathname}${request.nextUrl.search}`
 
-    // // Copy cookies from supabaseResponse to redirectResponse
-    // // supabaseResponse.cookies.getAll().forEach((cookie) => {
-    // //   redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    // // })
+    url.pathname = '/login'
+    url.search = ''
+    url.searchParams.set('next', intendedPath)
 
-    // return redirectResponse
+    const redirectResponse = NextResponse.redirect(url)
+
+    // Carry over any refreshed/cleared auth cookies so the session state
+    // written by getUser() is not lost on the redirect.
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+    })
+
+    return redirectResponse
   }
 
   // Redirect authenticated users away from auth routes to dashboard
@@ -109,7 +122,7 @@ export async function middleware(request: NextRequest) {
     const redirectResponse = NextResponse.redirect(url)
 
     supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value)
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
     })
 
     return redirectResponse
@@ -120,7 +133,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Temporarily exclude builder for puppeteer tests
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|resume/builder).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
