@@ -1,14 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { InternshalaProvider } from '../providers/InternshalaProvider';
 import { UnstopProvider } from '../providers/UnstopProvider';
-import { WellfoundProvider } from '../providers/WellfoundProvider';
 import { QueuePayload } from '../base/OpportunityProvider';
 
 export class QueueProducerService {
   private providers = [
     new InternshalaProvider(),
-    new UnstopProvider(),
-    new WellfoundProvider()
+    new UnstopProvider()
   ];
 
   async runProducer() {

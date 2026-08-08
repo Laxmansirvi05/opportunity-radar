@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import { OpportunityIngestionService } from './OpportunityIngestionService';
 import { InternshalaProvider } from '../providers/InternshalaProvider';
 import { UnstopProvider } from '../providers/UnstopProvider';
-import { WellfoundProvider } from '../providers/WellfoundProvider';
 import { SkillExtractor } from '../utils/SkillExtractor';
 import { OpportunityValidator } from '../validation/OpportunityValidator';
 import { OpportunityProvider } from '../base/OpportunityProvider';
@@ -26,8 +25,7 @@ export class QueueConsumerService {
     // In a future refactor, upsert logic should be extracted to a shared repository.
     const providersList = [
       new InternshalaProvider(),
-      new UnstopProvider(),
-      new WellfoundProvider()
+      new UnstopProvider()
     ];
     this.ingestionService = new OpportunityIngestionService(providersList, this.db);
     

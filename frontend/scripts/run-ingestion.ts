@@ -5,16 +5,7 @@ import { OpportunityIngestionService } from '../src/providers/opportunities/inge
 import { UnstopProvider } from '../src/providers/opportunities/providers/UnstopProvider.js';
 import { InternshalaProvider } from '../src/providers/opportunities/providers/InternshalaProvider.js';
 import { YCProvider } from '../src/providers/opportunities/providers/YCProvider.js';
-import { WellfoundProvider } from '../src/providers/opportunities/providers/WellfoundProvider.js';
-import { DevfolioProvider } from '../src/providers/opportunities/providers/DevfolioProvider.js';
 import { AmazonProvider } from '../src/providers/opportunities/providers/AmazonProvider.js';
-import { GitHubProvider } from '../src/providers/opportunities/providers/GitHubProvider.js';
-import { AtlassianProvider } from '../src/providers/opportunities/providers/AtlassianProvider.js';
-import { GSoCProvider } from '../src/providers/opportunities/providers/GSoCProvider.js';
-import { LFXProvider } from '../src/providers/opportunities/providers/LFXProvider.js';
-import { Hack2SkillProvider } from '../src/providers/opportunities/providers/Hack2SkillProvider.js';
-import { OutreachyProvider } from '../src/providers/opportunities/providers/OutreachyProvider.js';
-import { CompanyProvider } from '../src/providers/opportunities/providers/CompanyProvider.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 process.env.ENABLE_OPP_INGESTION = 'true';
@@ -92,16 +83,7 @@ async function run() {
     new UnstopProvider(),
     new InternshalaProvider(),
     new YCProvider(),
-    new WellfoundProvider(),
-    new DevfolioProvider(),
-    new AmazonProvider(),
-    new GitHubProvider(),
-    new AtlassianProvider(),
-    new GSoCProvider(),
-    new LFXProvider(),
-    new Hack2SkillProvider(),
-    new OutreachyProvider(),
-    new CompanyProvider()
+    new AmazonProvider()
   ];
 
   const service = new OpportunityIngestionService(providers, supabase);

@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { denyIfNotCron } from '@/lib/cron-auth';
 
+/**
+ * GET /api/cron/refresh-providers
+ *
+ * Refreshes the direct-employer sources.
+ *
+ * This route previously ran WellfoundProvider, which did not scrape anything —
+ * it returned two hardcoded listings pointing at wellfound.com/jobs/201 and /202,
+ * both of which 404. That provider has been deleted.
+ *
+ * It now runs the two real, unscheduled providers we already had:
+ *   - AmazonProvider — amazon.jobs search API, filtered to country=IND
+ *   - YCProvider     — Hacker News official jobs API (YC portfolio companies)
+ */
 export async function GET(request: Request) {
   const denied = denyIfNotCron(request);
   if (denied) return denied;
@@ -9,7 +22,7 @@ export async function GET(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase admin credentials");
     }
@@ -17,10 +30,12 @@ export async function GET(request: Request) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { OpportunityIngestionService, isPipelineDisabled } = await import('@/src/providers/opportunities/ingestion/OpportunityIngestionService');
-    const { WellfoundProvider } = await import('@/src/providers/opportunities/providers/WellfoundProvider');
+    const { AmazonProvider } = await import('@/src/providers/opportunities/providers/AmazonProvider');
+    const { YCProvider } = await import('@/src/providers/opportunities/providers/YCProvider');
 
     const providers = [
-      new WellfoundProvider(),
+      new AmazonProvider(),
+      new YCProvider(),
     ];
 
     const ingestionService = new OpportunityIngestionService(providers, supabase);
