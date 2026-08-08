@@ -3,6 +3,10 @@ import { OpportunityValidator, ValidationResult } from '../validation/Opportunit
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { SkillExtractor } from '../utils/SkillExtractor';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { detectSynthetic, describeVerdict } from '@/lib/ingestion/synthetic-detector';
+import { canonicalizeUrl } from '@/lib/ingestion/canonical-url';
+import { classifyGeo } from '@/lib/ingestion/geo';
+import { reconcileUnseen, deleteExpiredOpportunities, type Db } from '@/lib/ingestion/reconciliation';
 
 export interface IngestionStats {
   processed: number;
@@ -14,6 +18,10 @@ export interface IngestionStats {
    *  is mostly updates; a run reporting zero updates means refresh is broken. */
   updated: number;
   skipped_dup: number;
+  /** Rejected because their geography puts them out of reach of an India-based student. */
+  skipped_geo: number;
+  /** Deleted this run: past deadline, or no longer advertised by the source. */
+  removed: number;
   errors: number;
 }
 
@@ -55,6 +63,9 @@ export class OpportunityIngestionService {
    * must be UPDATED; only the latter is a duplicate worth skipping.
    */
   private knownSourceKeys: Set<string> = new Set();
+  /** Rows already stored per source before this run — the denominator for the
+   *  coverage guard that prevents a partial scrape from deleting a catalogue. */
+  private previousPerSource: Map<string, number> = new Map();
   private companyCache: Map<string, string> = new Map();
 
   constructor(providers: OpportunityProvider[], dbClient: any) {
@@ -119,6 +130,10 @@ export class OpportunityIngestionService {
         if (record.source && record.source_id) {
           this.knownSourceKeys.add(this.sourceKey(record.source, record.source_id));
         }
+        if (record.source) {
+          const key = String(record.source).toLowerCase();
+          this.previousPerSource.set(key, (this.previousPerSource.get(key) ?? 0) + 1);
+        }
       }
 
       loaded += rows.length;
@@ -164,7 +179,10 @@ export class OpportunityIngestionService {
       return { status: 'disabled', reason };
     }
 
-    const globalStats = { processed: 0, valid: 0, upserted: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
+    const runStartedAt = new Date().toISOString();
+    /** Records this run confirmed still live, per source. */
+    const seenPerSource = new Map<string, number>();
+    const globalStats = { processed: 0, valid: 0, upserted: 0, inserted: 0, updated: 0, skipped_dup: 0, skipped_geo: 0, removed: 0, errors: 0 };
 
     // Pre-load existing records to prevent cross-source dupes, and to recognise
     // our own listings when they come back for a refresh.
@@ -172,12 +190,31 @@ export class OpportunityIngestionService {
 
     for (const provider of this.providers) {
       const startTime = Date.now();
-      let providerStats = { processed: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
-      let providerName = provider.constructor.name;
+      const providerStats = { processed: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
+      const providerName = provider.constructor.name;
       
       try {
         const rawData = await provider.fetch();
-        
+
+        // ── Gate 2: batch-level fabrication check ────────────────────────
+        // A provider that invents data invents all of it, so the whole payload
+        // is rejected rather than filtered record by record.
+        const normalizedBatch = rawData.map((raw: unknown) => {
+          try { return provider.normalize(raw); } catch { return null; }
+        }).filter((nb): nb is NormalizedOpportunity => nb !== null).map((nb) => ({
+          title: nb.title, company: nb.company, description: nb.description,
+          apply_url: nb.apply_url, source_id: nb.source_id,
+        }));
+
+        const verdict = detectSynthetic(normalizedBatch);
+        if (verdict.isSynthetic) {
+          const reason = `Rejected ${rawData.length} records from ${providerName} as fabricated — ${describeVerdict(verdict)}`;
+          console.error(`[Ingestion] SYNTHETIC DATA REJECTED: ${reason}`);
+          await this.logRun(providerName, { ...EMPTY_PROVIDER_STATS, processed: rawData.length, errors: rawData.length }, 'REJECTED_SYNTHETIC', reason, Date.now() - startTime);
+          globalStats.errors += rawData.length;
+          continue;
+        }
+
         for (const raw of rawData) {
           globalStats.processed++;
           providerStats.processed++;
@@ -193,6 +230,18 @@ export class OpportunityIngestionService {
           }
           
           globalStats.valid++;
+
+          // ── Gate 4: geography ─────────────────────────────────────────
+          // India-first: an international on-site role is not actionable for
+          // the students this product serves.
+          const geo = classifyGeo(normalized.location, {
+            title: normalized.title,
+            mode: normalized.mode,
+          });
+          if (!geo.publishable) {
+            globalStats.skipped_geo++;
+            continue;
+          }
 
           // Duplicate Protection (Fingerprint + Exact URL)
           const fingerprint = this.generateFingerprint(normalized.title, normalized.company);
@@ -239,9 +288,11 @@ export class OpportunityIngestionService {
             continue;
           }
 
-          const upsertResult = await this.upsert(normalized);
+          const upsertResult = await this.upsert(normalized, runStartedAt);
           if (upsertResult.status === 'inserted' || upsertResult.status === 'updated') {
             globalStats.upserted++;
+            const srcKey = String(normalized.source ?? '').toLowerCase();
+            seenPerSource.set(srcKey, (seenPerSource.get(srcKey) ?? 0) + 1);
             if (upsertResult.status === 'inserted') {
               globalStats.inserted++;
               providerStats.inserted++;
@@ -281,7 +332,23 @@ export class OpportunityIngestionService {
     }
 
     if (!dryRun) {
-      // Handle Expiration & Freshness Tracking
+      // ── Auto-removal, run every cycle ───────────────────────────────────
+      // 1. Anything past its deadline is deleted outright (students never see
+      //    something they cannot act on, and storage is not spent on it).
+      const expiredResult = await deleteExpiredOpportunities(this.db as Db, runStartedAt);
+      globalStats.removed += expiredResult.deleted;
+      console.log(`[Ingestion] Deadline sweep: ${expiredResult.reason}`);
+
+      // 2. Anything this run did not see is no longer advertised by its source
+      //    and is deleted too — guarded so a partial scrape cannot empty a source.
+      for (const [source, seen] of seenPerSource) {
+        const previous = this.previousPerSource.get(source) ?? 0;
+        const r = await reconcileUnseen(this.db as Db, source, runStartedAt, seen, previous);
+        globalStats.removed += r.deleted;
+        console.log(`[Ingestion] Reconcile ${source}: ${r.reason}`);
+      }
+
+      // 3. Dead-link sweep (unchanged).
       await this.expireOpportunities();
     }
 
@@ -334,10 +401,15 @@ export class OpportunityIngestionService {
     return newCompany.id;
   }
 
-  public async upsert(opportunity: NormalizedOpportunity): Promise<{ status: 'inserted' | 'updated' | 'error', id?: string }> {
+  public async upsert(opportunity: NormalizedOpportunity, runStartedAt?: string): Promise<{ status: 'inserted' | 'updated' | 'error', id?: string }> {
     try {
       // Handle Company ID lookup and insertion safely without altering external relationships
       const companyId = await this.upsertCompany(opportunity.company, opportunity.company_logo_url);
+
+      const geo = classifyGeo(opportunity.location, {
+        title: opportunity.title,
+        mode: opportunity.mode,
+      });
 
       const { data: existing, error: selectError } = await this.db
         .from('opportunities')
@@ -372,7 +444,13 @@ export class OpportunityIngestionService {
         verified: opportunity.verified ?? null,
         experience_level: opportunity.experience_level || null,
         updated_at: new Date().toISOString(),
-        status: 'Published'
+        status: 'Published',
+        // Provenance: proves the source still advertises this listing on this
+        // run. Reconciliation deletes anything a complete run did not stamp.
+        last_seen_at: runStartedAt ?? new Date().toISOString(),
+        canonical_url: canonicalizeUrl(opportunity.apply_url),
+        country: geo.country,
+        is_remote: geo.isRemote,
       };
 
       if (existing) {

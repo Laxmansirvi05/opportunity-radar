@@ -45,6 +45,7 @@ interface FakeBuilder {
   in: () => FakeBuilder
   not: () => FakeBuilder
   lt: () => FakeBuilder
+  or: () => FakeBuilder
   ilike: () => FakeBuilder
   order: () => FakeBuilder
   range: (a: number, b: number) => FakeBuilder
@@ -127,6 +128,7 @@ function createFakeDb(existing: OppRow[]) {
       in: () => builder,
       not: () => builder,
       lt: () => builder,
+      or: () => builder,
       ilike: () => builder,
       order: () => builder,
       range: (a: number, b: number) => { state.range = [a, b]; return builder },
