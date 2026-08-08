@@ -8,6 +8,11 @@ export interface IngestionStats {
   processed: number;
   valid: number;
   upserted: number;
+  /** Rows created this run. */
+  inserted: number;
+  /** Rows already present that were refreshed this run. A healthy nightly run
+   *  is mostly updates; a run reporting zero updates means refresh is broken. */
+  updated: number;
   skipped_dup: number;
   errors: number;
 }
@@ -42,6 +47,14 @@ export class OpportunityIngestionService {
   private db: any;
   private fingerprintSet: Set<string> = new Set();
   private urlSet: Set<string> = new Set();
+  /**
+   * "source:source_id" for every opportunity already in the database.
+   *
+   * This is what distinguishes "a listing we already own, coming back for a
+   * refresh" from "a different provider advertising the same job". The former
+   * must be UPDATED; only the latter is a duplicate worth skipping.
+   */
+  private knownSourceKeys: Set<string> = new Set();
   private companyCache: Map<string, string> = new Map();
 
   constructor(providers: OpportunityProvider[], dbClient: any) {
@@ -63,6 +76,61 @@ export class OpportunityIngestionService {
          .replace(/[^a-z0-9]/g, '')
          .trim();
     return `${normalizeString(company)}:${normalizeString(title)}`;
+  }
+
+  /** Stable identity of a listing within the provider it came from. */
+  private sourceKey(source: string | null | undefined, sourceId: string | null | undefined): string {
+    return `${(source ?? '').toLowerCase()}:${sourceId ?? ''}`;
+  }
+
+  /**
+   * Load every existing opportunity into the in-memory dedupe indexes.
+   *
+   * Paginated deliberately: PostgREST caps an unbounded select at 1000 rows,
+   * so the previous single-shot query silently indexed only a fraction of the
+   * table once the catalogue grew past that. Anything beyond the cap was
+   * invisible to deduplication.
+   */
+  private async loadExistingIndex(): Promise<number> {
+    const PAGE_SIZE = 1000;
+    let from = 0;
+    let loaded = 0;
+
+    for (;;) {
+      const { data, error } = await this.db
+        .from('opportunities')
+        .select('title, company_name, apply_url, source, source_id')
+        .order('id', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error('[Ingestion] Failed to preload existing opportunities:', error);
+        break;
+      }
+
+      const rows = data ?? [];
+      for (const record of rows) {
+        if (record.title && record.company_name) {
+          this.fingerprintSet.add(this.generateFingerprint(record.title, record.company_name));
+        }
+        if (record.apply_url) {
+          this.urlSet.add(record.apply_url.toLowerCase());
+        }
+        if (record.source && record.source_id) {
+          this.knownSourceKeys.add(this.sourceKey(record.source, record.source_id));
+        }
+      }
+
+      loaded += rows.length;
+      if (rows.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+
+    console.log(
+      `[Ingestion] Indexed ${loaded} existing opportunities ` +
+      `(${this.knownSourceKeys.size} with a source key, ${this.fingerprintSet.size} fingerprints).`
+    );
+    return loaded;
   }
 
   /**
@@ -96,20 +164,11 @@ export class OpportunityIngestionService {
       return { status: 'disabled', reason };
     }
 
-    let globalStats = { processed: 0, valid: 0, upserted: 0, skipped_dup: 0, errors: 0 };
+    const globalStats = { processed: 0, valid: 0, upserted: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
 
-    // Pre-load existing records to prevent cross-source dupes
-    const { data: existingRecords } = await this.db.from('opportunities').select('title, company_name, apply_url');
-    if (existingRecords) {
-      existingRecords.forEach((record: any) => {
-        if (record.title && record.company_name) {
-          this.fingerprintSet.add(this.generateFingerprint(record.title, record.company_name));
-        }
-        if (record.apply_url) {
-          this.urlSet.add(record.apply_url.toLowerCase());
-        }
-      });
-    }
+    // Pre-load existing records to prevent cross-source dupes, and to recognise
+    // our own listings when they come back for a refresh.
+    await this.loadExistingIndex();
 
     for (const provider of this.providers) {
       const startTime = Date.now();
@@ -138,35 +197,56 @@ export class OpportunityIngestionService {
           // Duplicate Protection (Fingerprint + Exact URL)
           const fingerprint = this.generateFingerprint(normalized.title, normalized.company);
           const urlLower = normalized.apply_url.toLowerCase();
+          const sourceKey = this.sourceKey(normalized.source, normalized.source_id);
 
-          if (this.fingerprintSet.has(fingerprint) || this.urlSet.has(urlLower)) {
+          // A listing we already store, returning from the same provider, is a
+          // REFRESH — not a duplicate. It has to reach upsert() so changed
+          // deadlines, descriptions and closures actually land.
+          //
+          // This check must come first: the fingerprint and URL of an existing
+          // record are (by definition) already in the sets below, so testing
+          // those first would skip every returning listing and the database
+          // would never move after the first run. That was the bug.
+          const isRefreshOfOwnRecord = this.knownSourceKeys.has(sourceKey);
+
+          if (!isRefreshOfOwnRecord && (this.fingerprintSet.has(fingerprint) || this.urlSet.has(urlLower))) {
              console.log(`[Duplicate Skipped] ${normalized.company} - ${normalized.title}`);
              globalStats.skipped_dup++;
              providerStats.skipped_dup++;
              continue;
           }
-          
+
+          // Track within this run so two providers in the same batch cannot
+          // both insert the same job.
           this.fingerprintSet.add(fingerprint);
           this.urlSet.add(urlLower);
+          this.knownSourceKeys.add(sourceKey);
 
           // Enrichment: Automatic Skill Extraction
           const extractedSkills = SkillExtractor.extract(normalized.description || '');
           normalized.skills = Array.from(new Set([...(normalized.skills || []), ...extractedSkills]));
 
           if (dryRun) {
-            // Simulate Upsert
+            // Simulate the upsert, attributing it the way a real run would.
             globalStats.upserted++;
-            providerStats.inserted++;
+            if (isRefreshOfOwnRecord) {
+              globalStats.updated++;
+              providerStats.updated++;
+            } else {
+              globalStats.inserted++;
+              providerStats.inserted++;
+            }
             continue;
           }
 
           const upsertResult = await this.upsert(normalized);
           if (upsertResult.status === 'inserted' || upsertResult.status === 'updated') {
+            globalStats.upserted++;
             if (upsertResult.status === 'inserted') {
-              globalStats.upserted++;
+              globalStats.inserted++;
               providerStats.inserted++;
             } else {
-              globalStats.upserted++;
+              globalStats.updated++;
               providerStats.updated++;
             }
 

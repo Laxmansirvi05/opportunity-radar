@@ -37,6 +37,7 @@ interface QueryBuilderStub {
   lt: () => QueryBuilderStub
   ilike: () => QueryBuilderStub
   order: () => QueryBuilderStub
+  range: (from: number, to: number) => QueryBuilderStub
   limit: () => QueryBuilderStub
   maybeSingle: () => QueryBuilderStub
   single: () => QueryBuilderStub
@@ -67,6 +68,7 @@ function createDbStub(selectData: unknown[] = []) {
     lt: () => builder,
     ilike: () => builder,
     order: () => builder,
+    range: () => builder,
     limit: () => builder,
     maybeSingle: () => builder,
     single: () => builder,
