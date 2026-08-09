@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useTransition, useCallback } from 'react'
+import { useState, useMemo, useTransition, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
@@ -21,9 +22,8 @@ import {
   updateTrackerStatus,
   removeTrackerItem,
   updateTrackerNotes,
-  TRACKER_STAGES,
-  type TrackerStage,
 } from '../actions/tracker-actions'
+import { TRACKER_STAGES, type TrackerStage } from '../stages'
 
 export interface TrackerItem {
   id: string
@@ -263,6 +263,14 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
   const [draft, setDraft] = useState('')
   const [, startTransition] = useTransition()
 
+  // Escape closes the notes dialog, matching the certifications panel.
+  useEffect(() => {
+    if (!notesFor) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setNotesFor(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [notesFor])
+
   const sensors = useSensors(
     // A small distance threshold keeps taps on links and buttons from being
     // swallowed as drags.
@@ -431,8 +439,13 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
         </DndContext>
       )}
 
-      {/* Notes dialog */}
-      {notesFor && (
+      {/* Notes dialog, portalled to <body>.
+          Rendered in place it sits inside the board's flex/overflow container,
+          and DndContext's transforms make that an ancestor containing block —
+          so `fixed inset-0` resolved against the column strip rather than the
+          viewport and collapsed the dialog to a sliver. No mount guard is
+          needed: it only opens on a click, so it never renders during SSR. */}
+      {notesFor && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => setNotesFor(null)}
@@ -472,7 +485,8 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

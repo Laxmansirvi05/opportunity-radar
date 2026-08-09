@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { isTrackerStage } from '../stages'
 
 /**
  * Tracker mutations.
@@ -11,21 +12,6 @@ import { revalidatePath } from 'next/cache'
  * or a service-role caller would silently turn an id-only update into an IDOR;
  * the extra predicate costs nothing and removes that class of mistake.
  */
-
-/** Stages a student can move an application through, in order. */
-export const TRACKER_STAGES = [
-  'Saved',
-  'Applied',
-  'Interview Scheduled',
-  'Selected',
-  'Rejected',
-] as const
-
-export type TrackerStage = (typeof TRACKER_STAGES)[number]
-
-function isStage(value: string): value is TrackerStage {
-  return (TRACKER_STAGES as readonly string[]).includes(value)
-}
 
 type ActionResult = { success: boolean; error?: string }
 
@@ -44,7 +30,7 @@ export async function updateTrackerStatus(
   trackerId: string,
   newStatus: string
 ): Promise<ActionResult> {
-  if (!isStage(newStatus)) {
+  if (!isTrackerStage(newStatus)) {
     return { success: false, error: `Unknown stage: ${newStatus}` }
   }
 

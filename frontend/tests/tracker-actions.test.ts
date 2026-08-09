@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { TRACKER_STAGES } from '@/features/tracker/actions/tracker-actions'
+import { TRACKER_STAGES } from '@/features/tracker/stages'
 import { PROTECTED_TRACKER_STAGES } from '@/lib/ingestion/reconciliation'
 
 /**
