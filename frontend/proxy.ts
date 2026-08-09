@@ -21,6 +21,7 @@ const PROTECTED_ROUTES = [
   '/search',
   '/opportunities',
   '/resume',
+  '/certifications',
   '/settings',
   '/support',
   '/assistant',

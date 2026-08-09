@@ -114,6 +114,48 @@ export default async function OpportunityDetailsPage({
   const moreFromCompany = filterActive(moreFromCompanyData || [])
   const peopleAlsoViewed = filterActive(peopleAlsoViewedData || [])
 
+  /**
+   * Compensation, labelled for the kind of opportunity.
+   *
+   * A student's first question is "does this pay, and how much". Previously the
+   * page never said, so the answer is always rendered — including an explicit
+   * "Unpaid" or "Not disclosed" rather than an empty space that could be read
+   * either way.
+   */
+  const isContest = ['Hackathon', 'Competition', 'Workshop'].includes(opp.category ?? '')
+  const compensation = (() => {
+    const label = isContest ? 'Prize Pool' : opp.category === 'Internship' ? 'Stipend' : 'Salary'
+    const amount = (opp.salary_range ?? '').toString().trim()
+
+    if (amount) {
+      return { label, value: amount, tone: 'text-on-surface', note: null as string | null }
+    }
+    if (opp.is_paid === false) {
+      return {
+        label,
+        value: isContest ? 'No cash prize' : 'Unpaid',
+        tone: 'text-on-surface-variant',
+        note: isContest ? 'Certificate or recognition only.' : 'This opportunity is unpaid.',
+      }
+    }
+    return {
+      label,
+      value: 'Not disclosed',
+      tone: 'text-on-surface-variant',
+      note: `The ${isContest ? 'organiser' : 'employer'} has not published a figure. Check the listing before applying.`,
+    }
+  })()
+
+  const OFFICIAL_SOURCES = ['greenhouse', 'lever', 'smartrecruiters', 'amazon']
+  const isOfficialSource = OFFICIAL_SOURCES.includes((opp.source ?? '').toLowerCase())
+  const sourceLabel = isOfficialSource
+    ? `Official — ${company?.name ?? opp.company_name ?? 'company'} careers portal`
+    : (opp.source ?? '').toLowerCase() === 'unstop'
+      ? 'Unstop'
+      : (opp.source ?? '').toLowerCase() === 'internshala'
+        ? 'Internshala'
+        : 'Verified source'
+
   const industry = company?.industry || opp.category || 'Technology'
   
   const responsibilities = opp.responsibilities || []
@@ -294,28 +336,65 @@ export default async function OpportunityDetailsPage({
             </p>
           </div>
 
-          {/* Trust Indicators Card */}
+          {/* Key Details Card */}
           <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-            <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Trust Indicators</h3>
+            <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Key Details</h3>
+
+            {/* Compensation — labelled for the kind of opportunity this is.
+                Always shown: a student should never have to guess whether a
+                role pays, so an unknown says so explicitly rather than hiding. */}
+            <div className="flex flex-col gap-1.5 pb-4 border-b border-outline-variant">
+              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                {compensation.label}
+              </span>
+              <span className={`text-lg font-bold ${compensation.tone}`}>
+                {compensation.value}
+              </span>
+              {compensation.note && (
+                <span className="text-xs text-on-surface-variant">{compensation.note}</span>
+              )}
+            </div>
+
             <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant">Source Type</span>
-                <span className="font-bold text-primary">Verified</span>
+              <div className="flex justify-between items-center text-sm gap-3">
+                <span className="text-on-surface-variant shrink-0">Type</span>
+                <span className="font-semibold text-on-surface text-right">{opp.category ?? '—'}</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant">Last Verified</span>
-                <span className="font-bold text-on-surface">{opp.last_verified_at ? new Date(opp.last_verified_at).toLocaleDateString() : 'N/A'}</span>
+              <div className="flex justify-between items-center text-sm gap-3">
+                <span className="text-on-surface-variant shrink-0">Work mode</span>
+                <span className="font-semibold text-on-surface text-right">
+                  {opp.mode ?? (opp.is_remote ? 'Remote' : '—')}
+                </span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant">Trust Score</span>
-                <span className="font-bold text-green-600">{opp.trust_score ? `${opp.trust_score}/100` : 'Verified Source'}</span>
+              <div className="flex justify-between items-center text-sm gap-3">
+                <span className="text-on-surface-variant shrink-0">Location</span>
+                <span className="font-semibold text-on-surface text-right truncate max-w-[170px]">
+                  {opp.location || (opp.is_remote ? 'Remote' : '—')}
+                </span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant">Official Link</span>
-                <a href={company?.website_url || '#'} className="font-bold text-primary hover:underline truncate max-w-[150px]" target="_blank" rel="noopener noreferrer">
-                  {company?.website_url ? company.website_url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : 'vercel.com'}
-                  <span className="material-symbols-outlined text-[14px] ml-1 align-middle">open_in_new</span>
-                </a>
+              {opp.posted_at && (
+                <div className="flex justify-between items-center text-sm gap-3">
+                  <span className="text-on-surface-variant shrink-0">Posted</span>
+                  <span className="font-semibold text-on-surface text-right">
+                    {new Date(opp.posted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Source & Trust Card */}
+          <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+            <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Source</h3>
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-primary text-[20px] mt-0.5">verified</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-bold text-on-surface">{sourceLabel}</span>
+                <span className="text-xs text-on-surface-variant leading-relaxed">
+                  {isOfficialSource
+                    ? 'Published on the employer’s own careers portal. Applying takes you straight to them.'
+                    : 'Listed on a verified opportunity platform.'}
+                </span>
               </div>
             </div>
             <ReportBrokenLinkButton opportunityId={opp.id} />

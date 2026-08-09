@@ -11,21 +11,69 @@ interface CompanyLogoProps {
   fallbackIconClassName?: string
 }
 
+/**
+ * Known employer domains, for companies whose real logo we can resolve.
+ *
+ * This used to be an 11-entry list of US megacaps, which is why an employer
+ * like PhonePe — a company we ingest hundreds of roles from — rendered as bare
+ * initials. It now covers the employers actually in the catalogue.
+ *
+ * Deliberately a lookup rather than a guess: inferring "<name>.com" would
+ * produce a wrong-company logo, which is worse than initials. Anything not
+ * listed and without a stored logo falls back to initials, never to a
+ * placeholder image pretending to be a brand.
+ */
+const COMPANY_DOMAINS: Record<string, string> = {
+  // India
+  phonepe: 'phonepe.com', paytm: 'paytm.com', meesho: 'meesho.com', swiggy: 'swiggy.com',
+  zomato: 'zomato.com', flipkart: 'flipkart.com', cred: 'cred.club', groww: 'groww.in',
+  razorpay: 'razorpay.com', freshworks: 'freshworks.com', zoho: 'zoho.com', druva: 'druva.com',
+  unacademy: 'unacademy.com', ixigo: 'ixigo.com', naukri: 'naukri.com', zeta: 'zeta.tech',
+  highradius: 'highradius.com', mindtickle: 'mindtickle.com', netomi: 'netomi.com',
+  fampay: 'fampay.in', sigmoid: 'sigmoid.com', slice: 'sliceit.com', kredx: 'kredx.com',
+  lendingkart: 'lendingkart.com', freecharge: 'freecharge.in', zinghr: 'zinghr.com',
+  'observe.ai': 'observe.ai', observeai: 'observe.ai', 'fi money': 'fi.money', epifi: 'fi.money',
+  'captain fresh': 'captainfresh.in', unstop: 'unstop.com', internshala: 'internshala.com',
+  // Global
+  amazon: 'amazon.com', google: 'google.com', microsoft: 'microsoft.com', apple: 'apple.com',
+  meta: 'meta.com', github: 'github.com', atlassian: 'atlassian.com', adobe: 'adobe.com',
+  oracle: 'oracle.com', salesforce: 'salesforce.com', ibm: 'ibm.com', stripe: 'stripe.com',
+  databricks: 'databricks.com', mongodb: 'mongodb.com', gitlab: 'gitlab.com', twilio: 'twilio.com',
+  okta: 'okta.com', datadog: 'datadoghq.com', cloudflare: 'cloudflare.com', coinbase: 'coinbase.com',
+  airbnb: 'airbnb.com', postman: 'postman.com', vercel: 'vercel.com', figma: 'figma.com',
+  reddit: 'reddit.com', pinterest: 'pinterest.com', dropbox: 'dropbox.com', discord: 'discord.com',
+  canva: 'canva.com', wise: 'wise.com', elastic: 'elastic.co', fastly: 'fastly.com',
+  samsara: 'samsara.com', fivetran: 'fivetran.com', clickhouse: 'clickhouse.com',
+  instacart: 'instacart.com', anthropic: 'anthropic.com', affirm: 'affirm.com',
+  flexport: 'flexport.com', gusto: 'gusto.com', asana: 'asana.com', smartsheet: 'smartsheet.com',
+  lattice: 'lattice.com', netlify: 'netlify.com', planetscale: 'planetscale.com',
+  amplitude: 'amplitude.com', mixpanel: 'mixpanel.com', launchdarkly: 'launchdarkly.com',
+  jfrog: 'jfrog.com', duolingo: 'duolingo.com', lyft: 'lyft.com', faire: 'faire.com',
+  circleci: 'circleci.com', sezzle: 'sezzle.com', wrike: 'wrike.com', justworks: 'justworks.com',
+  hightouch: 'hightouch.com', storyblok: 'storyblok.com', sonarsource: 'sonarsource.com',
+  cockroachlabs: 'cockroachlabs.com', 'cockroach labs': 'cockroachlabs.com',
+  'scale ai': 'scale.com', scaleai: 'scale.com', airtable: 'airtable.com', '360learning': '360learning.com',
+};
+
 function getMappedLogo(name?: string): string | null {
   if (!name) return null;
-  const n = name.toLowerCase();
-  if (n.includes('amazon')) return 'https://www.google.com/s2/favicons?domain=amazon.com&sz=128';
-  if (n.includes('google')) return 'https://www.google.com/s2/favicons?domain=google.com&sz=128';
-  if (n.includes('microsoft')) return 'https://www.google.com/s2/favicons?domain=microsoft.com&sz=128';
-  if (n.includes('apple')) return 'https://www.google.com/s2/favicons?domain=apple.com&sz=128';
-  if (n.includes('meta')) return 'https://www.google.com/s2/favicons?domain=meta.com&sz=128';
-  if (n.includes('github')) return 'https://www.google.com/s2/favicons?domain=github.com&sz=128';
-  if (n.includes('atlassian')) return 'https://www.google.com/s2/favicons?domain=atlassian.com&sz=128';
-  if (n.includes('adobe')) return 'https://www.google.com/s2/favicons?domain=adobe.com&sz=128';
-  if (n.includes('oracle')) return 'https://www.google.com/s2/favicons?domain=oracle.com&sz=128';
-  if (n.includes('salesforce')) return 'https://www.google.com/s2/favicons?domain=salesforce.com&sz=128';
-  if (n.includes('ibm')) return 'https://www.google.com/s2/favicons?domain=ibm.com&sz=128';
-  return null;
+  const n = name.toLowerCase().trim();
+
+  // Exact match first, so "Meta" never matches "Metabase".
+  let domain = COMPANY_DOMAINS[n];
+
+  if (!domain) {
+    // Then a whole-word match, so "PhonePe India Pvt Ltd" still resolves while
+    // an unrelated name containing the letters does not.
+    for (const [key, value] of Object.entries(COMPANY_DOMAINS)) {
+      if (new RegExp(`(^|\\s)${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`).test(n)) {
+        domain = value;
+        break;
+      }
+    }
+  }
+
+  return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : null;
 }
 
 function getInitials(name: string) {
