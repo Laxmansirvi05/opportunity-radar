@@ -7,15 +7,53 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn().mockReturnValue({ get: vi.fn(), set: vi.fn() })
 }));
 
-vi.mock('@supabase/ssr', () => ({
-  createServerClient: () => ({
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null }) },
-    from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) })
-  }),
-  createClient: () => ({
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null }) },
-    from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) })
+// The saved-resume lookup must return a parsed resume. Returning `data: null`
+// made the route answer 404 "Saved Resume not found" before reaching any ATS
+// logic, so every test posting a resumeId asserted against an error body — the
+// reason all five of these were failing.
+const STORED_RESUME = {
+  id: '123',
+  parsed_data: {
+    name: 'Test Candidate',
+    email: 'test@example.com',
+    summary: 'Frontend developer with React and TypeScript experience.',
+    skills: ['React', 'TypeScript', 'JavaScript', 'HTML', 'CSS'],
+    experience: [
+      {
+        company: 'Acme',
+        role: 'Frontend Intern',
+        start_date: '2024-01',
+        end_date: '2024-06',
+        bullets: ['Built React components used across the product.'],
+      },
+    ],
+    education: [
+      { institution: 'State University', degree: 'B.Tech', field: 'Computer Science', graduation_year: 2026, gpa: 8.2 },
+    ],
+    projects: [{ name: 'Portfolio', description: 'Personal site', technologies: ['React'] }],
+  },
+}
+
+function supabaseStub() {
+  const chain: Record<string, unknown> = {}
+  Object.assign(chain, {
+    select: () => chain,
+    insert: () => chain,
+    update: () => chain,
+    eq: () => chain,
+    single: vi.fn().mockResolvedValue({ data: STORED_RESUME, error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: STORED_RESUME, error: null }),
+    then: (resolve: (v: unknown) => void) => resolve({ data: null, error: null }),
   })
+  return {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null }) },
+    from: vi.fn().mockReturnValue(chain),
+  }
+}
+
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: () => supabaseStub(),
+  createClient: () => supabaseStub(),
 }));
 
 const mockExtractJDIntelligence = vi.fn();
@@ -59,23 +97,64 @@ describe('ATS V2 Regression Tests', () => {
   });
 
   describe('CGPA Logic (Tests D, E, F)', () => {
+    // jdRequirementSchema also requires `provenance`; without it the same
+    // parse() call threw on ["atsV2","structuredJd","requirements",0,"provenance"].
+    const VALID_REQUIREMENT = {
+      id: 'req_1',
+      name: 'React',
+      category: 'technical_capability' as const,
+      importance: 'high' as const,
+      description: 'React experience required.',
+      provenance: { exactQuote: 'Experience with React', context: 'Requirements' },
+    }
+
+    // The response schema requires evidenceReferences, confidence and
+    // semanticReasoning on every evaluation. Omitting them made
+    // atsCheckResponseSchema.parse() throw a ZodError, so the route returned a
+    // 500 and the assertions below read an error body instead of a report.
+    const VALID_EVALUATION = {
+      capabilityId: 'req_1',
+      satisfaction: 'complete' as const,
+      evidenceStrength: 'strong' as const,
+      evidenceReferences: [],
+      confidence: 0.9,
+      semanticReasoning: 'Resume shows direct React project and internship experience.',
+    }
+
+    // Minimum viable resume for the V2 pipeline. Quality scoring reads these,
+    // so omitting them made the whole pipeline throw before the CGPA rule ran.
+    const BASE_RESUME = {
+      name: 'Test Candidate',
+      email: 'test@example.com',
+      summary: 'Frontend developer with React and TypeScript experience.',
+      skills: ['React', 'TypeScript', 'JavaScript'],
+      experience: [
+        { company: 'Acme', role: 'Frontend Intern', start_date: '2024-01', end_date: '2024-06',
+          bullets: ['Built React components used across the product.'] },
+      ],
+      projects: [{ name: 'Portfolio', description: 'Personal site', technologies: ['React'] }],
+    }
+
+    // Inline resume data, under the field name the route actually reads
+    // (`resumeData`). Previously this was `parsedResumeData` — which the route
+    // ignores — alongside a resumeId, so the stored resume was scored instead
+    // and the GPAs under test never reached the CGPA rule.
     const validBody = {
-      resumeId: '123',
       targetRole: 'Frontend Developer',
       companyName: 'Acme Corp',
       jobDescription: 'A'.repeat(150),
-      parsedResumeData: { education: [] }, // Will override
       jobUrl: 'https://acmecorp.com/jobs/1'
     };
 
     it('TEST D: B.Tech (9.5) + B.Sc (7.17) (No CGPA recommendation)', async () => {
       // Setup successful V2 response so we hit the CGPA logic at the end
-      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [{ id: 'req_1', name: 'React', category: 'technical_capability', importance: 'high' }] } });
-      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [{ capabilityId: 'req_1', satisfaction: 'complete', evidenceStrength: 'strong' }] } });
+      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [VALID_REQUIREMENT] } });
+      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [VALID_EVALUATION] } });
       
       const body = {
         ...validBody,
-        parsedResumeData: {
+        resumeData: {
+          ...BASE_RESUME,
           education: [
             { degree: 'B.Tech', gpa: 9.5, graduation_year: 2026 },
             { degree: 'B.Sc', gpa: 7.17, graduation_year: 2026 }
@@ -93,12 +172,13 @@ describe('ATS V2 Regression Tests', () => {
     });
 
     it('TEST E: Currently pursuing B.Tech (7.49) (Show recommendation)', async () => {
-      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [{ id: 'req_1', name: 'React', category: 'technical_capability', importance: 'high' }] } });
-      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [{ capabilityId: 'req_1', satisfaction: 'complete', evidenceStrength: 'strong' }] } });
+      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [VALID_REQUIREMENT] } });
+      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [VALID_EVALUATION] } });
       
       const body = {
         ...validBody,
-        parsedResumeData: {
+        resumeData: {
+          ...BASE_RESUME,
           education: [
             { degree: 'Bachelor of Technology', gpa: 7.49, graduation_year: 2030 }
           ]
@@ -115,12 +195,13 @@ describe('ATS V2 Regression Tests', () => {
     });
 
     it('TEST F: Currently pursuing B.Tech (7.5) (No recommendation)', async () => {
-      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [{ id: 'req_1', name: 'React', category: 'technical_capability', importance: 'high' }] } });
-      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [{ capabilityId: 'req_1', satisfaction: 'complete', evidenceStrength: 'strong' }] } });
+      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [VALID_REQUIREMENT] } });
+      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [VALID_EVALUATION] } });
       
       const body = {
         ...validBody,
-        parsedResumeData: {
+        resumeData: {
+          ...BASE_RESUME,
           education: [
             { degree: 'B.E.', gpa: 7.5, graduation_year: 2030 }
           ]
