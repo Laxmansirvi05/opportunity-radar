@@ -53,18 +53,23 @@ CREATE TABLE IF NOT EXISTS public.certifications (
 
 -- Free-text search over title, provider and topics, mirroring how the
 -- opportunities search works so the two feel like one product.
+-- `topics` is deliberately not folded into this expression. A STORED generated
+-- column requires an IMMUTABLE expression, and array_to_string() is only
+-- STABLE, so including it makes Postgres reject the whole table with
+-- "generation expression is not immutable". Topics get their own GIN index
+-- below, which is the right way to query an array anyway.
 ALTER TABLE public.certifications
   ADD COLUMN IF NOT EXISTS fts TSVECTOR
   GENERATED ALWAYS AS (
     to_tsvector('english',
       coalesce(title, '') || ' ' ||
       coalesce(provider, '') || ' ' ||
-      coalesce(description, '') || ' ' ||
-      coalesce(array_to_string(topics, ' '), '')
+      coalesce(description, '')
     )
   ) STORED;
 
 CREATE INDEX IF NOT EXISTS idx_certifications_fts      ON public.certifications USING GIN(fts);
+CREATE INDEX IF NOT EXISTS idx_certifications_topics   ON public.certifications USING GIN(topics);
 CREATE INDEX IF NOT EXISTS idx_certifications_is_free  ON public.certifications(is_free);
 CREATE INDEX IF NOT EXISTS idx_certifications_provider ON public.certifications(provider);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_certifications_canonical

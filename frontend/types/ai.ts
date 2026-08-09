@@ -20,6 +20,10 @@ export type AIFeature =
   | 'hr_coaching'
   | 'resume_optimization'
   | 'assistant'
+  // Resume optimisation: A rewrites the same facts, B adds confirmed work.
+  // They are separate features so their rate limits and usage can be told apart.
+  | 'resume_polish'
+  | 'resume_target'
 
 export type AIProvider = 'gemini' | 'groq' | 'openrouter' | 'cloudflare' | 'ollama'
 
