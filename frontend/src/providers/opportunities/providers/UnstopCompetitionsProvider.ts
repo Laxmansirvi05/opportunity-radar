@@ -110,6 +110,24 @@ type Tagged = UnstopItem & { _category: string };
  *
  * Anything unparseable returns null rather than being passed through.
  */
+/**
+ * Unstop reports currency as a FontAwesome icon class — "fa-rupee", not "INR" —
+ * so passing it through rendered stipends as "fa-rupee 1,000 – fa-rupee 10,000".
+ * Maps the icon names to real symbols and falls back to the rupee, since every
+ * listing on this India-native platform is priced in rupees.
+ */
+export function currencySymbol(raw: string | null | undefined): string {
+  const key = String(raw ?? '').toLowerCase().replace(/^fa-/, '').trim();
+  const symbols: Record<string, string> = {
+    rupee: '₹', inr: '₹', 'rupee-sign': '₹', 'indian-rupee-sign': '₹',
+    dollar: '$', usd: '$', 'dollar-sign': '$',
+    euro: '€', eur: '€', 'euro-sign': '€',
+    pound: '£', gbp: '£', 'sterling-sign': '£',
+    yen: '¥', jpy: '¥',
+  };
+  return symbols[key] ?? '₹';
+}
+
 export function toIsoOrNull(value: unknown): string | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
 
@@ -235,8 +253,17 @@ export class UnstopCompetitionsProvider extends OpportunityProvider {
     const max = Number(jd.max_salary ?? 0);
     if (!min && !max) return null;
 
-    const symbol = (jd.currency ?? 'INR').toUpperCase() === 'INR' ? '₹' : `${jd.currency} `;
-    const per = String(jd.pay_in ?? '').toLowerCase().includes('month') ? ' / month' : '';
+    const symbol = currencySymbol(jd.currency);
+    const payIn = String(jd.pay_in ?? '').toLowerCase();
+    const per = payIn.includes('month')
+      ? ' / month'
+      : payIn.includes('year') || payIn.includes('annum')
+        ? ' / year'
+        : payIn.includes('week')
+          ? ' / week'
+          : payIn.includes('hour')
+            ? ' / hour'
+            : '';
     const fmt = (v: number) => `${symbol}${v.toLocaleString('en-IN')}`;
 
     if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}${per}`;

@@ -41,7 +41,11 @@ function SearchPageContent() {
   }, [filters.q, addRecentSearch])
 
   return (
-    <>
+    // Search is a full-bleed, full-height layout with its own scroll container,
+    // but the protected layout pads every page by 16px (mobile) / 24px (desktop).
+    // That padding rendered as a strip of the wrong background colour under the
+    // last card, so it is cancelled here and the height compensated exactly.
+    <div className="flex -m-margin-mobile md:-m-gutter h-[calc(100%+32px)] md:h-[calc(100%+48px)] overflow-hidden">
       {/* Filters Sidebar */}
       <FiltersSidebar isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} />
 
@@ -129,7 +133,7 @@ function SearchPageContent() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

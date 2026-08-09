@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { detectSynthetic, describeVerdict } from '@/lib/ingestion/synthetic-detector'
 import { canonicalizeUrl, fingerprintPosting } from '@/lib/ingestion/canonical-url'
 import { classifyGeo, applyGeoQuota } from '@/lib/ingestion/geo'
-import { toIsoOrNull } from '@/src/providers/opportunities/providers/UnstopCompetitionsProvider'
+import { toIsoOrNull, currencySymbol } from '@/src/providers/opportunities/providers/UnstopCompetitionsProvider'
 import {
   deleteExpiredOpportunities,
   reconcileUnseen,
@@ -329,5 +329,24 @@ describe('toIsoOrNull', () => {
     expect(toIsoOrNull('not a date')).toBeNull()
     expect(toIsoOrNull(null)).toBeNull()
     expect(toIsoOrNull(undefined)).toBeNull()
+  })
+})
+
+describe('currencySymbol', () => {
+  it('maps Unstop\'s FontAwesome class to a real symbol', () => {
+    // Unstop sends "fa-rupee", which rendered literally as
+    // "fa-rupee 1,000 – fa-rupee 10,000 / month" on the live site.
+    expect(currencySymbol('fa-rupee')).toBe('₹')
+  })
+
+  it('handles plain currency codes and other symbols', () => {
+    expect(currencySymbol('INR')).toBe('₹')
+    expect(currencySymbol('fa-dollar')).toBe('$')
+    expect(currencySymbol('EUR')).toBe('€')
+  })
+
+  it('falls back to the rupee rather than echoing an unknown token', () => {
+    expect(currencySymbol('fa-something-odd')).toBe('₹')
+    expect(currencySymbol(null)).toBe('₹')
   })
 })
