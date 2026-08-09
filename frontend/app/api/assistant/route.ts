@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { callAI } from "@/lib/ai-gateway";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { sanitizeFilterTerm } from "@/features/opportunities/services/opportunity-service";
 
 interface OpportunitySearchRow {
   id: string;
@@ -86,10 +87,12 @@ async function searchOpportunitiesFromDB(
     dbQuery = dbQuery.eq("category", category);
   }
 
-  if (query && query.trim().length > 0) {
-    // Use text search + fallback title ilike
+  // The assistant passes free text straight from the user's message, so the
+  // same PostgREST filter-injection risk applies here.
+  const safeQuery = sanitizeFilterTerm(query ?? '');
+  if (safeQuery.length > 0) {
     dbQuery = dbQuery.or(
-      `title.ilike.%${query.trim()}%,location.ilike.%${query.trim()}%`
+      `title.ilike.%${safeQuery}%,location.ilike.%${safeQuery}%`
     );
   }
 

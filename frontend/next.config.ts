@@ -6,7 +6,8 @@ const cspHeader = `
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;
-  connect-src 'self' data: https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com;
+  connect-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com wss://*.supabase.co;
+  media-src 'self' blob: data:;
   frame-ancestors 'none';
   object-src 'none';
   base-uri 'self';
@@ -60,7 +61,10 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+            // microphone=(self) is required for the AI voice interview:
+            // getUserMedia is refused outright while it is disallowed here,
+            // and no client-side code can work around that.
+            value: 'camera=(), microphone=(self), geolocation=(), browsing-topics=()',
           },
           {
             key: 'Strict-Transport-Security',

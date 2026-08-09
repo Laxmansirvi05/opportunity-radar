@@ -22,7 +22,11 @@ export async function POST(req: NextRequest) {
 
     // Auth check
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (!user && process.env.NODE_ENV === 'production') {
+    // Auth is required unconditionally. This previously skipped the check
+    // whenever NODE_ENV was not 'production', which made every preview
+    // deployment an open, unmetered door to the AI providers — and the
+    // 'dev-test-user' fallback below also bypassed per-user rate limits.
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -87,7 +91,7 @@ export async function POST(req: NextRequest) {
         outputFormat: 'json',
         media: isImage ? { data: Buffer.from(buffer).toString('base64'), mimeType: file.type } : undefined,
       },
-      { feature: 'resume_parser', userId: user?.id || 'dev-test-user', validator: parserValidator }
+      { feature: 'resume_parser', userId: user.id, validator: parserValidator }
     )
 
     if (!aiResult.success) {

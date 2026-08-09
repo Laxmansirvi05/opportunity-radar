@@ -9,6 +9,26 @@ import {
 type SupabaseClientType = SupabaseClient<Database>
 
 /**
+ * Make a user-supplied term safe to embed in a PostgREST `.or()` filter string.
+ *
+ * PostgREST parses `.or()` as a comma-separated expression list, so a term
+ * containing `,` `(` `)` `.` or a quote can close one condition and open
+ * another — altering the filter tree rather than the value being matched.
+ * Escaping is not enough for these; PostgREST has no escape syntax inside an
+ * unquoted `ilike` pattern, so the separators are stripped outright.
+ *
+ * Deliberately lossy: a search for "a,b" matches on "ab". Losing a comma from a
+ * query is a far better outcome than letting it rewrite the query.
+ */
+export function sanitizeFilterTerm(term: string): string {
+  return term
+    .replace(/[,()."'\\*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100)
+}
+
+/**
  * Builds and executes a search query against the opportunities table.
  */
 export async function searchOpportunities(
@@ -247,12 +267,17 @@ function applyAllFilters(
   // Search string application
   if (filters.q && filters.q.trim().length > 0) {
     const term = filters.q.trim()
+    // Full-text search is quoted, so doubling embedded quotes is sufficient there.
     const safeQ = term.replace(/"/g, '""')
+    // ilike patterns are unquoted and cannot be escaped, so separators are removed.
+    const safeTerm = sanitizeFilterTerm(term)
     const conditions = []
-    
+
     conditions.push(`fts.plfts(english)."${safeQ}"`)
-    conditions.push(`location.ilike.%${term}%`)
-    conditions.push(`category.ilike.%${term}%`)
+    if (safeTerm.length > 0) {
+      conditions.push(`location.ilike.%${safeTerm}%`)
+      conditions.push(`category.ilike.%${safeTerm}%`)
+    }
     
     if (compIds.length > 0) {
       conditions.push(`company_id.in.(${compIds.join(',')})`)

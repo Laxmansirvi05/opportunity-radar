@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { detectSynthetic, describeVerdict } from '@/lib/ingestion/synthetic-detector'
 import { canonicalizeUrl, fingerprintPosting } from '@/lib/ingestion/canonical-url'
 import { classifyGeo, applyGeoQuota } from '@/lib/ingestion/geo'
+import { sanitizeFilterTerm } from '@/features/opportunities/services/opportunity-service'
 import { toIsoOrNull, currencySymbol } from '@/src/providers/opportunities/providers/UnstopCompetitionsProvider'
 import {
   deleteExpiredOpportunities,
@@ -348,5 +349,35 @@ describe('currencySymbol', () => {
   it('falls back to the rupee rather than echoing an unknown token', () => {
     expect(currencySymbol('fa-something-odd')).toBe('₹')
     expect(currencySymbol(null)).toBe('₹')
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// PostgREST filter injection
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('sanitizeFilterTerm', () => {
+  it('strips the separators PostgREST uses to delimit .or() conditions', () => {
+    // A comma closes one condition and opens another, letting a search box
+    // rewrite the filter tree rather than just the value being matched.
+    for (const ch of [',', '(', ')', '.', '"', "'", '*']) {
+      expect(sanitizeFilterTerm(`a${ch}b`)).not.toContain(ch)
+    }
+  })
+
+  it('neutralises a crafted injection attempt', () => {
+    const attack = 'x,status.eq.Expired,title.ilike.%'
+    const safe = sanitizeFilterTerm(attack)
+    expect(safe).not.toContain(',')
+    expect(safe).not.toContain('.')
+  })
+
+  it('leaves ordinary searches usable', () => {
+    expect(sanitizeFilterTerm('software engineer intern')).toBe('software engineer intern')
+    expect(sanitizeFilterTerm('  Bengaluru  ')).toBe('Bengaluru')
+  })
+
+  it('bounds the length so a huge term cannot bloat the query', () => {
+    expect(sanitizeFilterTerm('a'.repeat(500)).length).toBe(100)
   })
 })
