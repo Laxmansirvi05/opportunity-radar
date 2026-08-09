@@ -14,6 +14,10 @@
       "schedule": "0 22 * * *"
     },
     {
+      "path": "/api/cron/refresh-employers",
+      "schedule": "0 19 * * *"
+    },
+    {
       "path": "/api/cron/maintenance",
       "schedule": "0 23 * * *"
     },
