@@ -86,6 +86,29 @@ interface UnstopItem {
 
 type Tagged = UnstopItem & { _category: string };
 
+/**
+ * Coerce a provider date into an ISO string Postgres will accept.
+ *
+ * Unstop mixes formats: `end_date` and `updated_at` are ISO-8601
+ * ("2026-08-17T00:00:00+05:30"), but `approved_date` is
+ * "2026-08-09 14:26:41 GMT+0530" — and Postgres rejects that with
+ * `time zone "gmt+0530" not recognized`, failing the whole insert. Preferring
+ * approved_date therefore broke all 2,462 upserts in one run.
+ *
+ * Anything unparseable returns null rather than being passed through.
+ */
+export function toIsoOrNull(value: unknown): string | null {
+  if (typeof value !== 'string' || value.trim() === '') return null;
+
+  // "GMT+0530" / "GMT +05:30" -> "+05:30", which Date can parse.
+  const cleaned = value
+    .replace(/\s*GMT\s*([+-])(\d{2}):?(\d{2})/i, '$1$2:$3')
+    .trim();
+
+  const d = new Date(cleaned);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 async function getPage(type: string, page: number): Promise<UnstopItem[] | null> {
   // oppstatus=open is essential: without it the API returns its full archive,
   // of which the overwhelming majority have closed and are rejected downstream
@@ -213,12 +236,16 @@ export class UnstopCompetitionsProvider extends OpportunityProvider {
       source: 'unstop',
       source_id: String(raw.id ?? ''),
       category: raw._category,
-      deadline: raw.end_date ?? null,
-      registration_deadline: raw.end_date ?? null,
-      event_date: raw.start_date ?? null,
-      // opportunities.posted_at is NOT NULL and Unstop rarely sets start_date,
-      // so fall back to when the listing was approved, then to now.
-      posted_at: (raw.approved_date as string) ?? (raw.updated_at as string) ?? new Date().toISOString(),
+      deadline: toIsoOrNull(raw.end_date),
+      registration_deadline: toIsoOrNull(raw.end_date),
+      event_date: toIsoOrNull(raw.start_date),
+      // opportunities.posted_at is NOT NULL and Unstop rarely sets start_date.
+      // updated_at is checked before approved_date because the latter uses a
+      // format Postgres rejects; both go through the sanitiser regardless.
+      posted_at:
+        toIsoOrNull(raw.updated_at) ??
+        toIsoOrNull(raw.approved_date) ??
+        new Date().toISOString(),
       // Competitions have no salary; salary_range carries the compensation for
       // the category, which here is the prize pool.
       salary_range: prizePool,

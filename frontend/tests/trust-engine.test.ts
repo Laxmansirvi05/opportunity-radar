@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { detectSynthetic, describeVerdict } from '@/lib/ingestion/synthetic-detector'
 import { canonicalizeUrl, fingerprintPosting } from '@/lib/ingestion/canonical-url'
 import { classifyGeo, applyGeoQuota } from '@/lib/ingestion/geo'
+import { toIsoOrNull } from '@/src/providers/opportunities/providers/UnstopCompetitionsProvider'
 import {
   deleteExpiredOpportunities,
   reconcileUnseen,
@@ -305,5 +306,28 @@ describe('reconcileUnseen', () => {
   it('runs on a first-ever scrape, when there is no previous volume', async () => {
     const { client } = createDb({ opportunities: [] })
     expect((await reconcileUnseen(client, 'newsource', RUN, 5, 0)).skipped).toBe(false)
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// Unstop date coercion
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('toIsoOrNull', () => {
+  it('accepts the ISO form Unstop uses for end_date', () => {
+    expect(toIsoOrNull('2026-08-17T00:00:00+05:30')).toBe('2026-08-16T18:30:00.000Z')
+  })
+
+  it('repairs the "GMT+0530" form that Postgres rejects', () => {
+    // This exact format failed 2,462 upserts with
+    // `time zone "gmt+0530" not recognized`.
+    expect(toIsoOrNull('2026-08-09 14:26:41 GMT+0530')).toBe('2026-08-09T08:56:41.000Z')
+  })
+
+  it('returns null for empty or unparseable input rather than passing it through', () => {
+    expect(toIsoOrNull('')).toBeNull()
+    expect(toIsoOrNull('not a date')).toBeNull()
+    expect(toIsoOrNull(null)).toBeNull()
+    expect(toIsoOrNull(undefined)).toBeNull()
   })
 })
