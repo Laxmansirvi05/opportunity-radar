@@ -28,7 +28,7 @@ export async function optimiseBullet(params: {
   })
 
   // First attempt
-  let aiResult: AIResult = await callAI(
+  const aiResult: AIResult = await callAI(
     {
       systemPrompt: OPTIMIZER_SYSTEM_PROMPT,
       userPrompt,
