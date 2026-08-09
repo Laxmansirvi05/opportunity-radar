@@ -64,8 +64,21 @@ interface UnstopPrize {
   others?: string | null;
 }
 
+interface UnstopJobDetail {
+  min_salary?: number | string | null;
+  max_salary?: number | string | null;
+  currency?: string | null;
+  paid_unpaid?: string | null;
+  show_salary?: boolean | number | null;
+  pay_in?: string | null;
+  min_experience?: number | null;
+}
+
 interface UnstopItem {
   id?: number | string;
+  /** Full HTML description. Present in the list response, so no detail fetch. */
+  details?: string | null;
+  jobDetail?: UnstopJobDetail | null;
   title?: string;
   type?: string;
   subtype?: string | null;
@@ -164,7 +177,7 @@ export class UnstopCompetitionsProvider extends OpportunityProvider {
 
         for (const item of items) {
           if (!this.isIndian(item)) continue;
-          out.push({ ...item, _category: CATEGORY[String(item.type ?? type)] ?? 'Competition' });
+          out.push({ ...item, _category: this.categoryFor(item, type) });
         }
 
         if (items.length < PER_PAGE) break;
@@ -174,6 +187,60 @@ export class UnstopCompetitionsProvider extends OpportunityProvider {
     }
 
     return out;
+  }
+
+  /**
+   * Unstop reports an internship as `type: 'jobs'` with `subtype: 'internships'`,
+   * so keying off `type` alone filed 857 internships under Job. Subtype wins,
+   * then the endpoint we asked for, then the raw type; a title mentioning an
+   * internship overrides all of them.
+   */
+  private categoryFor(item: UnstopItem, endpointType: string): string {
+    const title = String(item.title ?? '');
+    if (/\b(intern|internship)\b/i.test(title)) return 'Internship';
+
+    const bySubtype = CATEGORY[String(item.subtype ?? '')];
+    if (bySubtype) return bySubtype;
+
+    return CATEGORY[endpointType] ?? CATEGORY[String(item.type ?? '')] ?? 'Competition';
+  }
+
+  /** Plain text from Unstop's HTML description. */
+  private stripHtml(html: string): string {
+    return html
+      .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&rsquo;/g, '’')
+      .replace(/&lsquo;/g, '‘').replace(/&ldquo;/g, '“').replace(/&rdquo;/g, '”')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&[a-z]+;/gi, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Stipend or salary from Unstop's jobDetail block.
+   * Returns null when the source does not publish a figure — the UI then says
+   * "Not disclosed" rather than inventing one.
+   */
+  private formatPay(jd: UnstopJobDetail | null | undefined): string | null {
+    if (!jd) return null;
+
+    if (String(jd.paid_unpaid ?? '').toLowerCase() === 'unpaid') return 'Unpaid';
+
+    const min = Number(jd.min_salary ?? 0);
+    const max = Number(jd.max_salary ?? 0);
+    if (!min && !max) return null;
+
+    const symbol = (jd.currency ?? 'INR').toUpperCase() === 'INR' ? '₹' : `${jd.currency} `;
+    const per = String(jd.pay_in ?? '').toLowerCase().includes('month') ? ' / month' : '';
+    const fmt = (v: number) => `${symbol}${v.toLocaleString('en-IN')}`;
+
+    if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}${per}`;
+    return `${fmt(max || min)}${per}`;
   }
 
   /**
@@ -217,12 +284,23 @@ export class UnstopCompetitionsProvider extends OpportunityProvider {
     const prizePool = this.formatPrizes(raw.prizes);
     const isOnline = String(raw.region ?? '').toLowerCase() === 'online';
 
+    const pay = this.formatPay(raw.jobDetail);
+
+    // Prefer the source's own description. Only fall back to a generated
+    // summary when Unstop genuinely ships none, rather than replacing 2,000
+    // characters of real detail with a one-line stub.
+    const realDescription = raw.details ? this.stripHtml(String(raw.details)) : '';
+
     const bits: string[] = [];
-    if (prizePool) bits.push(`Prize pool: ${prizePool}.`);
-    if (raw.registerCount) bits.push(`${raw.registerCount} students already registered.`);
-    bits.push(
-      `${raw._category} hosted by ${org.name ?? 'an organiser'} on Unstop${isOnline ? ', held online' : ''}.`
-    );
+    if (realDescription.length >= 80) {
+      bits.push(realDescription.slice(0, 6000));
+    } else {
+      if (raw.registerCount) bits.push(`${raw.registerCount} students already registered.`);
+      bits.push(
+        `${raw._category} hosted by ${org.name ?? 'an organiser'} on Unstop${isOnline ? ', held online' : ''}.`
+      );
+    }
+    if (prizePool) bits.push(`\n\nPrize pool: ${prizePool}.`);
 
     return {
       title,
@@ -248,8 +326,10 @@ export class UnstopCompetitionsProvider extends OpportunityProvider {
         new Date().toISOString(),
       // Competitions have no salary; salary_range carries the compensation for
       // the category, which here is the prize pool.
-      salary_range: prizePool,
-      is_paid: prizePool ? true : null,
+      // One compensation field, meaning whichever applies to the category:
+      // prize pool for a contest, stipend or salary for a role.
+      salary_range: prizePool ?? pay,
+      is_paid: pay === 'Unpaid' ? false : (prizePool || pay) ? true : null,
       skills: [],
       requirements: [],
     } as NormalizedOpportunity;

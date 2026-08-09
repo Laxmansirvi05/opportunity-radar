@@ -82,7 +82,7 @@ function SearchPageContent() {
 
         {/* Results List */}
         <div className="flex-1 p-4 md:p-8 bg-surface-container-lowest overflow-y-auto">
-          <div className="max-w-6xl mx-auto w-full flex flex-col gap-5 pb-24">
+          <div className="max-w-6xl mx-auto w-full flex flex-col gap-5 pb-6">
             {isLoading ? (
               <SearchSkeleton count={3} />
             ) : !hasResults ? (
