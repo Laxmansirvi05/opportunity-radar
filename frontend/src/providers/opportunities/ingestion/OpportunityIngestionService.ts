@@ -20,6 +20,8 @@ export interface IngestionStats {
   skipped_dup: number;
   /** Rejected because their geography puts them out of reach of an India-based student. */
   skipped_geo: number;
+  /** Publishable internationally, but held back to keep the India-weighted mix. */
+  skipped_quota: number;
   /** Deleted this run: past deadline, or no longer advertised by the source. */
   removed: number;
   errors: number;
@@ -41,6 +43,9 @@ export function isPipelineDisabled(
 ): result is PipelineDisabledResult {
   return result.status === 'disabled';
 }
+
+/** Ceiling on the share of the live catalogue that may be non-India. */
+export const MAX_INTERNATIONAL_SHARE = 0.15;
 
 const EMPTY_PROVIDER_STATS = {
   processed: 0,
@@ -87,6 +92,31 @@ export class OpportunityIngestionService {
          .replace(/[^a-z0-9]/g, '')
          .trim();
     return `${normalizeString(company)}:${normalizeString(title)}`;
+  }
+
+  /**
+   * Current India vs international split of the live catalogue, used to seed
+   * the publishing quota so it reflects reality rather than this run alone.
+   */
+  private async loadGeoBudget(): Promise<{ india: number; intl: number }> {
+    const nowIso = new Date().toISOString();
+    const live = (q: any) => q
+      .in('status', ['Published', 'Closing Soon'])
+      .or(`deadline.is.null,deadline.gte.${nowIso}`);
+
+    try {
+      const [inRes, intlRes] = await Promise.all([
+        live(this.db.from('opportunities').select('id', { count: 'exact', head: true })).eq('country', 'IN'),
+        live(this.db.from('opportunities').select('id', { count: 'exact', head: true })).neq('country', 'IN'),
+      ]);
+      const india = inRes?.count ?? 0;
+      const intl = intlRes?.count ?? 0;
+      console.log(`[Ingestion] Geo budget seeded from live catalogue: ${india} India / ${intl} international.`);
+      return { india, intl };
+    } catch (e) {
+      console.warn('[Ingestion] Could not seed geo budget; starting from zero.', e);
+      return { india: 0, intl: 0 };
+    }
   }
 
   /** Stable identity of a listing within the provider it came from. */
@@ -182,7 +212,14 @@ export class OpportunityIngestionService {
     const runStartedAt = new Date().toISOString();
     /** Records this run confirmed still live, per source. */
     const seenPerSource = new Map<string, number>();
-    const globalStats = { processed: 0, valid: 0, upserted: 0, inserted: 0, updated: 0, skipped_dup: 0, skipped_geo: 0, removed: 0, errors: 0 };
+
+    // ── India-weighted publishing quota ──────────────────────────────────
+    // Applied as a running budget against the LIVE catalogue rather than per
+    // batch: a batch that happens to be entirely international must not still
+    // admit its own 15%, or the mix drifts with every run. India listings are
+    // never blocked — only international ones are rate-limited.
+    const geoBudget = await this.loadGeoBudget();
+    const globalStats = { processed: 0, valid: 0, upserted: 0, inserted: 0, updated: 0, skipped_dup: 0, skipped_geo: 0, skipped_quota: 0, removed: 0, errors: 0 };
 
     // Pre-load existing records to prevent cross-source dupes, and to recognise
     // our own listings when they come back for a refresh.
@@ -237,10 +274,34 @@ export class OpportunityIngestionService {
           const geo = classifyGeo(normalized.location, {
             title: normalized.title,
             mode: normalized.mode,
+            source: normalized.source,
           });
           if (!geo.publishable) {
             globalStats.skipped_geo++;
             continue;
+          }
+
+          // The quota governs ADMISSION of new listings, not the survival of
+          // existing ones. A listing already published and still advertised by
+          // its source must keep flowing through to upsert(), or it will miss
+          // its last_seen_at stamp and be deleted by reconciliation — then
+          // re-added on a later run, churning the catalogue.
+          const alreadyPublished = this.knownSourceKeys.has(
+            this.sourceKey(normalized.source, normalized.source_id)
+          );
+
+          if (geo.country === 'IN') {
+            geoBudget.india++;
+          } else if (alreadyPublished) {
+            geoBudget.intl++;
+          } else {
+            // Would admitting this NEW listing push international past the cap?
+            const projected = (geoBudget.intl + 1) / (geoBudget.india + geoBudget.intl + 1);
+            if (projected > MAX_INTERNATIONAL_SHARE) {
+              globalStats.skipped_quota++;
+              continue;
+            }
+            geoBudget.intl++;
           }
 
           // Duplicate Protection (Fingerprint + Exact URL)
@@ -409,6 +470,7 @@ export class OpportunityIngestionService {
       const geo = classifyGeo(opportunity.location, {
         title: opportunity.title,
         mode: opportunity.mode,
+        source: opportunity.source,
       });
 
       const { data: existing, error: selectError } = await this.db

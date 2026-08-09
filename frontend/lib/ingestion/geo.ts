@@ -41,9 +41,23 @@ function haystack(...parts: (string | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ').toLowerCase()
 }
 
+/**
+ * Sources whose audience is India. A bare "Remote" listing on an India-native
+ * platform is an Indian remote role — Unstop and Internshala serve Indian
+ * students, so their remote postings are not "international" in any sense a
+ * student would recognise. Without this hint the classifier had no way to know,
+ * and marked 1,041 India-native remote listings as international, which then
+ * skewed the India-weighted publishing quota.
+ */
+const INDIA_NATIVE_SOURCES = new Set(['unstop', 'internshala', 'naukri', 'hirist', 'cutshort'])
+
+export function isIndiaNativeSource(source: string | null | undefined): boolean {
+  return INDIA_NATIVE_SOURCES.has((source ?? '').toLowerCase())
+}
+
 export function classifyGeo(
   location: string | null | undefined,
-  extra?: { title?: string | null; description?: string | null; mode?: string | null }
+  extra?: { title?: string | null; description?: string | null; mode?: string | null; source?: string | null }
 ): GeoDecision {
   const locText = (location ?? '').toLowerCase()
   const all = haystack(location, extra?.mode, extra?.title)
@@ -59,6 +73,11 @@ export function classifyGeo(
 
   if (isIndia) {
     return { country: 'IN', isRemote, publishable: true, reason: 'India location' }
+  }
+
+  // A remote listing from an India-native platform is an Indian remote role.
+  if (isRemote && isIndiaNativeSource(extra?.source) && !REMOTE_RESTRICTED.test(locText)) {
+    return { country: 'IN', isRemote: true, publishable: true, reason: 'remote listing on an India-native source' }
   }
 
   // No location at all: keep only if it is explicitly remote, otherwise we

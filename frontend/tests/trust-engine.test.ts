@@ -151,6 +151,23 @@ describe('classifyGeo', () => {
     expect(g.publishable).toBe(false)
   })
 
+  it('treats a bare "Remote" on an India-native source as an India role', () => {
+    // Unstop and Internshala serve Indian students; their remote listings are
+    // not international in any sense a student would recognise.
+    const g = classifyGeo('Remote', { source: 'unstop' })
+    expect(g.country).toBe('IN')
+    expect(g.isRemote).toBe(true)
+    expect(g.publishable).toBe(true)
+  })
+
+  it('still treats a bare "Remote" on a global source as international', () => {
+    expect(classifyGeo('Remote', { source: 'greenhouse' }).country).toBe('INTL')
+  })
+
+  it('does not let an India-native source override an explicit foreign restriction', () => {
+    expect(classifyGeo('Remote - US', { source: 'internshala' }).publishable).toBe(false)
+  })
+
   it('rejects an unlocated, non-remote listing rather than guessing', () => {
     expect(classifyGeo('').publishable).toBe(false)
     expect(classifyGeo('', { mode: 'Remote' }).publishable).toBe(true)
