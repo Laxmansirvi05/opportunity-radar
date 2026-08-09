@@ -201,3 +201,8 @@ Fix: a default limit instead of `return true`.
 |---|---|
 | 10 Aug 2026 | Full audit; 25 issues catalogued |
 | 10 Aug 2026 | DB-01 – DB-05 fixed and verified; database drift resolved |
+| 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
+
+> The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
+> were live in production from the moment they were run. This deploy shipped the
+> migration files, the type additions and the three documents.
