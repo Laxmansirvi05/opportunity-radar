@@ -34,23 +34,34 @@ export default async function ProfilePage() {
   // renders from the auth user below so the student can hit Save and upsert one.
 
   const stats = {
-    saved: 0,
+    total: 0,
     applied: 0,
-    interviews: 0
+    interviewing: 0,
+    offers: 0,
+    responseRate: null as number | null
   }
 
   if (trackerData) {
+    stats.total = trackerData.length;
+    
+    let appliedCount = 0;
+    let interviewCount = 0;
+    let offerCount = 0;
+    let rejectedCount = 0;
+
     for (const row of trackerData) {
-      if (row.status === 'Saved') stats.saved++
-      else if (row.status === 'Applied') stats.applied++
-      else if (row.status === 'Interview Scheduled') stats.interviews++
+      if (row.status === 'Applied') appliedCount++;
+      else if (row.status === 'Interview Scheduled') interviewCount++;
+      else if (row.status === 'Selected') offerCount++;
+      else if (row.status === 'Rejected') rejectedCount++;
     }
-    // Note: If you have Offer or Rejected, they also count as Applied since they are downstream
-    for (const row of trackerData) {
-        if (row.status === 'Selected' || row.status === 'Rejected') {
-            stats.applied++
-        }
-    }
+
+    stats.applied = appliedCount + interviewCount + offerCount + rejectedCount;
+    stats.interviewing = interviewCount;
+    stats.offers = offerCount;
+
+    const responses = interviewCount + offerCount + rejectedCount;
+    stats.responseRate = stats.applied > 0 ? Math.round((responses / stats.applied) * 100) : null;
   }
 
   const initialProfileData = {

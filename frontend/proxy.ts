@@ -19,6 +19,7 @@ const PROTECTED_ROUTES = [
   '/submit',
   '/hub',
   '/search',
+  '/ai-search',
   '/opportunities',
   '/resume',
   '/certifications',

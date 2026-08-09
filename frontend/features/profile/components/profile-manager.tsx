@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { updateProfile, updateResume, updateAvatarUrl, ProfileUpdateData } from '../actions/profile-actions'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
+import { ImageCropper } from './image-cropper'
+import { AchievementsSection } from './achievements-section'
 
 type ProfileData = {
   id: string
@@ -29,9 +31,11 @@ type ProfileData = {
 }
 
 type TrackerStats = {
-  saved: number
+  total: number
   applied: number
-  interviews: number
+  interviewing: number
+  offers: number
+  responseRate: number | null
 }
 
 interface ProfileManagerProps {
@@ -54,10 +58,12 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
   const [profile, setProfile] = useState<ProfileData>(initialProfile)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+
+  const [cropImageFile, setCropImageFile] = useState<File | null>(null)
 
   // Form State
   const [formData, setFormData] = useState<ProfileUpdateData>({
@@ -105,11 +111,11 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       } else {
         // If it's a column error, warn but save the rest in UI for now
         if (result.error && result.error.includes('does not exist')) {
-            console.warn('Database columns missing. Please run the migration. Preserving UI state.')
-            setProfile({ ...profile, ...formData })
-            setIsEditing(false)
+          console.warn('Database columns missing. Please run the migration. Preserving UI state.')
+          setProfile({ ...profile, ...formData })
+          setIsEditing(false)
         } else {
-            setError(result.error || 'Failed to update profile')
+          setError(result.error || 'Failed to update profile')
         }
       }
     })
@@ -172,14 +178,23 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       return
     }
 
+    setCropImageFile(file)
+    // Clear input so same file can be selected again
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = ''
+    }
+  }
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropImageFile(null)
     setError(null)
     startTransition(async () => {
-      const ext = file.name.split('.').pop()
-      const filePath = `${profile.id}/avatar-${Date.now()}.${ext}`
-      
+      // Use a stable file name for the user's avatar so upsert always replaces the same file
+      const filePath = `${profile.id}/avatar.jpeg`
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, croppedBlob, { upsert: true, contentType: 'image/jpeg' })
 
       if (uploadError) {
         setError(uploadError.message)
@@ -189,13 +204,16 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath)
+        
+      // Add a cache-busting timestamp so the frontend immediately shows the fresh image
+      const publicUrlWithCacheBuster = `${publicUrl}?t=${Date.now()}`
 
-      const updateResult = await updateAvatarUrl(publicUrl)
+      const updateResult = await updateAvatarUrl(publicUrlWithCacheBuster)
 
       if (updateResult.success || (updateResult.error && updateResult.error.includes('does not exist'))) {
         setProfile((prev) => ({
           ...prev,
-          avatar_url: publicUrl
+          avatar_url: publicUrlWithCacheBuster
         }))
       } else {
         setError(updateResult.error || 'Failed to update avatar URL')
@@ -220,7 +238,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
     setError(null)
     startTransition(async () => {
       const filePath = `${profile.id}/resume.pdf`
-      
+
       const { error: uploadError } = await supabase.storage
         .from('resumes')
         .upload(filePath, file, { upsert: true })
@@ -266,7 +284,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
     startTransition(async () => {
       const filePath = `${profile.id}/resume.pdf`
       const { error: deleteError } = await supabase.storage.from('resumes').remove([filePath])
-      
+
       if (deleteError) {
         setError(deleteError.message)
         return
@@ -294,8 +312,15 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-8 pb-16 pt-4">
-      
+    <div className="w-full h-full flex flex-col space-y-6 pb-16 pt-2">
+      {cropImageFile && (
+        <ImageCropper
+          imageFile={cropImageFile}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setCropImageFile(null)}
+        />
+      )}
+
       {error && (
         <div className="bg-error/10 text-error px-4 py-3 rounded-2xl text-sm font-medium border border-error/20 flex items-center gap-2 mb-4">
           <span className="material-symbols-outlined text-[18px]">error</span>
@@ -304,15 +329,15 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       )}
 
       {/* Profile Header */}
-      <section className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-8 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 relative">
+      <section className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-6 flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative">
         {isPending && (
           <div className="absolute inset-0 bg-surface/30 backdrop-blur-[1px] rounded-[24px] flex items-center justify-center z-20">
             <span className="material-symbols-outlined animate-spin text-primary text-3xl">refresh</span>
           </div>
         )}
-        
+
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8 w-full relative">
-          
+
           {/* Avatar Container */}
           <div className="relative group shrink-0">
             <div className="w-[120px] h-[120px] rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-display text-4xl shrink-0 border-4 border-surface-container-lowest shadow-sm overflow-hidden">
@@ -323,30 +348,30 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
               )}
             </div>
             {/* Camera Upload Button Overlay */}
-            <button 
+            <button
               onClick={() => avatarInputRef.current?.click()}
               className="absolute bottom-0 right-0 w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-md border-2 border-surface-container-lowest hover:bg-primary/90 transition-colors z-10"
               aria-label="Upload profile photo"
             >
               <span className="material-symbols-outlined text-[20px]">photo_camera</span>
             </button>
-            <input 
-              type="file" 
-              accept="image/*" 
-              ref={avatarInputRef} 
-              className="hidden" 
+            <input
+              type="file"
+              accept="image/*"
+              ref={avatarInputRef}
+              className="hidden"
               onChange={handleAvatarUpload}
             />
           </div>
-          
+
           {isEditing ? (
             <div className="flex-1 w-full flex flex-col gap-4 max-w-2xl">
               <div className="flex flex-col gap-1 w-full">
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">FULL NAME</label>
-                <input 
-                  type="text" 
-                  value={formData.name} 
-                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter your full name"
                   className="font-headline-sm text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
@@ -354,80 +379,80 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">University</label>
-                  <input 
-                    type="text" 
-                    value={formData.university || ''} 
-                    onChange={e => setFormData({...formData, university: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.university || ''}
+                    onChange={e => setFormData({ ...formData, university: e.target.value })}
                     placeholder="University"
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Degree</label>
-                  <input 
-                    type="text" 
-                    value={formData.degree || ''} 
-                    onChange={e => setFormData({...formData, degree: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.degree || ''}
+                    onChange={e => setFormData({ ...formData, degree: e.target.value })}
                     placeholder="e.g. B.S. Computer Science"
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Graduation Year</label>
-                  <input 
-                    type="number" 
-                    value={formData.graduation_year || ''} 
-                    onChange={e => setFormData({...formData, graduation_year: parseInt(e.target.value) || null})} 
+                  <input
+                    type="number"
+                    value={formData.graduation_year || ''}
+                    onChange={e => setFormData({ ...formData, graduation_year: parseInt(e.target.value) || null })}
                     placeholder="YYYY"
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GPA</label>
-                  <input 
-                    type="text" 
-                    value={formData.gpa || ''} 
-                    onChange={e => setFormData({...formData, gpa: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.gpa || ''}
+                    onChange={e => setFormData({ ...formData, gpa: e.target.value })}
                     placeholder="e.g. 3.8/4.0"
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Location / City</label>
-                  <input 
-                    type="text" 
-                    value={formData.city || ''} 
-                    onChange={e => setFormData({...formData, city: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.city || ''}
+                    onChange={e => setFormData({ ...formData, city: e.target.value })}
                     placeholder="e.g. San Francisco, CA"
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Bio / Tagline</label>
-                  <input 
-                    type="text" 
-                    value={formData.bio || ''} 
-                    onChange={e => setFormData({...formData, bio: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.bio || ''}
+                    onChange={e => setFormData({ ...formData, bio: e.target.value })}
                     placeholder="Short bio"
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">GitHub URL</label>
-                  <input 
-                    type="text" 
-                    value={formData.github_url || ''} 
-                    onChange={e => setFormData({...formData, github_url: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.github_url || ''}
+                    onChange={e => setFormData({ ...formData, github_url: e.target.value })}
                     placeholder="https://github.com/..."
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">LinkedIn URL</label>
-                  <input 
-                    type="text" 
-                    value={formData.linkedin_url || ''} 
-                    onChange={e => setFormData({...formData, linkedin_url: e.target.value})} 
+                  <input
+                    type="text"
+                    value={formData.linkedin_url || ''}
+                    onChange={e => setFormData({ ...formData, linkedin_url: e.target.value })}
                     placeholder="https://linkedin.com/in/..."
                     className="font-body-md text-on-surface bg-surface border border-outline-variant rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   />
@@ -436,8 +461,8 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
             </div>
           ) : (
             <div className="text-center md:text-left flex-1">
-              <h2 className="font-headline-lg text-[28px] font-bold text-on-surface mb-2 tracking-tight">{displayName}</h2>
-              
+              <h2 className="font-headline-lg text-[26px] font-bold text-on-surface mb-2 tracking-tight">{displayName}</h2>
+
               {(profile.university || profile.degree) && (
                 <div className="flex items-center justify-center md:justify-start gap-2 text-on-surface-variant mb-2">
                   <span className="material-symbols-outlined text-[20px] text-primary">school</span>
@@ -446,7 +471,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   </span>
                 </div>
               )}
-              
+
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-outline font-label-md mb-4">
                 {profile.graduation_year && (
                   <span className="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full text-[13px] font-medium text-on-surface-variant">
@@ -467,7 +492,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   </span>
                 )}
               </div>
-              
+
               {profile.bio && (
                 <p className="text-on-surface-variant max-w-2xl mb-6 leading-relaxed">
                   {profile.bio}
@@ -489,7 +514,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant/50 hover:bg-surface-variant hover:border-outline-variant transition-all text-on-surface font-medium text-sm">
                     {/* SVG for LinkedIn */}
                     <svg height="16" width="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                     </svg>
                     LinkedIn
                   </a>
@@ -523,68 +548,59 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
       </section>
 
       {/* Career Snapshot Stats */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <Link href="/profile/saved" className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] hover:border-primary/40 hover:shadow-md transition-all block group relative overflow-hidden">
-          <div className="flex items-start justify-between mb-3 relative z-10">
-            <p className="font-semibold text-sm text-outline">Saved Opportunities</p>
-            <span className="material-symbols-outlined text-primary/80 bg-primary/10 p-2 rounded-xl">bookmark</span>
+      <section className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-[18px] text-on-surface">monitoring</span>
+            <h3 className="font-headline-sm text-[18px] font-bold text-on-surface">Application Tracker Stats</h3>
           </div>
-          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10">{stats.saved}</p>
-          <p className="text-sm font-medium text-primary mt-3 flex items-center gap-1 relative z-10">
-            View all <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
-          </p>
-        </Link>
-        <Link href="/tracker" className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] hover:border-primary/40 hover:shadow-md transition-all block group relative overflow-hidden">
-          <div className="flex items-start justify-between mb-3 relative z-10">
-            <p className="font-semibold text-sm text-outline">Applications</p>
-            <span className="material-symbols-outlined text-primary/80 bg-primary/10 p-2 rounded-xl">send</span>
-          </div>
-          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10">{stats.applied}</p>
-          <p className="text-sm font-medium text-primary mt-3 flex items-center gap-1 relative z-10">
-            Track status <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
-          </p>
-        </Link>
-        <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] group relative overflow-hidden">
-          <div className="flex items-start justify-between mb-3 relative z-10">
-            <p className="font-semibold text-sm text-outline">Interviews</p>
-            <span className="material-symbols-outlined text-primary/80 bg-primary/10 p-2 rounded-xl">event_available</span>
-          </div>
-          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10">{stats.interviews}</p>
-          <p className="text-sm font-medium text-primary mt-3 flex items-center gap-1 relative z-10 cursor-pointer">
-            Schedule <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
-          </p>
+          <Link href="/tracker" className="text-sm font-medium text-primary flex items-center gap-1 group">
+            Open Tracker <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+          </Link>
         </div>
-        <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] p-6 rounded-[24px] group relative overflow-hidden">
-          <div className="flex items-start justify-between mb-3 relative z-10">
-            <p className="font-semibold text-sm text-outline">Success Rate</p>
-            <span className="material-symbols-outlined text-green-600 bg-green-100 p-2 rounded-xl">trending_up</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <div className="px-4 py-3 rounded-xl bg-surface border border-outline-variant/60 flex flex-col justify-center">
+            <div className="text-2xl font-bold leading-none text-on-surface mb-1.5">{stats.total}</div>
+            <div className="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Tracked</div>
           </div>
-          <p className="text-4xl font-bold text-on-surface mb-1 relative z-10 text-green-700">
-            {stats.applied > 0 ? Math.round((stats.interviews / stats.applied) * 100) : 0}%
-          </p>
-          <p className="text-sm font-medium text-green-700 mt-3 flex items-center gap-1 relative z-10">
-            Keep it up!
-          </p>
+          <div className="px-4 py-3 rounded-xl bg-surface border border-outline-variant/60 flex flex-col justify-center">
+            <div className="text-2xl font-bold leading-none text-on-surface mb-1.5">{stats.applied}</div>
+            <div className="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Applied</div>
+          </div>
+          <div className="px-4 py-3 rounded-xl bg-surface border border-outline-variant/60 flex flex-col justify-center">
+            <div className="text-2xl font-bold leading-none text-tertiary mb-1.5">{stats.interviewing}</div>
+            <div className="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Interviewing</div>
+          </div>
+          <div className="px-4 py-3 rounded-xl bg-surface border border-outline-variant/60 flex flex-col justify-center">
+            <div className="text-2xl font-bold leading-none text-secondary mb-1.5">{stats.offers}</div>
+            <div className="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Offers</div>
+          </div>
+          {stats.responseRate !== null && (
+            <div className="px-4 py-3 rounded-xl bg-surface border border-outline-variant/60 flex flex-col justify-center">
+              <div className="text-2xl font-bold leading-none text-primary mb-1.5">{stats.responseRate}%</div>
+              <div className="text-[11px] text-on-surface-variant uppercase tracking-wide font-semibold">Response rate</div>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Main Bento Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
         {isPending && isEditing && (
           <div className="absolute inset-0 bg-surface/30 backdrop-blur-[1px] rounded-[24px] z-20" />
         )}
-        
+
         {/* Left Column: Skills, Interests, Goal */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          
+        <div className="lg:col-span-8 flex flex-col gap-6">
+
           <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] overflow-hidden">
             {/* Skills Section */}
-            <div className="p-8 border-b border-outline-variant/30">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">build</span>
-                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Skills</h3>
+            <div className="p-6 border-b border-outline-variant/30">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[18px]">build</span>
+                <h3 className="font-headline-sm text-[18px] font-bold text-on-surface">Skills</h3>
               </div>
-              
+
               {isEditing && (
                 <div className="flex items-center gap-2 mb-6">
                   <input
@@ -619,12 +635,12 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
             </div>
 
             {/* Interests Section */}
-            <div className="p-8 border-b border-outline-variant/30 bg-surface-container-lowest">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">favorite</span>
-                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Interests</h3>
+            <div className="p-6 border-b border-outline-variant/30 bg-surface-container-lowest">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[18px]">favorite</span>
+                <h3 className="font-headline-sm text-[18px] font-bold text-on-surface">Interests</h3>
               </div>
-              
+
               {isEditing && (
                 <div className="flex items-center gap-2 mb-6">
                   <input
@@ -659,12 +675,12 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
             </div>
 
             {/* Career Goal Section */}
-            <div className="p-8 bg-surface/50">
+            <div className="p-6 bg-surface/50">
               <div className="flex items-center gap-3 mb-4">
-                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">track_changes</span>
-                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Career Goal</h3>
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[18px]">track_changes</span>
+                <h3 className="font-headline-sm text-[18px] font-bold text-on-surface">Career Goal</h3>
               </div>
-              
+
               <div className="pl-14">
                 {isEditing ? (
                   <textarea
@@ -684,15 +700,15 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
         </div>
 
         {/* Right Column: Resume & Settings */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
-          
+        <div className="lg:col-span-4 flex flex-col gap-6">
+
           {/* Resume Section */}
-          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-6 h-fit">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="material-symbols-outlined text-on-surface">description</span>
-              <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Resume</h3>
+          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] p-5 h-fit">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="material-symbols-outlined text-[18px] text-on-surface">description</span>
+              <h3 className="font-headline-sm text-[18px] font-bold text-on-surface">Resume</h3>
             </div>
-            
+
             {profile.resume_name ? (
               <div className="flex flex-col gap-4">
                 <div className="bg-surface p-4 rounded-xl flex items-start gap-4 border border-outline-variant/40 shadow-sm shadow-black/[0.01]">
@@ -711,7 +727,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col gap-3">
                   <button onClick={handleViewResume} disabled={isEditing || isPending} className="w-full bg-primary text-on-primary py-3 rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors shadow-sm shadow-black/[0.05] disabled:opacity-50">
                     View Resume
@@ -740,82 +756,17 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                 </button>
               </div>
             )}
-            <input 
-              type="file" 
-              accept="application/pdf" 
-              ref={fileInputRef} 
-              className="hidden" 
+            <input
+              type="file"
+              accept="application/pdf"
+              ref={fileInputRef}
+              className="hidden"
               onChange={handleFileUpload}
             />
           </div>
-          {/* Achievements Section */}
-          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] overflow-hidden h-fit">
-            <div className="p-6 border-b border-outline-variant/30">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg text-[20px]">workspace_premium</span>
-                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Achievements</h3>
-              </div>
-            </div>
-            <div className="p-8 text-center bg-surface/30">
-              <span className="material-symbols-outlined text-[32px] text-on-surface-variant/50 mb-3">military_tech</span>
-              <p className="font-semibold text-on-surface text-[15px]">No achievements yet</p>
-              <p className="text-[13px] text-on-surface-variant mt-1">Add your certifications and awards.</p>
-              <button disabled={isEditing || isPending} className="mt-4 px-4 py-2 border border-outline-variant rounded-full text-sm font-semibold text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-50">
-                + Add Achievement
-              </button>
-            </div>
-          </div>
+          <AchievementsSection userId={profile.id} isEditingProfile={isEditing} />
 
-          {/* Account Settings */}
-          <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm shadow-black/[0.02] rounded-[24px] overflow-hidden h-fit">
-            <div className="p-6 pb-4 border-b border-outline-variant/30">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-on-surface">settings</span>
-                <h3 className="font-headline-sm text-[20px] font-bold text-on-surface">Account Settings</h3>
-              </div>
-            </div>
-            <div className="flex flex-col py-2">
-              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[18px]">lock</span>
-                  </div>
-                  <span className="font-semibold text-[15px] text-on-surface">Change Password</span>
-                </div>
-                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-              </Link>
-              
-              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[18px]">notifications</span>
-                  </div>
-                  <span className="font-semibold text-[15px] text-on-surface">Notification Preferences</span>
-                </div>
-                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-              </Link>
-              
-              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[18px]">security</span>
-                  </div>
-                  <span className="font-semibold text-[15px] text-on-surface">Privacy Settings</span>
-                </div>
-                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-              </Link>
-              
-              <Link href="/settings" className="flex items-center justify-between px-6 py-3.5 hover:bg-surface-variant/50 transition-colors group cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-colors text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[18px]">link</span>
-                  </div>
-                  <span className="font-semibold text-[15px] text-on-surface">Connected Accounts</span>
-                </div>
-                <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
-              </Link>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

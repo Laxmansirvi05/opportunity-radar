@@ -74,10 +74,11 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
       {/* Bottom section */}
       <div className="mt-auto pt-lg border-t border-outline-variant">
         <Link
-          href="/search?category=Internship"
-          className="block text-center w-full bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold py-sm rounded-xl hover:opacity-90 transition-opacity mb-md shadow-sm cursor-pointer"
+          href="/ai-search"
+          className="flex items-center justify-center gap-2 w-full bg-primary text-on-primary font-label-md text-label-md font-semibold py-sm rounded-xl hover:opacity-90 transition-opacity mb-md shadow-sm cursor-pointer"
         >
-          Find Internships
+          <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+          AI Search
         </Link>
         <div className="flex flex-col gap-xs">
           <Link
