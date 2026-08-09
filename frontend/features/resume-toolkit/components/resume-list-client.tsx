@@ -77,13 +77,11 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
               </Button>
             </Link>
 
-            {/* Copilot */}
-            <Link href={`/resume/copilot?resume=${resume.id}`}>
-              <Button variant="ghost" size="sm" className="h-8 px-2" title="Optimize with Copilot">
-                <span className="material-symbols-outlined text-sm text-primary">auto_fix_high</span>
-                <span className="sr-only">Copilot</span>
-              </Button>
-            </Link>
+            {/* Optimiser: deliberately not linked yet.
+                /resume/copilot is still a static mockup — its score, its chart
+                and its "last saved" line are hardcoded. Showing a student a
+                fabricated ATS score is worse than showing them nothing, so the
+                entry point stays out until the real feature ships. */}
 
             {/* Delete */}
             <div className="relative">

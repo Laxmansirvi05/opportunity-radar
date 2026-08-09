@@ -16,10 +16,12 @@ Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · AI feature
 
 | | Critical | High | Moderate | Low | Total |
 |---|---|---|---|---|---|
-| **Fixed** | 3 | 1 | 0 | 0 | **4** |
-| Open | 1 | 4 | 8 | 6 | 19 |
+| **Fixed** | 4 | 2 | 0 | 0 | **6** |
+| Open | 0 | 4 | 8 | 6 | 18 |
 | Deferred | 0 | 0 | 1 | 1 | 2 |
-| **Total** | **4** | **5** | **9** | **7** | **25** |
+| **Total** | **4** | **6** | **9** | **7** | **26** |
+
+**No critical issues remain open.**
 
 Last updated: **10 Aug 2026**
 
@@ -94,12 +96,22 @@ resumes           public=false
 
 ---
 
+### APP-01 · `/resume/copilot` was a hardcoded mockup reachable by students — **CRITICAL**
+**Found:** the "68" ATS score, the donut chart offset, "Last saved 2m ago" and the gap list were all literals in `app/(protected)/resume/copilot/page.tsx`. None of it came from the student's resume. Reachable from `/resume` via `resume-list-client.tsx:81`.
+**Fixed:** 10 Aug 2026, in three parts — unlinking alone was not enough, because the route stayed directly reachable and would still have shown a fabricated score to anyone with the URL.
+1. Removed the live entry point in `resume-list-client.tsx` (the only reachable one — `/resume` renders this component).
+2. **Replaced the mockup itself** with an honest under-construction page that says where the feature stands and points to ATS Check and the Resume Builder. The route is kept, because the real optimiser will be built there.
+3. Deleted `workspace-tools-panel.tsx` — dead code (zero importers) carrying the same link.
+
+**Evidence:** `grep -rn "resume/copilot"` across `app`, `features`, `components`, `lib` now returns only an explanatory comment — no link remains. Production build compiles `/resume/copilot`; 254/254 tests pass; TypeScript unchanged at the 36 baseline. The new page was rendered and visually confirmed via a temporary unprotected route, which was then deleted.
+
+> Judgement worth recording: a fabricated ATS score is worse than no score, because a student may rewrite their resume in response to it. That is why the mockup was replaced rather than merely hidden.
+
+---
+
 ## ⬜ Open — Critical
 
-### APP-01 · `/resume/copilot` is a hardcoded mockup, reachable by students
-The "68" ATS score, the donut offset and "Last saved 2m ago" are literals in `app/(protected)/resume/copilot/page.tsx`.
-Linked from `features/resume-toolkit/components/resume-list-client.tsx:81` and `workspace-tools-panel.tsx:45`.
-**Highest demo-embarrassment risk in the project.** Fix: remove both links until the real feature ships.
+*(none)*
 
 ---
 
@@ -175,7 +187,7 @@ Fix: a default limit instead of `return true`.
 | Resume: builder | 80% | **85%** | Photo upload unblocked (DB-03) |
 | Resume: extract | 75% | 75% | |
 | Resume: ATS | 85% | **88%** | `resume_ats_reports` now exists |
-| Resume: optimisation | 35% | **45%** | Persistence layer unblocked; generation not yet wired |
+| Resume: optimisation | 35% | **45%** | Persistence unblocked; mockup replaced with an honest placeholder; generation not yet wired |
 | AI Search | 35% | **50%** | DB blocker cleared; agent still undeployed |
 | Certifications | 30% | **45%** | Table exists; no ingest pipeline yet |
 | AI Voice Interview | 2% | 2% | |
@@ -187,10 +199,10 @@ Fix: a default limit instead of `return true`.
 
 ## Next up
 
-1. **APP-01** — unlink the copilot mockup (2 minutes, removes the worst demo risk)
-2. **Schema drift guard** — a startup check that fails loudly when a required table is missing, so DB-01 cannot recur silently
-3. **Finish resume optimisation** — now unblocked: wire `lib/resume-optimizer/generate.ts`, score both resumes through `calculateAtsV2Score`, add the ATS-safe PDF export
-4. **DATA-01** — the 376 dead-end apply links
+1. **Schema drift guard** — a startup check that fails loudly when a required table is missing, so DB-01 cannot recur silently
+2. **Finish resume optimisation** — now unblocked: wire `lib/resume-optimizer/generate.ts`, score both resumes through `calculateAtsV2Score`, add the ATS-safe PDF export. This is what replaces the placeholder page from APP-01
+3. **DATA-01** — the 376 dead-end apply links
+4. **SEC-01** — rate-limit the other 13 AI features
 5. **Deploy the AI Search agent** (see the handoff document)
 
 ---
@@ -201,6 +213,7 @@ Fix: a default limit instead of `return true`.
 |---|---|
 | 10 Aug 2026 | Full audit; 25 issues catalogued |
 | 10 Aug 2026 | DB-01 – DB-05 fixed and verified; database drift resolved |
+| 10 Aug 2026 | APP-01 fixed — copilot mockup unlinked and replaced with an honest placeholder; dead `workspace-tools-panel.tsx` deleted. **No critical issues remain open.** |
 | 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
 
 > The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
