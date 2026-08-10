@@ -13,7 +13,13 @@ import type { ParsedResume } from '@/types/resume'
 // confirmed, this generates and scores Resume B. If a previously-confirmed
 // suggestion is unchecked again, any existing target resume is cleared —
 // it would otherwise present work as done that the student just un-confirmed.
+//
+// PATCH can trigger runTargetGeneration, which is 2 sequential AI-gateway
+// calls (generation + evidence eval) with per-provider timeouts up to 40s
+// each — see the note in the POST route for why this needs an explicit
+// maxDuration rather than Vercel's default.
 // ---------------------------------------------------------------------------
+export const maxDuration = 300;
 
 async function loadRun(supabase: Awaited<ReturnType<typeof createClient>>, id: string, userId: string) {
   const { data, error } = await supabase

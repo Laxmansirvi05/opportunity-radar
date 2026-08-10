@@ -11,7 +11,17 @@ import type { ParsedResume } from '@/types/resume'
 //
 // GET /api/resume/optimization
 // Lists the authenticated user's past runs, newest first.
+//
+// Note on duration: a full run makes up to ~6 sequential AI-gateway calls
+// (JD extraction, baseline evidence eval, polish generation with its own
+// guarded retry, polish evidence eval, and conditionally a target generation
+// + eval when a full-tier run has zero suggestions). The gateway's own
+// per-provider timeouts run up to 40s and it can fall back through several
+// providers, so worst case this legitimately takes over a minute. Without an
+// explicit maxDuration this route was being killed on Vercel's default
+// timeout before the AI calls could ever finish — every run silently failed.
 // ---------------------------------------------------------------------------
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()

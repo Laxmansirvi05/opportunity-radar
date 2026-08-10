@@ -113,7 +113,7 @@ export function ResumeOptimizerDashboard() {
         payload.resumeId = resumeId
       }
 
-      toast.loading("Scoring your resume against this role...", { id: "optimizer-progress" })
+      toast.loading("Scoring your resume against this role — this can take up to a minute...", { id: "optimizer-progress" })
       const res = await fetch("/api/resume/optimization", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
