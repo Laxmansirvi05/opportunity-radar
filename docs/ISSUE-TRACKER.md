@@ -158,6 +158,21 @@ Two design points, both learned from this incident rather than assumed:
 - **Schema guard:** re-ran `verifySchema()` against production after the constraint change — **all 24 objects still `ok`**.
 - Full gate one more time: **296/296** tests, TypeScript unchanged at 36, production build clean.
 
+**Route-handler test coverage added, 10 Aug 2026 — the largest remaining verification gap that didn't need a real session to close.** Everything up to here tested `lib/resume-optimizer/*` directly; none of the five Next.js route handlers themselves had ever been exercised — only traced by eye. That's exactly the layer where the `polish_only` and zero-suggestions bugs above were living, so eye-tracing had already proven insufficient once. Added `tests/api-resume-optimization.test.ts`, `tests/api-resume-optimization-id.test.ts`, `tests/api-resume-optimization-download.test.ts`, plus a shared `tests/helpers/fake-supabase.ts` (a minimal chainable fake of the Supabase query builder, so each test controls exactly what each table+operation returns without a real database). These call the actual exported `POST`/`GET`/`PATCH` functions with a real `NextRequest`, not a re-implementation of their logic.
+
+**28 new tests**, covering per route:
+- Auth boundary: every route 401s with no session, checked first, before touching validation or the database.
+- Input validation: short JD, missing role/company, missing resumeId-or-resumeData, invalid `variant`.
+- Ownership: `resumeId` lookups and run lookups are asserted to carry `.eq('user_id', user.id)` — not just RLS as the only line of defence, matching the project's existing "belt and suspenders" pattern elsewhere.
+- The two bugs fixed above, re-proven at the HTTP layer: confirming a `polish_only` checklist (even fully unlocked) never calls `runTargetGeneration`; a `full`-tier confirmation does, and persists the result.
+- Un-confirming a suggestion after Resume B exists clears `target_resume`/`target_score` in the actual persisted row.
+- The download route streams **real PDF bytes** (not mocked — `renderResumePdf` runs for real) with the correct `Content-Type`/`Content-Disposition`, 404s the requested variant without silently substituting the other one, and a filename-sanitisation test using a `../../etc/passwd; rm -rf`-style resume name.
+- Failure paths: orchestration failure → 502 without inserting a row; DB write failure after successful scoring → 500; list-query failure → 500.
+
+**Evidence:** Suite: **324/324** (up from 296). TypeScript unchanged at 36. Lint clean on all 4 new files. Production build unaffected.
+
+**What this does and doesn't close:** this proves the HTTP layer — auth, validation, the exact Supabase calls made, response shapes, and the tier-gating fixes — all wired correctly, using a fake database. It is not, and cannot be, a substitute for one real run through the real AI gateway with a real account — that remains the one thing only the owner can verify, per the project's own "dual verification" rule and the hard rule against signing into the five real `auth.users` accounts.
+
 ---
 
 ### SEC-01 · AI rate limiting covered 4 of 17 features — **HIGH**
