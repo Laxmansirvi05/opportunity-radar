@@ -70,13 +70,15 @@ const REQUIRED_TABLES: { name: string; breaks: string }[] = [
   { name: 'ai_usage_log',         breaks: 'AI usage and cost go unrecorded' },
   { name: 'ingestion_logs',       breaks: 'Ingestion runs become unobservable and /api/cron/health degrades' },
   { name: 'source_registry',      breaks: 'The employer-board provider has no sources to crawl' },
+  { name: 'hub_messages',         breaks: 'The Hub community chat fails to load or accept messages' },
 ]
 
 const REQUIRED_BUCKETS: { name: string; breaks: string }[] = [
-  { name: 'resumes',        breaks: 'Resume PDF upload fails' },
-  { name: 'avatars',        breaks: 'Profile picture upload fails' },
-  { name: 'resume-toolkit', breaks: 'Resume-builder photo upload returns 500 on every attempt' },
-  { name: 'company-logos',  breaks: 'Company logos fall back to a placeholder' },
+  { name: 'resumes',         breaks: 'Resume PDF upload fails' },
+  { name: 'avatars',         breaks: 'Profile picture upload fails' },
+  { name: 'resume-toolkit',  breaks: 'Resume-builder photo upload returns 500 on every attempt' },
+  { name: 'company-logos',   breaks: 'Company logos fall back to a placeholder' },
+  { name: 'hub-attachments', breaks: 'Sending an image in the Hub fails' },
 ]
 
 const REQUIRED_RPCS: { name: string; args: Record<string, unknown>; breaks: string }[] = [

@@ -19,7 +19,7 @@ function stubClient(opts: {
   const missing = new Set(opts.missingTables ?? [])
   const denied = new Set(opts.deniedTables ?? [])
   const missingRpcs = new Set(opts.missingRpcs ?? [])
-  const buckets = opts.buckets ?? ['resumes', 'avatars', 'resume-toolkit', 'company-logos']
+  const buckets = opts.buckets ?? ['resumes', 'avatars', 'resume-toolkit', 'company-logos', 'hub-attachments']
 
   return {
     from(table: string) {
@@ -142,7 +142,8 @@ describe('the guard never makes things worse', () => {
       'chat_messages', 'ai_usage_log', 'ingestion_logs', 'source_registry']
     const report = await verifySchema(stubClient({ missingTables: everything, buckets: [], missingRpcs: ['search_opportunities_rpc', 'check_ai_rate_limit'] }))
     expect(report.healthy).toBe(false)
-    expect(report.failures.length).toBe(everything.length + 4 + 2)
+    // 5 required buckets (resumes, avatars, resume-toolkit, company-logos, hub-attachments) + 2 RPCs
+    expect(report.failures.length).toBe(everything.length + 5 + 2)
   })
 })
 
