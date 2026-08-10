@@ -103,12 +103,10 @@ export function ResumeOptimizerDashboard() {
         toast.loading("Extracting resume data...", { id: "optimizer-progress" })
         const formData = new FormData()
         formData.append("file", uploadedFile)
-        const parseRes = await fetch("/api/resume/parse", { method: "POST", body: formData })
-        if (!parseRes.ok) {
-          const err = await parseRes.json()
-          throw new Error(err.error || "Extraction failed")
-        }
-        payload.resumeData = await parseRes.json()
+        const parseRes = await fetch("/api/resume/optimization/extract", { method: "POST", body: formData })
+        const parsed = await parseRes.json()
+        if (!parseRes.ok) throw new Error(parsed.error || "Extraction failed")
+        payload.resumeData = parsed.resume
       } else {
         payload.resumeId = resumeId
       }

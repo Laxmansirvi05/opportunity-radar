@@ -28,7 +28,12 @@ export type ResumeExperience = z.infer<typeof ResumeExperienceSchema>
 export const ResumeProjectSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  technologies: z.array(z.string()),
+  // .default([]), not a bare array: a project genuinely often has no
+  // separately-listed tech stack (the stack is only mentioned in prose, or
+  // not at all), and a model correctly omitting this field per instructions
+  // was failing validation for the ENTIRE resume over one missing array —
+  // observed directly extracting a real resume.
+  technologies: z.array(z.string()).default([]),
   url: z.string().url().optional(),
 })
 export type ResumeProject = z.infer<typeof ResumeProjectSchema>
@@ -58,6 +63,17 @@ export const ParsedResumeSchema = z.object({
   experience: z.array(ResumeExperienceSchema).default([]),
   projects: z.array(ResumeProjectSchema).default([]),
   education: z.array(ResumeEducationSchema).default([]),
+  // Optional (not .default([])) to match every other field here — a
+  // .default() makes Zod's inferred type non-optional, which would force
+  // every existing literal ParsedResume object across the codebase to add
+  // this field. Callers treat a missing value as `?? []`.
+  //
+  // Kept separate from skills/projects deliberately: a certification is a
+  // different, weaker kind of evidence than a hands-on project, and the ATS
+  // v2 evidence evaluator needs a clean signal to tell them apart rather
+  // than inferring "certified" from a skill string.
+  certifications: z.array(z.string()).optional(),
+  achievements: z.array(z.string()).optional(),
   rawText: z.string().optional(),
 })
 export type ParsedResume = z.infer<typeof ParsedResumeSchema>

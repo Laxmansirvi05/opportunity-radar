@@ -153,7 +153,7 @@ describe('POST /api/resume/optimization', () => {
     })
     startOptimizationRun.mockResolvedValue({ success: false, error: 'Could not analyse the job description.' })
 
-    const res = await POST(postReq({ jobDescription: validJd, targetRole: 'X', companyName: 'Y', resumeData: {} }))
+    const res = await POST(postReq({ jobDescription: validJd, targetRole: 'X', companyName: 'Y', resumeData: { name: 'Jane Doe', skills: [], experience: [], projects: [], education: [] } }))
     const body = await res.json()
 
     expect(res.status).toBe(502)
@@ -176,7 +176,7 @@ describe('POST /api/resume/optimization', () => {
       result: { structuredJd: {}, baselineScore: 42, baselineReport: {}, tier: 'full', suggestions: [] },
     })
 
-    const res = await POST(postReq({ jobDescription: validJd, targetRole: 'X', companyName: 'Y', resumeData: {} }))
+    const res = await POST(postReq({ jobDescription: validJd, targetRole: 'X', companyName: 'Y', resumeData: { name: 'Jane Doe', skills: [], experience: [], projects: [], education: [] } }))
     expect(res.status).toBe(500)
   })
 })

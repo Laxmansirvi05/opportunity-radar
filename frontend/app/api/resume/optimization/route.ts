@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { startOptimizationRun } from '@/lib/resume-optimizer/run'
+import { convertResumeDataToParsedResume, looksLikeParsedResume } from '@/lib/resume-optimizer/convert-resume-data'
 import type { ParsedResume } from '@/types/resume'
 
 // ---------------------------------------------------------------------------
@@ -70,12 +71,28 @@ export async function POST(req: NextRequest) {
     if (error || !data?.parsed_data) {
       return NextResponse.json({ error: 'Resume not found, or has not finished parsing yet.' }, { status: 404 })
     }
-    resume = data.parsed_data as ParsedResume
+    // resumes.parsed_data is stored in the Resume Builder's shape (basics /
+    // sections.*.items[]), not the flat ParsedResume shape the scoring
+    // engine reads. Casting it directly used to hand the AI an object with
+    // name/skills/experience all undefined — every requirement then read as
+    // unmet regardless of what the student actually wrote.
+    const raw = data.parsed_data as Record<string, unknown>
+    resume = looksLikeParsedResume(raw) ? (raw as unknown as ParsedResume) : convertResumeDataToParsedResume(raw)
     originalResumeId = data.id
   } else if (resumeData) {
-    resume = resumeData
+    // The client gets this from POST /api/resume/parse, which returns the
+    // same Resume Builder shape — same conversion needed here.
+    const raw = resumeData as unknown as Record<string, unknown>
+    resume = looksLikeParsedResume(raw) ? resumeData : convertResumeDataToParsedResume(raw)
   } else {
     return NextResponse.json({ error: 'Must provide either resumeId or resumeData.' }, { status: 400 })
+  }
+
+  if (!resume.name || resume.name === 'Unknown Candidate') {
+    return NextResponse.json(
+      { error: 'Could not read your name from this resume. Please make sure it has a clear name at the top, or try re-uploading.' },
+      { status: 422 }
+    )
   }
 
   const trimmedRole = targetRole.trim()
