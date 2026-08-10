@@ -41,12 +41,7 @@ function SearchPageContent() {
   }, [filters.q, addRecentSearch])
 
   return (
-    // Search is a full-height layout with its own scroll container, but the
-    // protected layout pads every page. The bottom padding rendered as a strip
-    // of the wrong background colour beneath the last card, so only that edge is
-    // cancelled — pulling in all four sides shifted the page up and clipped the
-    // filter panel's header.
-    <div className="flex -mb-margin-mobile md:-mb-gutter h-[calc(100%+16px)] md:h-[calc(100%+24px)] overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden">
       {/* Filters Sidebar */}
       <FiltersSidebar isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} />
 
@@ -87,7 +82,7 @@ function SearchPageContent() {
 
         {/* Results List */}
         <div className="flex-1 p-4 md:p-8 bg-surface-container-lowest overflow-y-auto">
-          <div className="max-w-6xl mx-auto w-full flex flex-col gap-5 pb-6">
+          <div className="max-w-6xl mx-auto w-full flex flex-col gap-5">
             {isLoading ? (
               <SearchSkeleton count={3} />
             ) : !hasResults ? (

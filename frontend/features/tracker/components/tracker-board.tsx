@@ -407,6 +407,7 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
         </div>
       ) : (
         <DndContext
+          id="tracker-dnd-context"
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={onDragStart}
@@ -454,7 +455,7 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
           aria-label="Application note"
         >
           <div
-            className="bg-surface w-full max-w-md rounded-2xl shadow-xl p-6 flex flex-col gap-4"
+            className="bg-surface w-[calc(100vw-2rem)] sm:w-[480px] max-w-full rounded-2xl shadow-xl p-6 flex flex-col gap-4 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
@@ -464,11 +465,11 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              rows={5}
+              rows={6}
               maxLength={2000}
               autoFocus
               placeholder="Recruiter name, interview date, follow-up reminder…"
-              className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
+              className="w-full min-h-[160px] rounded-xl border border-outline-variant bg-surface-container-lowest p-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-y"
             />
             <div className="flex justify-end gap-2">
               <button

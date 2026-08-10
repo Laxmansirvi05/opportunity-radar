@@ -44,7 +44,7 @@ export function ImageCropper({ imageFile, onCropComplete, onCancel }: ImageCropp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl overflow-hidden shadow-xl border border-outline-variant/30 flex flex-col">
+      <div className="bg-surface-container-lowest w-full max-w-[90vw] sm:max-w-[500px] rounded-3xl overflow-hidden shadow-xl border border-outline-variant/30 flex flex-col shrink-0">
         <div className="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface">
           <h3 className="font-headline-sm text-lg font-bold text-on-surface">Crop Profile Photo</h3>
           <button

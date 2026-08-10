@@ -12,7 +12,6 @@ export const revalidate = 60;
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const displayName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'Student'
 
   if (!user) return null
 
@@ -26,10 +25,10 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, university, skills, resume_name')
+      .select('id, name, university, skills, resume_name')
       .eq('id', user.id)
       .single(),
-    
+
     supabase
       .from('bookmarks')
       .select('id', { count: 'exact', head: true })
@@ -46,14 +45,14 @@ export default async function DashboardPage() {
       .eq('status', 'Published')
       .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
       .order('posted_at', { ascending: false })
-      .limit(4),
+      .limit(6),
 
     supabase
       .from('recently_viewed')
       .select('viewed_at, opportunities(id, title, location, category, mode, experience_level, is_paid, status, posted_at, deadline, company_id, apply_url, description, companies(id, name, logo_url, website_url), opportunity_tags(tag_name))')
       .eq('user_id', user.id)
       .order('viewed_at', { ascending: false })
-      .limit(10)
+      .limit(15)
   ])
 
   let appliedCount = 0
@@ -69,9 +68,16 @@ export default async function DashboardPage() {
   }
 
   const now = new Date()
-  const recentlyViewed = (recentViews?.map((v: any) => v.opportunities).filter(Boolean) || []).filter(
-    (opp: any) => (!opp.deadline || new Date(opp.deadline) >= now) && !['Closed', 'Expired'].includes(opp.status)
-  )
+  const recentlyViewed = (recentViews?.map((v: any) => v.opportunities).filter(Boolean) || [])
+    .filter((opp: any) => {
+      if ((opp.deadline && new Date(opp.deadline) < now) || ['Closed', 'Expired'].includes(opp.status)) return false
+      if (!opp.description || opp.description.trim().length < 80) return false
+      if (!opp.opportunity_tags || opp.opportunity_tags.length < 2) return false
+      return true
+    })
+    .slice(0, 7)
+
+  const displayName = profile?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student'
 
   // 3. Compute Intelligence
   const isProfileComplete = profile && profile.university && profile.skills && profile.skills.length > 0
@@ -149,17 +155,31 @@ export default async function DashboardPage() {
     })
   }
 
+  alerts.push({
+    id: 'optimize-resume',
+    title: 'Optimize Your Resume',
+    subtitle: 'Action',
+    description: 'Improve your resume before applying to your next opportunity.'
+  })
+
+  alerts.push({
+    id: 'ai-voice-interview',
+    title: 'Take an AI Voice Interview',
+    subtitle: 'Action',
+    description: 'Practice your interview skills with an AI-powered voice interview.'
+  })
+
   const hasNoTrackerItems = !savedCount && appliedCount === 0 && interviewCount === 0 && offerCount === 0
 
   return (
     <div className="flex flex-col gap-xl">
       {/* Header Section */}
-      <header className="mb-lg flex flex-col md:flex-row md:justify-between md:items-end gap-md">
-        <div>
-          <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-xs">
+      <header className="mb-sm py-2 flex flex-col md:flex-row md:justify-between md:items-center gap-md">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-on-background">
             Action Station: {displayName}
           </h2>
-          <p className="font-body-md text-body-md text-on-surface-variant">Focus on today&apos;s high-impact opportunities.</p>
+          <p className="text-base md:text-lg text-on-surface-variant">Focus on today&apos;s highest-impact career opportunities.</p>
         </div>
         <div className="flex gap-sm">
           <Link href="/search" className="flex-1 md:flex-none bg-primary text-on-primary font-label-md text-label-md font-semibold px-md py-sm rounded-xl hover:opacity-90 transition-opacity shadow-sm flex items-center justify-center gap-2 cursor-pointer">
@@ -175,7 +195,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
         {/* Left Column */}
         <div className="lg:col-span-2 flex flex-col gap-gutter">
-          
+
           {/* Progress Summary */}
           <section className="bg-surface border border-outline-variant rounded-2xl p-md shadow-sm">
             <h3 className="font-headline-sm text-on-background mb-md flex items-center gap-2 border-b border-outline-variant pb-sm font-bold">
@@ -241,45 +261,28 @@ export default async function DashboardPage() {
               </h3>
               <Link href="/search" className="font-label-md text-primary font-medium hover:underline cursor-pointer">Explore More</Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex overflow-x-auto pb-4 gap-4 snap-x">
               {freshOpportunities?.filter(opp => {
                 if (['Closed', 'Expired'].includes(opp.status)) return false
                 if (!opp.deadline) return true
                 return new Date(opp.deadline).getTime() >= new Date().getTime()
               }).map((opp) => (
-                <OpportunitySearchCard key={opp.id} opportunity={opp as any} />
+                <div key={opp.id} className="snap-start shrink-0 w-full md:w-[calc(50%-0.5rem)]">
+                  <OpportunitySearchCard opportunity={opp as any} maxSkills={7} className="h-full" />
+                </div>
               ))}
               {freshOpportunities?.length === 0 && (
-                <div className="col-span-full py-8 text-center text-on-surface-variant">
+                <div className="w-full py-8 text-center text-on-surface-variant">
                   No fresh opportunities available at the moment.
                 </div>
               )}
             </div>
           </section>
-
-          {/* Recently Viewed */}
-          {recentlyViewed.length > 0 && (
-            <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md">
-              <div className="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
-                <h3 className="font-headline-sm text-on-background flex items-center gap-2 font-bold">
-                  <span className="material-symbols-outlined text-secondary">history</span>
-                  Recently Viewed
-                </h3>
-              </div>
-              <div className="flex overflow-x-auto pb-4 gap-4 snap-x">
-                {recentlyViewed.map((opp: any) => (
-                  <div key={opp.id} className="min-w-[300px] w-[300px] snap-start shrink-0">
-                    <OpportunitySearchCard opportunity={opp as any} />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
 
         {/* Right Column */}
         <div className="flex flex-col gap-gutter">
-          
+
           <DashboardAlerts initialAlerts={alerts} />
 
           {/* Tracker Snapshot */}
@@ -294,31 +297,74 @@ export default async function DashboardPage() {
                 <p className="font-label-md text-on-surface-variant">Save opportunities to begin tracking.</p>
               </div>
             ) : (
-              <div className="space-y-sm">
-                <Link href="/profile/saved" className="flex justify-between items-center p-2 bg-surface-container-lowest rounded-lg border border-outline-variant/50 hover:border-primary transition-colors cursor-pointer group">
-                  <span className="font-label-md group-hover:text-primary transition-colors">Saved for Later</span>
-                  <span className="font-bold">{savedCount || 0}</span>
+              <div className="flex flex-col gap-2">
+                <Link href="/profile/saved" className="flex items-center justify-between p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50 hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                    </div>
+                    <span className="font-label-md text-on-background group-hover:text-primary transition-colors">Saved for Later</span>
+                  </div>
+                  <span className="font-title-md font-bold text-on-background">{savedCount || 0}</span>
                 </Link>
-                <div className="flex justify-between items-center p-2 bg-surface-container-lowest rounded-lg border border-outline-variant/50">
-                  <span className="font-label-md">Applied</span>
-                  <span className="font-bold">{appliedCount}</span>
+
+                <div className="flex items-center justify-between p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[18px]">send</span>
+                    </div>
+                    <span className="font-label-md text-on-background">Applied</span>
+                  </div>
+                  <span className="font-title-md font-bold text-on-background">{appliedCount}</span>
                 </div>
-                <div className="flex justify-between items-center p-2 bg-primary-container/10 rounded-lg text-primary font-bold">
-                  <span>Interviewing</span>
-                  <span>{interviewCount}</span>
+
+                <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined text-[18px]">forum</span>
+                    </div>
+                    <span className="font-label-md text-primary font-medium">Interviewing</span>
+                  </div>
+                  <span className="font-title-md font-bold text-primary">{interviewCount}</span>
                 </div>
-                <div className="flex justify-between items-center p-2 bg-secondary-container/10 rounded-lg text-secondary font-bold">
-                  <span>Offers</span>
-                  <span>{offerCount}</span>
+
+                <div className="flex items-center justify-between p-3 bg-secondary/5 border border-secondary/20 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                      <span className="material-symbols-outlined text-[18px]">verified</span>
+                    </div>
+                    <span className="font-label-md text-secondary font-medium">Offers</span>
+                  </div>
+                  <span className="font-title-md font-bold text-secondary">{offerCount}</span>
                 </div>
               </div>
             )}
-            <Link href="/tracker" className="w-full mt-md py-sm border border-outline-variant rounded-lg font-label-md text-on-surface hover:bg-surface-container transition-colors font-medium cursor-pointer block text-center">
+            <Link href="/tracker" className="w-full mt-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-xl font-label-md text-on-surface hover:bg-surface-container hover:text-primary transition-colors font-semibold cursor-pointer flex items-center justify-center gap-2">
               View Full Tracker
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </Link>
           </section>
         </div>
       </div>
+
+      {/* Recently Viewed - Full Width */}
+      {recentlyViewed.length > 0 && (
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md">
+          <div className="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
+            <h3 className="font-headline-sm text-on-background flex items-center gap-2 font-bold">
+              <span className="material-symbols-outlined text-secondary">history</span>
+              Recently Viewed
+            </h3>
+          </div>
+          <div className="flex overflow-x-auto pb-4 gap-4 snap-x">
+            {recentlyViewed.map((opp: any) => (
+              <div key={opp.id} className="w-[300px] md:w-[350px] lg:w-[400px] snap-start shrink-0">
+                <OpportunitySearchCard opportunity={opp as any} maxSkills={7} className="h-full" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

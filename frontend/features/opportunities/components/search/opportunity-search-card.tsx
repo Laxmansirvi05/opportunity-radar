@@ -20,9 +20,11 @@ import sanitizeHtml from 'sanitize-html'
  */
 interface OpportunitySearchCardProps {
   opportunity: OpportunityWithDetails
+  maxSkills?: number
+  className?: string
 }
 
-export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({ opportunity }: OpportunitySearchCardProps) {
+export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({ opportunity, maxSkills, className }: OpportunitySearchCardProps) {
   const company = opportunity.companies
   const tags = opportunity.opportunity_tags ?? []
   const deadlineText = getDeadlineText(opportunity.deadline)
@@ -34,12 +36,15 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
       : null
   }, [opportunity.description])
 
+  const tagsToDisplay = maxSkills && tags.length > maxSkills ? tags.slice(0, maxSkills) : tags
+  const extraTagsCount = maxSkills && tags.length > maxSkills ? tags.length - maxSkills : 0
+
   return (
     <Link
       href={`/opportunities/${opportunity.id}`}
-      className="block"
+      className={`block ${className || ''}`}
     >
-      <div className="bg-surface border border-outline-variant rounded-2xl p-4 md:p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group relative cursor-pointer flex flex-col gap-4">
+      <div className="bg-surface border border-outline-variant rounded-2xl p-4 md:p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group relative cursor-pointer flex flex-col gap-4 h-full">
         {/* Header: Logo + Title + Bookmark */}
         <div className="flex justify-between items-start">
           <div className="flex gap-4">
@@ -79,7 +84,7 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
         {/* Tags */}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
+            {tagsToDisplay.map((tag) => (
               <span
                 key={tag.tag_name}
                 className="px-3 py-1 rounded-lg bg-surface-container-low border border-outline-variant/50 text-xs font-medium text-on-surface group-hover:border-primary/20 transition-colors"
@@ -87,11 +92,16 @@ export const OpportunitySearchCard = React.memo(function OpportunitySearchCard({
                 {tag.tag_name}
               </span>
             ))}
+            {extraTagsCount > 0 && (
+              <span className="px-3 py-1 rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-xs font-medium text-on-surface-variant">
+                +{extraTagsCount} more
+              </span>
+            )}
           </div>
         )}
 
         {/* Footer: Location + Deadline */}
-        <div className="flex justify-between items-center border-t border-outline-variant/60 pt-4">
+        <div className="flex justify-between items-center border-t border-outline-variant/60 pt-4 mt-auto">
           <div className="flex items-center gap-1.5 text-on-surface-variant">
             <span className="material-symbols-outlined text-[18px]">
               {opportunity.mode === 'Remote' ? 'public' : 'location_on'}

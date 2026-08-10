@@ -21,7 +21,7 @@ export function DashboardAlerts({ initialAlerts }: { initialAlerts: Alert[] }) {
         Urgent Alerts
       </h3>
       {alerts.length > 0 ? (
-        <div className="space-y-md">
+        <div className="flex flex-col gap-2">
           {alerts.map((alert) => (
             <div key={alert.id} className="p-3 bg-error-container/10 rounded-xl border-l-4 border-error">
               <div className="flex justify-between mb-1">
