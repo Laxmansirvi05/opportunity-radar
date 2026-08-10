@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, UploadCloud, FileText, Loader2, ArrowLeft, History } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { OptimizerResults } from "./optimizer-results"
 import type { OptimizationRun, RunSummary } from "./types"
 
@@ -154,10 +155,10 @@ export function ResumeOptimizerDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 pb-12">
+    <div className="mx-auto max-w-4xl space-y-6 pb-12">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">Resume Optimiser</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight">Resume Optimiser</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
           Your real ATS score against a specific job, plus suggested projects, courses and skills — never work
           experience, since that cannot be built without an interview.
         </p>
@@ -173,30 +174,36 @@ export function ResumeOptimizerDashboard() {
         </div>
       ) : (
         <>
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>New optimisation</CardTitle>
+          <Card className="bg-card border-border/80">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">New optimisation</CardTitle>
               <CardDescription>Select a resume and the role you are targeting.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
                 <Label>Resume Source *</Label>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={resumeSource === "saved" ? "default" : "outline"}
+                <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+                  <button
+                    type="button"
                     onClick={() => { setResumeSource("saved"); setUploadedFile(null) }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      resumeSource === "saved" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
                     Saved Resume
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={resumeSource === "upload" ? "default" : "outline"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => { setResumeSource("upload"); setResumeId("") }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      resumeSource === "upload" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
                   >
-                    <UploadCloud className="mr-2 h-4 w-4" />
+                    <UploadCloud className="h-3.5 w-3.5" />
                     Upload PDF
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -238,18 +245,18 @@ export function ResumeOptimizerDashboard() {
                   />
                   <Button
                     variant="outline"
-                    className="h-auto w-full sm:w-[400px] flex-col border-dashed py-8 font-normal hover:bg-muted/50"
+                    className="h-auto w-full sm:w-[400px] flex-col border-dashed py-6 font-normal hover:bg-muted/50"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     {uploadedFile ? (
                       <>
-                        <FileText className="h-8 w-8 text-primary mb-2" />
-                        <p className="font-medium text-foreground">{uploadedFile.name}</p>
+                        <FileText className="h-6 w-6 text-primary mb-1.5" />
+                        <p className="font-medium text-foreground text-sm">{uploadedFile.name}</p>
                       </>
                     ) : (
                       <>
-                        <UploadCloud className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">Click to upload PDF resume</p>
+                        <UploadCloud className="h-6 w-6 text-muted-foreground mb-1.5" />
+                        <p className="text-muted-foreground text-sm">Click to upload PDF resume</p>
                       </>
                     )}
                   </Button>
@@ -298,26 +305,26 @@ export function ResumeOptimizerDashboard() {
           </Card>
 
           {!isLoadingHistory && history.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <History className="h-4 w-4" />
+            <Card className="border-border/80">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <History className="h-3.5 w-3.5" />
                   Past runs
                 </CardTitle>
-                <CardDescription>Persisted across logout — pick up where you left off.</CardDescription>
+                <CardDescription className="text-xs">Persisted across logout — pick up where you left off.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-1.5">
                 {history.map((h) => (
                   <button
                     key={h.id}
                     onClick={() => openRun(h.id)}
-                    className="w-full text-left flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
+                    className="w-full text-left flex items-center justify-between rounded-lg border border-border p-2.5 hover:bg-muted/50 hover:border-muted-foreground/20 transition-colors"
                   >
-                    <div>
-                      <p className="text-sm font-medium">{h.target_role} at {h.company_name}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{h.target_role} at {h.company_name}</p>
                       <p className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleDateString()}</p>
                     </div>
-                    <Badge variant="outline">Baseline {h.baseline_score}</Badge>
+                    <Badge variant="outline" className="shrink-0 ml-2">Baseline {h.baseline_score}</Badge>
                   </button>
                 ))}
               </CardContent>
