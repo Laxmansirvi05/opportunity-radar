@@ -46,6 +46,33 @@ export function useHubMessages({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // only on mount — initialMessages is the SSR snapshot, not meant to re-seed the cache on every parent re-render
 
+  // Resolves a sender's public profile fields via the server (cache-first).
+  // Deliberately NOT a direct `supabase.from('profiles')` call from the
+  // browser: `profiles` SELECT RLS is `auth.uid() = id`, so the browser's
+  // own client can only ever read the viewer's own row and silently returns
+  // null for anyone else — every other sender's name/avatar included.
+  const resolveSender = useCallback(async (senderId: string): Promise<HubSender> => {
+    const cached = senderCache.current.get(senderId)
+    if (cached) return cached
+
+    try {
+      const res = await fetch(`/api/hub/senders?ids=${encodeURIComponent(senderId)}`)
+      const { senders } = await res.json()
+      const found = senders?.[senderId]
+      const sender: HubSender = {
+        name: found?.name ?? null,
+        avatar_url: found?.avatar_url ?? null,
+        email: found?.email ?? null,
+        linkedin_url: found?.linkedin_url ?? null,
+      }
+      senderCache.current.set(senderId, sender)
+      return sender
+    } catch (err) {
+      console.error('[Hub] Failed to resolve sender:', err)
+      return { name: null, avatar_url: null, email: null, linkedin_url: null }
+    }
+  }, [])
+
   // ── Realtime subscription ─────────────────────────────────────────────────
   useEffect(() => {
     const supabase = createClient()
@@ -81,23 +108,12 @@ export function useHubMessages({
 
           seenIds.current.add(raw.id)
 
-          // Resolve sender profile (cache-first)
-          let sender = senderCache.current.get(raw.sender_id)
-          if (!sender) {
-            const { data } = await supabase
-              .from('profiles')
-              .select('name, avatar_url, email, linkedin_url')
-              .eq('id', raw.sender_id)
-              .single()
-
-            sender = {
-              name: data?.name ?? null,
-              avatar_url: data?.avatar_url ?? null,
-              email: data?.email ?? null,
-              linkedin_url: data?.linkedin_url ?? null,
-            }
-            senderCache.current.set(raw.sender_id, sender)
-          }
+          // Resolve sender profile (cache-first, then the server-side lookup
+          // below — never a direct client-side `profiles` query: RLS there
+          // is `auth.uid() = id`, so the browser's own client can only ever
+          // read the viewer's own row and would silently return null for
+          // anyone else's name/avatar).
+          const sender = await resolveSender(raw.sender_id)
 
           // Resolve reply preview if needed
           let replyPreview = null
@@ -109,19 +125,8 @@ export function useHubMessages({
               .single()
 
             if (replyMsg) {
-              let replySenderName: string | null = null
-              const cached = senderCache.current.get(replyMsg.sender_id)
-              if (cached) {
-                replySenderName = cached.name
-              } else {
-                const { data: rp } = await supabase
-                  .from('profiles')
-                  .select('name')
-                  .eq('id', replyMsg.sender_id)
-                  .single()
-                replySenderName = rp?.name ?? null
-              }
-              replyPreview = { content: replyMsg.content, sender_name: replySenderName }
+              const replySender = await resolveSender(replyMsg.sender_id)
+              replyPreview = { content: replyMsg.content, sender_name: replySender.name }
             }
           }
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { HubClient } from '@/features/hub/components/hub-client'
 
@@ -11,6 +12,18 @@ export default async function HubPage() {
   if (!user) {
     redirect('/login')
   }
+
+  // `profiles` SELECT RLS is `auth.uid() = id` — a user can only read their
+  // OWN row through the regular client. Hub is a public chat where every
+  // member's name/avatar must be visible to every other member, so looking
+  // up OTHER senders' profiles needs the service-role client, same as
+  // /api/hub/messages and /api/hub/send already correctly do. Using the
+  // regular client here silently returned null for every sender who wasn't
+  // the viewer themselves — every message read "Student" with no avatar.
+  const adminSupabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   // 1. Fetch current user profile to pass to client
   const { data: profile } = await supabase
@@ -54,7 +67,7 @@ export default async function HubPage() {
   const profilesDict: Record<string, typeof currentUserSender> = {}
 
   if (senderIds.length > 0) {
-    const { data: profileRows } = await supabase
+    const { data: profileRows } = await adminSupabase
       .from('profiles')
       .select('id, name, avatar_url, email, linkedin_url')
       .in('id', senderIds)
@@ -83,7 +96,7 @@ export default async function HubPage() {
     const replySenderIds = [...new Set((replyRows ?? []).map(r => r.sender_id).filter(id => !profilesDict[id]))]
     const replyProfiles: typeof profilesDict = {}
     if (replySenderIds.length > 0) {
-      const { data: rp } = await supabase.from('profiles').select('id, name').in('id', replySenderIds)
+      const { data: rp } = await adminSupabase.from('profiles').select('id, name').in('id', replySenderIds)
       for (const p of rp ?? []) replyProfiles[p.id] = { name: p.name, avatar_url: null, email: null, linkedin_url: null }
     }
 
