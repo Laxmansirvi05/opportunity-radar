@@ -16,8 +16,8 @@ Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · AI feature
 
 | | Critical | High | Moderate | Low | Total |
 |---|---|---|---|---|---|
-| **Fixed** | 4 | 5 | 0 | 0 | **9** |
-| Open | 0 | 2 | 8 | 6 | 16 |
+| **Fixed** | 4 | 6 | 0 | 0 | **10** |
+| Open | 0 | 1 | 8 | 6 | 15 |
 | Deferred | 0 | 0 | 1 | 1 | 2 |
 | **Total** | **4** | **7** | **9** | **7** | **27** |
 
@@ -181,6 +181,21 @@ This is a data-only change — no schema modification, so the full schema guard 
 
 ---
 
+### DATA-02 · Internshala is 73% dead — **audit's number held up under re-verification**
+**Found:** the audit reported 27 of 37 Internshala listings rendering *"Applications are closed for this internship."*
+
+**Re-verified:** 10 Aug 2026. Pulled all 32 `Published` Internshala rows (5 of the 37 were already `Expired`) and fetched each `apply_url` directly (not head:true, not a pattern match — the literal marker text) with a real browser user agent. **22 of 32 showed the closed banner; 10 were genuinely open.** 22 + the 5 already-Expired = 27 — matches the audit exactly. Spot-checked one closed and one open result in an actual browser (not just curl) to rule out a client-side-rendered banner producing a false negative: both matched the curl-based read.
+
+**Root cause:** Internshala returns HTTP 200 with the closed banner embedded in the page rather than 404ing — nothing in the ingestion pipeline ever read the page to notice, so a closed posting kept getting re-confirmed as live (`last_seen_at` refreshed) on every run indefinitely.
+
+**Fixed:** 10 Aug 2026, two parts.
+1. **Data:** `UPDATE opportunities SET status = 'Expired', updated_at = NOW() WHERE id IN (the 22 confirmed IDs) AND status = 'Published'`. Verified before (22/22 `Published`) and after (27 `Expired` / 10 `Published` for the full Internshala set, matching 5 already-expired + 22 newly-expired) with real row-selects.
+2. **Scraper:** added `src/providers/opportunities/utils/internshalaClosedDetector.ts` (`isInternshipClosed()`), wired into both `InternshalaProvider.fetchDetailPage()` (throws, so the queue-consumer path marks it failed rather than upserting it) and the detail-enrichment loop inside `fetch()` (the path actually running in production via `/api/cron/refresh-internshala` — excludes closed items from the batch entirely, so they stop being refreshed as live and fall through to the existing reconciliation gate instead).
+
+**Evidence:** new tests — `tests/internshala-closed-detector.test.ts` (4 cases: real captured banner text, case-insensitivity, an open posting, and a false-positive guard against unrelated "closed" mentions) and `tests/internshala-provider-closed.test.ts` (`fetchDetailPage` rejects a closed posting, returns normally for an open one, mocking `fetch` directly). The `fetch()` end-to-end path itself isn't separately tested — its list-scraping logic loops over 18 category URLs × pagination and mocking that fully wasn't worth the cost — but the detection logic both paths call is fully unit-tested and the wiring at each call site is a small, reviewed diff. Suite: **285/285**. TypeScript unchanged at 36. Lint: the 9 errors/6 warnings in `InternshalaProvider.ts` are pre-existing (confirmed via `git stash` diff, same 15 problems before and after); the new files are clean.
+
+---
+
 ## ⬜ Open — Critical
 
 *(none)*
@@ -188,10 +203,6 @@ This is a data-only change — no schema modification, so the full schema guard 
 ---
 
 ## ⬜ Open — High
-
-### DATA-02 · Internshala is 73% dead
-27 of 37 listings render *"Applications are closed for this internship."* — verified against the live page, not inferred.
-Fix: deactivate the 27, and teach the scraper that marker.
 
 ### DATA-03 · Link verification never runs
 `link_status` is `NULL` on all 4,175 rows. The `link_status` and `link_checked_at` columns already exist; nothing populates them.
@@ -263,9 +274,8 @@ Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a f
 ## Next up
 
 1. **Owner UX pass on Resume Optimisation** — run one real optimisation end-to-end (real login, real JD, real AI gateway) and confirm the checklist gate, both downloads, and persistence-after-logout feel right. Per the "dual verification" rule this is the owner's call, not something further code review can substitute for.
-2. **DATA-02** — deactivate the 27 closed Internshala listings, teach the scraper the closed-page marker
-3. **DATA-03** — wire up the nightly link-verification sweep
-4. **Deploy the AI Search agent** (see the handoff document)
+2. **DATA-03** — wire up the nightly link-verification sweep
+3. **Deploy the AI Search agent** (see the handoff document)
 
 ---
 
@@ -280,9 +290,9 @@ Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a f
 | 10 Aug 2026 | APP-02 built — Resume Optimisation generation wired, ATS-safe PDF export, full UI replacing the APP-01 placeholder. 277/277 tests, TypeScript unchanged at 36, build passes, UI screenshot-verified via a temporary unprotected route (then deleted). Not yet run end-to-end against a real session. |
 | 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
 | 10 Aug 2026 | Committed `3aa4612` (APP-02) and pushed to `restore-june19`. Post-push spot check only: `/resume/copilot` → 307, `/api/cron/health` → 401, matching pre-existing behaviour — **not** a confirmation the new feature works live, since that needs a real session. |
-| 10 Aug 2026 | SEC-01 fixed and pushed (commit `86eef58`). |
+| 10 Aug 2026 | SEC-01 fixed and pushed (commit `86eef58`) — default rate limit (30/hour) closes the unlimited-feature gap for every `AIFeature` without a tuned entry. 279/279 tests. |
 | 10 Aug 2026 | DATA-01 re-investigated with the owner present: only 170 of the audit's 376 rows were real dead-ends (Stripe 126, HighRadius 44) — the other 206 (Databricks, MongoDB, Fivetran) were a false positive from URL-pattern matching; verified by clicking through live samples per company. No working link exists for the 170, including the audit's suggested `job-boards.greenhouse.io` fallback. Expired all 170 in production; verified via real row-select before and after. |
-| 10 Aug 2026 | SEC-01 fixed — default rate limit (30/hour) closes the unlimited-feature gap for every `AIFeature` without a tuned entry. 279/279 tests. |
+| 10 Aug 2026 | DATA-02 re-verified and fixed: 22 of 32 published Internshala rows genuinely show the closed banner (curl + browser spot-check), matching the audit's 27-total once the 5 already-expired are added back. Expired the 22 in production. Taught `InternshalaProvider` the closed-page marker at both call sites so it stops re-confirming closed postings as live. 285/285 tests, TypeScript unchanged at 36. |
 
 > The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
 > were live in production from the moment they were run. This deploy shipped the

@@ -2,6 +2,7 @@ import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { isInternshipClosed } from '../utils/internshalaClosedDetector';
 import * as cheerio from 'cheerio';
 
 const INDIA_CITIES = ['bangalore', 'hyderabad', 'pune', 'delhi', 'ncr', 'mumbai', 'chennai', 'remote'];
@@ -86,8 +87,15 @@ export class InternshalaProvider extends OpportunityProvider {
         }
       }, { maxRetries: 1, timeoutMs: 8000 });
       const detailHtml = await detailRes.text();
+
+      // Internshala returns 200 with this banner instead of 404ing a closed
+      // posting, so the only way to know is to read the page (DATA-02).
+      if (isInternshipClosed(detailHtml)) {
+        throw new Error(`Internshala posting is closed: ${url}`);
+      }
+
       const $detail = cheerio.load(detailHtml);
-      
+
       const item: any = {
         id: url.split('/').pop() || String(Math.random()),
         apply_url: url,
@@ -260,8 +268,18 @@ export class InternshalaProvider extends OpportunityProvider {
               }
             }, { maxRetries: 1, timeoutMs: 8000 });
             const detailHtml = await detailRes.text();
+
+            // Internshala returns 200 with this banner instead of 404ing a
+            // closed posting, so nothing downstream would otherwise notice
+            // and the listing would keep getting refreshed as live forever
+            // (DATA-02). Exclude it from this run's results entirely.
+            if (isInternshipClosed(detailHtml)) {
+              item._closed = true;
+              return;
+            }
+
             const $detail = cheerio.load(detailHtml);
-            
+
             // 1. Full Description
             const fullDesc = $detail('.internship_details').first().text().replace(/\s+/g, ' ').trim();
             if (fullDesc) {
@@ -308,7 +326,7 @@ export class InternshalaProvider extends OpportunityProvider {
           }
         }));
       }
-      return allData;
+      return allData.filter((item) => !item._closed);
     } catch (err) {
       console.error('Error in InternshalaProvider:', err);
       return [];
