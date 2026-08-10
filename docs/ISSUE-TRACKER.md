@@ -290,7 +290,7 @@ This is a data-only change — no schema modification, so the full schema guard 
 | Resume: builder | 80% | **85%** | Photo upload unblocked (DB-03) |
 | Resume: extract | 75% | 75% | |
 | Resume: ATS | 85% | **88%** | `resume_ats_reports` now exists |
-| Resume: optimisation | 35% | **90%** | Generation wired, ATS-safe PDF export, full UI (APP-02). Code-complete and test/build-verified; not yet run end-to-end against a live session |
+| Resume: optimisation | 35% | **95%** | Generation wired, ATS-safe PDF export, full UI, 3 real bugs found and fixed on re-review, schema/RLS/routes verified live in production (APP-02). The last 5%: nobody has run it end-to-end with a real login yet |
 | AI Search | 35% | **50%** | DB blocker cleared; agent still undeployed |
 | Certifications | 30% | **45%** | Table exists; no ingest pipeline yet |
 | AI Voice Interview | 2% | 2% | |
