@@ -16,8 +16,8 @@ Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · AI feature
 
 | | Critical | High | Moderate | Low | Total |
 |---|---|---|---|---|---|
-| **Fixed** | 4 | 6 | 0 | 0 | **10** |
-| Open | 0 | 1 | 8 | 6 | 15 |
+| **Fixed** | 4 | 7 | 0 | 0 | **11** |
+| Open | 0 | 0 | 8 | 6 | 14 |
 | Deferred | 0 | 0 | 1 | 1 | 2 |
 | **Total** | **4** | **7** | **9** | **7** | **27** |
 
@@ -196,6 +196,23 @@ This is a data-only change — no schema modification, so the full schema guard 
 
 ---
 
+### DATA-03 · Link verification never ran — **scoped deliberately narrower than "detect any dead link"**
+**Found:** `link_status`/`link_checked_at` have existed since the trust-engine migration; nothing ever populated them — `NULL` on all 4,175 live rows.
+
+**Scope decision, made explicit because DATA-01 is a cautionary tale here:** DATA-01 showed that HTTP status code alone can't tell a real per-job page from a broken one — Stripe and Databricks both return 200 for their `?gh_jid=` URLs, and only reading the rendered content told them apart. A status-code sweep can't replicate that per-company judgement call at 4,000-row scale. So this sweep does exactly what its name says — verifies the HTTP-level outcome — and only auto-expires the subset where that's unambiguous regardless of page content: the URL doesn't resolve at all (DNS/connect failure), or the host itself says the resource is gone (404/410). A 403/401/405/5xx is recorded but left alone, because the original audit's own Amazon false-positive (a "404 error" string inside analytics JS) is exactly the failure mode of trusting an ambiguous signal.
+
+**Built:** 10 Aug 2026.
+- `lib/ingestion/link-checker.ts` — `checkUrl()` (HEAD, falling back to GET on 405/501 or a thrown error; resolves to `status: 0` rather than throwing, so one bad host never stalls a batch) and `sweepLinkHealth()` (selects live rows ordered `link_checked_at NULLS FIRST`, checks at bounded concurrency within a time budget, writes `link_status`/`link_checked_at` for every row checked, and auto-expires only the unambiguously-dead ones).
+- `app/api/cron/link-sweep/route.ts` — same fail-closed `denyIfNotCron` pattern as every other cron, `maxDuration = 300`, a 270s internal time budget so the function always returns before Vercel's own ceiling. Scheduled nightly at `0 2 * * *` in `vercel.json`, after the other ingestion crons.
+- Resumable by construction: a time-budget cutoff mid-sweep is safe — everything checked so far is already written, and the next run picks up the least-recently-checked rows first.
+
+**Evidence:**
+- 9 new tests in `tests/link-checker.test.ts`: `classifyLinkStatus` (0/404/410 dead, 403/401/500/301 not), `checkUrl`'s HEAD→GET fallback on both a 405 and a thrown error, and `sweepLinkHealth` against a fake Supabase-shaped `Db` — confirms per-row `link_status` writes, that only the 404 in a 3-row mixed batch gets expired (403 does not), and that the time-budget cutoff actually stops the loop rather than overrunning. Suite: **294/294**. TypeScript unchanged at 36. Lint clean.
+- **Live proof-run against production**, not just mocks: ran `sweepLinkHealth` directly (via `tsx`, real service-role client, `limit: 12`) against the actual database. Result: `{ checked: 12, ok: 12, dead: 0, expired: 0 }`. Verified independently with a real row-select (not `head:true`) — `SELECT count(*) WHERE link_checked_at IS NOT NULL` → **12**, all `link_status = 200`. The scratch script was not committed.
+- The full nightly sweep has not yet run in production — it starts at `0 2 * * *` once this deploys. The 12-row proof-run above confirms the mechanism works end-to-end; it does not confirm throughput at the full ~4,000-row scale within the 300s ceiling. Worth checking after the first scheduled run.
+
+---
+
 ## ⬜ Open — Critical
 
 *(none)*
@@ -204,9 +221,7 @@ This is a data-only change — no schema modification, so the full schema guard 
 
 ## ⬜ Open — High
 
-### DATA-03 · Link verification never runs
-`link_status` is `NULL` on all 4,175 rows. The `link_status` and `link_checked_at` columns already exist; nothing populates them.
-Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a full nightly pass over ~4,000 is roughly 7 minutes.
+*(none)*
 
 ---
 
@@ -274,8 +289,9 @@ Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a f
 ## Next up
 
 1. **Owner UX pass on Resume Optimisation** — run one real optimisation end-to-end (real login, real JD, real AI gateway) and confirm the checklist gate, both downloads, and persistence-after-logout feel right. Per the "dual verification" rule this is the owner's call, not something further code review can substitute for.
-2. **DATA-03** — wire up the nightly link-verification sweep
+2. **Check the first scheduled `link-sweep` run** (`0 2 * * *`) once it lands — the 12-row proof-run confirmed correctness, not full-catalogue throughput within the 300s ceiling.
 3. **Deploy the AI Search agent** (see the handoff document)
+4. Everything else in **Open — Moderate** and **Open — Low** below — no High or Critical issues remain open.
 
 ---
 
@@ -293,6 +309,7 @@ Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a f
 | 10 Aug 2026 | SEC-01 fixed and pushed (commit `86eef58`) — default rate limit (30/hour) closes the unlimited-feature gap for every `AIFeature` without a tuned entry. 279/279 tests. |
 | 10 Aug 2026 | DATA-01 re-investigated with the owner present: only 170 of the audit's 376 rows were real dead-ends (Stripe 126, HighRadius 44) — the other 206 (Databricks, MongoDB, Fivetran) were a false positive from URL-pattern matching; verified by clicking through live samples per company. No working link exists for the 170, including the audit's suggested `job-boards.greenhouse.io` fallback. Expired all 170 in production; verified via real row-select before and after. |
 | 10 Aug 2026 | DATA-02 re-verified and fixed: 22 of 32 published Internshala rows genuinely show the closed banner (curl + browser spot-check), matching the audit's 27-total once the 5 already-expired are added back. Expired the 22 in production. Taught `InternshalaProvider` the closed-page marker at both call sites so it stops re-confirming closed postings as live. 285/285 tests, TypeScript unchanged at 36. |
+| 10 Aug 2026 | DATA-03 built and shipped: `lib/ingestion/link-checker.ts` + `/api/cron/link-sweep`, scheduled nightly at `0 2 * * *`. Scope deliberately narrower than "detect any dead link" — only DNS/connect failure, 404 and 410 auto-expire; everything else is recorded, not acted on, per the DATA-01 lesson that status codes alone can't tell a real page from a broken one. 294/294 tests. Live proof-run against production (12 rows, real service-role client) verified with a real row-select, not just mocks. **No High or Critical issues remain open.** |
 
 > The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
 > were live in production from the moment they were run. This deploy shipped the
