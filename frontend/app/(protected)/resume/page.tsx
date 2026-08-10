@@ -84,30 +84,32 @@ export default async function ResumeToolkitPrototype() {
           </div>
         </Link>
 
-        {/* Card 4: AI Optimizer (Active — dashed selection border) */}
-        <div style={{
-          padding: '2px',
-          borderRadius: '14px',
-          border: '2px solid #004ac6',
-        }}>
+        {/* Card 4: AI Optimizer */}
+        <Link href="/resume/copilot" style={{ textDecoration: 'none' }}>
           <div style={{
-            display: 'flex', flexDirection: 'column', gap: '8px',
-            padding: '16px', borderRadius: '12px',
-            backgroundColor: '#004ac6', cursor: 'pointer',
+            padding: '2px',
+            borderRadius: '14px',
+            border: '2px solid #004ac6',
           }}>
             <div style={{
-              width: '40px', height: '40px', borderRadius: '8px',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', flexDirection: 'column', gap: '8px',
+              padding: '16px', borderRadius: '12px',
+              backgroundColor: '#004ac6', cursor: 'pointer',
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#ffffff' }}>auto_fix_high</span>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '8px',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#ffffff' }}>auto_fix_high</span>
+              </div>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>AI Optimizer</span>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>
+                Your real ATS score against a job description, plus gap-derived suggestions.
+              </span>
             </div>
-            <span style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>AI Optimizer</span>
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>
-              Smart enhancement suggestions based on your target role.
-            </span>
           </div>
-        </div>
+        </Link>
 
         {/* Resumes List */}
         <div className="mt-6 flex flex-col gap-4">
@@ -151,200 +153,49 @@ export default async function ResumeToolkitPrototype() {
           </div>
         </div>
 
-        {/* Main Card */}
+        {/* Main Card — a real call-to-action, not a fabricated score.
+            This used to show a hardcoded "68" ATS score, fake gaps, and
+            buttons with no click handler at all. Never show a student a
+            number or a result you made up — the real thing lives at
+            /resume/copilot and needs their actual resume and a job
+            description to produce anything honest. */}
         <div style={{
           backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
           borderRadius: '12px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          padding: '40px 32px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px',
         }}>
-
-          {/* Stepper Row */}
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '16px 24px',
-            borderBottom: '1px solid #E2E8F0',
+            width: '56px', height: '56px', borderRadius: '16px',
+            backgroundColor: '#dbe1ff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              {/* Step 1 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '24px', height: '24px', borderRadius: '50%',
-                  backgroundColor: '#004ac6', color: '#ffffff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '12px', fontWeight: 700,
-                }}>1</div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#004ac6' }}>Analysis</span>
-              </div>
-              {/* Connector line */}
-              <div style={{ width: '32px', height: '2px', backgroundColor: '#E2E8F0' }} />
-              {/* Step 2 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.5 }}>
-                <div style={{
-                  width: '24px', height: '24px', borderRadius: '50%',
-                  backgroundColor: '#E2E8F0', color: '#191b23',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '12px', fontWeight: 700,
-                }}>2</div>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#191b23' }}>Optimization</span>
-              </div>
-            </div>
-            {/* Last saved */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              color: '#004ac6', fontSize: '13px', fontWeight: 600,
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>history</span>
-              Last saved 2m ago
-            </div>
+            <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#004ac6' }}>auto_fix_high</span>
           </div>
-
-          {/* Content grid: ATS Score + Critical Gaps */}
-          <div style={{ padding: '24px', display: 'flex', gap: '24px' }}>
-
-            {/* ATS Score Donut */}
-            <div style={{
-              width: '190px', flexShrink: 0,
-              border: '1px solid #e1e2ed', backgroundColor: '#f3f3fe',
-              borderRadius: '12px', padding: '24px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', textAlign: 'center',
-            }}>
-              <div style={{ position: 'relative', width: '120px', height: '120px', marginBottom: '16px' }}>
-                <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                  <circle cx="50" cy="50" r="40" stroke="#E2E8F0" strokeWidth="9" fill="none" />
-                  <circle
-                    cx="50" cy="50" r="40"
-                    stroke="#004ac6"
-                    strokeWidth="9"
-                    fill="none"
-                    strokeDasharray="251.2"
-                    strokeDashoffset="80.38"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: '36px', fontWeight: 700, color: '#191b23', letterSpacing: '-0.02em', lineHeight: 1 }}>68</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#434655', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>ATS SCORE</span>
-                </div>
-              </div>
-              <p style={{ fontSize: '13px', color: '#434655', fontWeight: 500, lineHeight: 1.4, margin: 0, padding: '0 8px' }}>
-                Improve your score to 85+ for best results
-              </p>
-            </div>
-
-            {/* Critical Gaps */}
-            <div className="flex-1 min-w-0" style={{ display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#191b23', marginBottom: '16px', margin: '0 0 16px 0' }}>
-                Critical Gaps
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-                {/* Gap 1: Red — Missing Action Verbs */}
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '12px',
-                  padding: '14px', borderRadius: '8px',
-                  backgroundColor: '#ffdad6', border: '1px solid #ffdad6',
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#ba1a1a', marginTop: '1px' }}>warning</span>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#ba1a1a' }}>Missing Action Verbs</span>
-                    <span style={{ fontSize: '13px', color: '#ba1a1a', lineHeight: 1.4, marginTop: '2px' }}>
-                      Use words like &quot;Orchestrated&quot;, &quot;Developed&quot;, or &quot;Initiated&quot;.
-                    </span>
-                  </div>
-                </div>
-
-                {/* Gap 2: Orange — Quantifiable Results */}
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '12px',
-                  padding: '14px', borderRadius: '8px',
-                  backgroundColor: '#bc4800', border: '1px solid #bc4800',
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#ffffff', marginTop: '1px' }}>lightbulb</span>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>Quantifiable Results</span>
-                    <span style={{ fontSize: '13px', color: '#ffede6', lineHeight: 1.4, marginTop: '2px' }}>
-                      Add metrics (%, $, numbers) to your achievements.
-                    </span>
-                  </div>
-                </div>
-
-                {/* Gap 3: Gray — Skills Alignment */}
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '12px',
-                  padding: '14px', borderRadius: '8px',
-                  backgroundColor: '#ededf9', border: '1px solid #e1e2ed',
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#434655', marginTop: '1px' }}>search</span>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#191b23' }}>Skills Alignment</span>
-                    <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.4, marginTop: '2px' }}>
-                      Python and Cloud Architecture keys not detected.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Generated Result Preview */}
-          <div style={{ padding: '8px 24px 24px 24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#191b23', marginBottom: '16px', margin: '0 0 16px 0' }}>
-              Generated Result Preview
+          <div>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', margin: '0 0 8px 0' }}>
+              Score your resume against a real job
             </h3>
-
-            <div style={{
-              backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
-              borderRadius: '12px', padding: '32px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              minHeight: '280px', position: 'relative',
-            }}>
-              {/* Placeholder resume skeleton */}
-              <div style={{ width: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', opacity: 0.6 }}>
-                <div style={{ width: '180px', height: '24px', backgroundColor: '#f3f3fe', borderRadius: '4px' }} />
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-                  <div style={{ width: '100%', height: '12px', backgroundColor: '#f3f3fe', borderRadius: '4px' }} />
-                  <div style={{ width: '80%', height: '12px', backgroundColor: '#f3f3fe', borderRadius: '4px' }} />
-                  <div style={{ width: '90%', height: '12px', backgroundColor: '#f3f3fe', borderRadius: '4px' }} />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{
-                position: 'absolute', bottom: '24px', left: '24px', right: '24px',
-                display: 'flex', gap: '16px',
-              }}>
-                <button style={{
-                  flex: 1, height: '44px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  borderRadius: '8px', border: '1px solid #E2E8F0',
-                  backgroundColor: '#ffffff', color: '#191b23',
-                  fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>visibility</span>
-                  Preview Full
-                </button>
-                <button style={{
-                  flex: 1, height: '44px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  borderRadius: '8px', border: 'none',
-                  backgroundColor: '#004ac6', color: '#ffffff',
-                  fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>auto_fix_high</span>
-                  Apply All AI Fixes
-                </button>
-              </div>
-            </div>
+            <p style={{ fontSize: '14px', color: '#434655', lineHeight: 1.6, margin: 0, maxWidth: '420px' }}>
+              Upload or pick a resume, paste a job description, and get your real ATS score, gap-derived
+              suggestions, and two downloadable versions — never a number we made up.
+            </p>
           </div>
+          <Link
+            href="/resume/copilot"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              height: '44px', padding: '0 24px',
+              borderRadius: '8px', border: 'none',
+              backgroundColor: '#004ac6', color: '#ffffff',
+              fontSize: '15px', fontWeight: 600, textDecoration: 'none',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>arrow_forward</span>
+            Open the optimiser
+          </Link>
         </div>
       </div>
 

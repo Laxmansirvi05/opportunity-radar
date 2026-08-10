@@ -173,6 +173,12 @@ Two design points, both learned from this incident rather than assumed:
 
 **What this does and doesn't close:** this proves the HTTP layer — auth, validation, the exact Supabase calls made, response shapes, and the tier-gating fixes — all wired correctly, using a fake database. It is not, and cannot be, a substitute for one real run through the real AI gateway with a real account — that remains the one thing only the owner can verify, per the project's own "dual verification" rule and the hard rule against signing into the five real `auth.users` accounts.
 
+**4th bug — the one the owner actually hit, 10 Aug 2026: `/resume` (not `/resume/copilot`) had its own separate, pre-existing fake mockup.** The owner reported "the feature doesn't even open." All the verification above was against `/resume/copilot`, the route APP-01 fixed and APP-02 built out — but the main `/resume` landing page (`app/(protected)/resume/page.tsx`, last touched 24 Jul 2026, before this session and before the 10 Aug audit) had its own **completely independent** hardcoded "AI Resume Optimizer" panel sitting in the center column: a fixed **"68"** ATS score in a donut chart, three fabricated "Critical Gaps," a fake "Generated Result Preview," and two `<button>` elements — "Preview Full" and "Apply All AI Fixes" — with **no `onClick` handler at all**. The sidebar's "AI Optimizer" card was a plain `<div>` with a pointer cursor and no `href`. A student landing on `/resume` (the normal way in) would see what looks like a working feature with a real-looking score, click a button, and nothing would happen — exactly what was reported, and exactly the class of fabricated-data bug this whole project exists to eliminate. The 10 Aug audit never flagged this because it audited `/resume/copilot` specifically; this file was never in scope for APP-01 and I missed it too, despite multiple "thorough" review passes, because I was verifying the route I built rather than checking whether another entry point existed.
+
+**Fixed:** 10 Aug 2026. Replaced the fake donut/gaps/preview panel with an honest card (no fabricated numbers, real copy explaining what the feature needs from the student) linking to the real `/resume/copilot`. Made the sidebar card a real `<Link href="/resume/copilot">`. Verified via the same temporary-unprotected-route method — screenshotted the new card, then clicked the real rendered link (not just checked the `href` attribute) and confirmed it navigated to `/resume/copilot`, which correctly redirected to `/login`. Route deleted after. TypeScript unchanged at 36, lint clean, 324/324 tests, build clean.
+
+**Not yet checked:** the same page's right-column "Career Insights" panel (`+12% this month` resume strength, a fixed skills list, "342 active roles match your profile") is *also* entirely fabricated and untouched by this fix — it wasn't what was reported broken, and touching it wasn't requested, but it's the same class of problem sitting on the same page and is worth a follow-up.
+
 ---
 
 ### SEC-01 · AI rate limiting covered 4 of 17 features — **HIGH**
@@ -318,9 +324,10 @@ This is a data-only change — no schema modification, so the full schema guard 
 ## Next up
 
 1. **Owner UX pass on Resume Optimisation** — run one real optimisation end-to-end (real login, real JD, real AI gateway) and confirm the checklist gate, both downloads, and persistence-after-logout feel right. Per the "dual verification" rule this is the owner's call, not something further code review can substitute for.
-2. **Check the first scheduled `link-sweep` run** (`0 2 * * *`) once it lands — the 12-row proof-run confirmed correctness, not full-catalogue throughput within the 300s ceiling.
-3. **Deploy the AI Search agent** (see the handoff document)
-4. Everything else in **Open — Moderate** and **Open — Low** below — no High or Critical issues remain open.
+2. **`/resume`'s "Career Insights" panel is still fabricated** — `+12% this month`, a fixed skills list, "342 active roles match your profile," none of it real. Same class of bug as the AI Optimizer panel just fixed, on the same page, not yet touched.
+3. **Check the first scheduled `link-sweep` run** (`0 2 * * *`) once it lands — the 12-row proof-run confirmed correctness, not full-catalogue throughput within the 300s ceiling.
+4. **Deploy the AI Search agent** (see the handoff document)
+5. Everything else in **Open — Moderate** and **Open — Low** below — no High or Critical issues remain open.
 
 ---
 
