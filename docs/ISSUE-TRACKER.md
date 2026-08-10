@@ -16,10 +16,10 @@ Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · AI feature
 
 | | Critical | High | Moderate | Low | Total |
 |---|---|---|---|---|---|
-| **Fixed** | 4 | 2 | 0 | 0 | **6** |
+| **Fixed** | 4 | 3 | 0 | 0 | **7** |
 | Open | 0 | 4 | 8 | 6 | 18 |
 | Deferred | 0 | 0 | 1 | 1 | 2 |
-| **Total** | **4** | **6** | **9** | **7** | **26** |
+| **Total** | **4** | **7** | **9** | **7** | **27** |
 
 **No critical issues remain open.**
 
@@ -106,6 +106,21 @@ resumes           public=false
 **Evidence:** `grep -rn "resume/copilot"` across `app`, `features`, `components`, `lib` now returns only an explanatory comment — no link remains. Production build compiles `/resume/copilot`; 254/254 tests pass; TypeScript unchanged at the 36 baseline. The new page was rendered and visually confirmed via a temporary unprotected route, which was then deleted.
 
 > Judgement worth recording: a fabricated ATS score is worse than no score, because a student may rewrite their resume in response to it. That is why the mockup was replaced rather than merely hidden.
+
+---
+
+### OPS-02 · Nothing detected schema drift — **HIGH (prevention)**
+**Found:** DB-01 through DB-05 went unnoticed for weeks. A missing table only surfaces as a 500 on the single code path that touches it, and nobody was on those paths. There was no check that the deployed database matched the code.
+**Fixed:** 10 Aug 2026. Added `lib/schema-guard.ts` — `verifySchema()` probes 24 required objects (18 tables, 4 storage buckets, 2 RPCs) and reports each as `ok` / `missing` / `denied` / `error`.
+
+Two design points, both learned from this incident rather than assumed:
+
+1. **Existence is not enough.** `notifications` existed the whole time — only the GRANT was absent. The guard probes *reachability as the role that uses the object*, so it separates `missing` (needs a migration) from `denied` (needs a GRANT). Collapsing those into "broken" would send someone to the wrong fix.
+2. **`head: true` count queries cannot prove existence.** PostgREST returns `count: null` with **no error** for a table that does not exist. A head-count probe gave a false all-clear during the audit itself and had to be re-run. Every check now issues a real row select and reads the error code. This is pinned by a test.
+
+**Wiring:** `instrumentation.ts` runs it in development only, fire-and-forget — Next.js awaits `register()` before serving requests, so probing 24 objects there would add that cost to every production cold start for nothing. Production gets the same check on `/api/cron/health`, which already runs daily; it now returns `status: "degraded"` and **HTTP 503** when drift is present, with a per-object failure list.
+
+**Evidence:** 12 new tests, all passing. Mutation-tested — disabling the `42501` branch made exactly the two GRANT tests fail, so they detect real regressions rather than passing vacuously. Run against the live production database: **all 24 objects `ok`**, independently confirming the DB-01–DB-05 repair holds. Suite 266/266, TypeScript unchanged at 36, lint clean on all four touched files.
 
 ---
 
@@ -199,11 +214,10 @@ Fix: a default limit instead of `return true`.
 
 ## Next up
 
-1. **Schema drift guard** — a startup check that fails loudly when a required table is missing, so DB-01 cannot recur silently
-2. **Finish resume optimisation** — now unblocked: wire `lib/resume-optimizer/generate.ts`, score both resumes through `calculateAtsV2Score`, add the ATS-safe PDF export. This is what replaces the placeholder page from APP-01
-3. **DATA-01** — the 376 dead-end apply links
-4. **SEC-01** — rate-limit the other 13 AI features
-5. **Deploy the AI Search agent** (see the handoff document)
+1. **Finish resume optimisation** — now unblocked: wire `lib/resume-optimizer/generate.ts`, score both resumes through `calculateAtsV2Score`, add the ATS-safe PDF export. This is what replaces the placeholder page from APP-01
+2. **DATA-01** — the 376 dead-end apply links
+3. **SEC-01** — rate-limit the other 13 AI features
+4. **Deploy the AI Search agent** (see the handoff document)
 
 ---
 
@@ -213,6 +227,7 @@ Fix: a default limit instead of `return true`.
 |---|---|
 | 10 Aug 2026 | Full audit; 25 issues catalogued |
 | 10 Aug 2026 | DB-01 – DB-05 fixed and verified; database drift resolved |
+| 10 Aug 2026 | OPS-02 fixed — schema guard added; verified green against production (24/24 objects) |
 | 10 Aug 2026 | APP-01 fixed — copilot mockup unlinked and replaced with an honest placeholder; dead `workspace-tools-panel.tsx` deleted. **No critical issues remain open.** |
 | 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
 
