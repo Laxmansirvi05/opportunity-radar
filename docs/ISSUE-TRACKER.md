@@ -16,8 +16,8 @@ Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · AI feature
 
 | | Critical | High | Moderate | Low | Total |
 |---|---|---|---|---|---|
-| **Fixed** | 4 | 4 | 0 | 0 | **8** |
-| Open | 0 | 3 | 8 | 6 | 17 |
+| **Fixed** | 4 | 5 | 0 | 0 | **9** |
+| Open | 0 | 2 | 8 | 6 | 16 |
 | Deferred | 0 | 0 | 1 | 1 | 2 |
 | **Total** | **4** | **7** | **9** | **7** | **27** |
 
@@ -153,6 +153,34 @@ Two design points, both learned from this incident rather than assumed:
 
 ---
 
+### DATA-01 · 376 listings link to a search page, not the job — **the audit's number was wrong; 170 actually needed fixing**
+**Found:** the original audit flagged 376 rows by URL *pattern* (`/search`, `/open-positions`, `/careers-list` in the URL) as dead-end links, without clicking through per company.
+
+**Re-investigated:** 10 Aug 2026, with the owner present. Clicked through real sample URLs (2–3 per company, in a live browser, JS executed) for every company on the list, not just the URL shape:
+
+| Company | Rows | Result |
+|---|---|---|
+| Stripe | 126 | **Broken** — every sample landed on an unfiltered 549-job list; the `gh_jid` query param is not consumed client-side |
+| HighRadius | 44 | **Broken** — every sample landed on the marketing homepage, not even a job list |
+| Databricks | 125 | **Works** — every sample deep-linked to the correct job title and description |
+| MongoDB | 52 | **Works** — same |
+| Fivetran | 29 | **Works** — same |
+
+Only **170** of the 376 (Stripe + HighRadius) were real dead-ends. The other 206 were a false positive from the pattern-matching heuristic — their embedded Greenhouse widgets do correctly resolve `gh_jid` client-side, the URL shape just looked generic.
+
+For the 170 real dead-ends, checked whether the audit's suggested fix (`https://job-boards.greenhouse.io/<slug>/jobs/<id>`) provides a working alternative: it does not — for both Stripe and HighRadius, every Greenhouse-hosted-domain variant (`job-boards.greenhouse.io` and `boards.greenhouse.io`) 301-redirects to the same broken company page. Both companies have fully migrated to a custom-domain embed with no working per-job deep link anywhere. There is no honest URL to reconstruct.
+
+**Fixed:** 10 Aug 2026.
+```sql
+UPDATE opportunities SET status = 'Expired', updated_at = NOW()
+WHERE company_name IN ('Stripe', 'HighRadius') AND status = 'Published';
+```
+This is a data-only change — no schema modification, so the full schema guard wasn't the relevant check. `opportunity-service.ts` and the `search_opportunities_rpc` fast path both filter `status IN ('Published', 'Closing Soon')`, so `Expired` rows are excluded from every search path a student can reach.
+
+**Evidence:** dry-run `SELECT ... GROUP BY company_name, status` before the update showed exactly 170 rows, all `Published`. Re-ran the same query after the `UPDATE` with a real row-select (not `head:true`) — confirmed **170/170 now `Expired`**, split 126 Stripe / 44 HighRadius as expected. Databricks/MongoDB/Fivetran rows were not touched.
+
+---
+
 ## ⬜ Open — Critical
 
 *(none)*
@@ -160,11 +188,6 @@ Two design points, both learned from this incident rather than assumed:
 ---
 
 ## ⬜ Open — High
-
-### DATA-01 · 376 listings link to a search page, not the job
-The student clicks Apply and lands on a company careers homepage.
-`stripe.com/jobs/search` **126** · `databricks …/open-positions/job` **125** · `mongodb …/careers/job` **52** · `highradius …/careers-list` **44** · `fivetran …/careers/job` **29**
-Fix: rebuild the per-job URL from `gh_jid` (Greenhouse: `https://job-boards.greenhouse.io/<slug>/jobs/<id>`), or drop listings whose URL is a board root.
 
 ### DATA-02 · Internshala is 73% dead
 27 of 37 listings render *"Applications are closed for this internship."* — verified against the live page, not inferred.
@@ -240,8 +263,8 @@ Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a f
 ## Next up
 
 1. **Owner UX pass on Resume Optimisation** — run one real optimisation end-to-end (real login, real JD, real AI gateway) and confirm the checklist gate, both downloads, and persistence-after-logout feel right. Per the "dual verification" rule this is the owner's call, not something further code review can substitute for.
-2. **DATA-01** — the 376 dead-end apply links (needs a production DB write — holding until the owner is back, per their standing rule on database work)
-3. **DATA-02 / DATA-03** — Internshala dead listings, link verification sweep (same DB-write hold)
+2. **DATA-02** — deactivate the 27 closed Internshala listings, teach the scraper the closed-page marker
+3. **DATA-03** — wire up the nightly link-verification sweep
 4. **Deploy the AI Search agent** (see the handoff document)
 
 ---
@@ -257,6 +280,8 @@ Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a f
 | 10 Aug 2026 | APP-02 built — Resume Optimisation generation wired, ATS-safe PDF export, full UI replacing the APP-01 placeholder. 277/277 tests, TypeScript unchanged at 36, build passes, UI screenshot-verified via a temporary unprotected route (then deleted). Not yet run end-to-end against a real session. |
 | 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
 | 10 Aug 2026 | Committed `3aa4612` (APP-02) and pushed to `restore-june19`. Post-push spot check only: `/resume/copilot` → 307, `/api/cron/health` → 401, matching pre-existing behaviour — **not** a confirmation the new feature works live, since that needs a real session. |
+| 10 Aug 2026 | SEC-01 fixed and pushed (commit `86eef58`). |
+| 10 Aug 2026 | DATA-01 re-investigated with the owner present: only 170 of the audit's 376 rows were real dead-ends (Stripe 126, HighRadius 44) — the other 206 (Databricks, MongoDB, Fivetran) were a false positive from URL-pattern matching; verified by clicking through live samples per company. No working link exists for the 170, including the audit's suggested `job-boards.greenhouse.io` fallback. Expired all 170 in production; verified via real row-select before and after. |
 | 10 Aug 2026 | SEC-01 fixed — default rate limit (30/hour) closes the unlimited-feature gap for every `AIFeature` without a tuned entry. 279/279 tests. |
 
 > The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
