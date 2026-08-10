@@ -16,8 +16,8 @@ Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · AI feature
 
 | | Critical | High | Moderate | Low | Total |
 |---|---|---|---|---|---|
-| **Fixed** | 4 | 3 | 0 | 0 | **7** |
-| Open | 0 | 4 | 8 | 6 | 18 |
+| **Fixed** | 4 | 4 | 0 | 0 | **8** |
+| Open | 0 | 3 | 8 | 6 | 17 |
 | Deferred | 0 | 0 | 1 | 1 | 2 |
 | **Total** | **4** | **7** | **9** | **7** | **27** |
 
@@ -132,7 +132,7 @@ Two design points, both learned from this incident rather than assumed:
 2. **`POST /api/resume/optimization`** (start a run, persists to `resume_optimizations`) · **`GET /api/resume/optimization`** and **`GET /api/resume/optimization/[id]`** (list/fetch — this is what makes a run survive logout) · **`PATCH /api/resume/optimization/[id]`** (checklist toggle; triggers Resume B generation once `targetResumeUnlocked()` flips true; **un-checking a suggestion after Resume B exists clears `target_resume`/`target_score`**, since it would otherwise keep presenting un-confirmed work as done).
 3. **`lib/resume-optimizer/pdf.tsx`** — ATS-safe PDF via `@react-pdf/renderer`: single column, no colour, no tables, Helvetica (no font embedding needed). Deliberately not built on the vendored `packages/pdf` (Reactive Resume fork) to stay clear of the unresolved AGPL question in LEGAL-01.
 4. **`features/resume-toolkit/components/optimizer/`** replaces the `/resume/copilot` placeholder: intake form (saved resume or upload, JD/role/company), baseline score always shown, tier message, suggestion checklist with progress bar, Resume A/B cards with the download gate, and a past-runs list. Re-linked from `resume-list-client.tsx` (unlinked there since APP-01).
-5. Added `resume_polish` / `resume_target` to `RATE_LIMITS` (10/day each) — the handoff flagged these as declared `AIFeature`s with no limit, i.e. unlimited (SEC-01-adjacent). The other 13 unlimited features are still open under SEC-01.
+5. Added `resume_polish` / `resume_target` to `RATE_LIMITS` (10/day each) — the handoff flagged these as declared `AIFeature`s with no limit, i.e. unlimited. (The remaining unlimited features were then closed by SEC-01, below.)
 
 **Evidence:**
 - 11 new tests (9 orchestration in `tests/resume-optimizer-run.test.ts` — mocking the AI-facing calls to assert the tier/warning/fabrication-safe branches independent of what the real scoring engine returns for a fixture resume; 2 PDF in `tests/resume-optimizer-pdf.test.ts` — **round-trips the actual generated PDF bytes through `pdf-parse`** and asserts the candidate's name, company, bullet text and skills come back as real extractable text, not an image). Suite: **277/277**.
@@ -140,7 +140,16 @@ Two design points, both learned from this incident rather than assumed:
 - `npm run build`: passes; all five new routes (`/api/resume/optimization`, `/api/resume/optimization/[id]`, `/api/resume/optimization/[id]/download`, plus the rebuilt `/resume/copilot` page) compile and register correctly.
 - UI rendered and screenshotted via a temporary unprotected route (both the intake form and, with a fixture run, the results/checklist/lock view), then the route was deleted — same method APP-01 used, for the same reason: the five real accounts in `auth.users` are not mine to sign into.
 
-**Not verified — say so plainly:** no end-to-end run against a real logged-in session or the live AI gateway/provider chain — that needs a real account, which I did not create or sign into. No production deploy yet. The owner should run one real optimisation end-to-end (per the "dual verification" rule — UX is the owner's call) before this is called done.
+**Not verified — say so plainly:** no end-to-end run against a real logged-in session or the live AI gateway/provider chain — that needs a real account, which I did not create or sign into. The owner should run one real optimisation end-to-end (per the "dual verification" rule — UX is the owner's call) before this is called done.
+
+**Deployed:** committed `3aa4612` and pushed to `restore-june19` (the production branch). Not verified against the live deployment beyond confirming the site still responds correctly post-push (`/resume/copilot` → 307, `/api/cron/health` → 401, both matching pre-existing behaviour) — that is not the same as confirming the new routes work in production, which needs the same real-session run as above.
+
+---
+
+### SEC-01 · AI rate limiting covered 4 of 17 features — **HIGH**
+**Found:** `RATE_LIMITS` in `lib/ai-gateway/index.ts` defined only `resume_parser`, `resume_ats`, `resume_optimizer`, `skill_extraction` (plus `resume_polish`/`resume_target` added in APP-02). `checkRateLimit` did `if (!limit) return true`, so every other declared `AIFeature` — `jd_intelligence`, `evidence_evaluation`, `resume_ats_v2_*`, `hr_coaching`, `assistant`, `schema_repair`, `resume_extraction`, `resume_optimization`, `resume_ats_jd_extract`, `resume_ats_coaching`, `resume_ats_general_coaching` — was completely unlimited. An authenticated user could drain the provider quota through any of them.
+**Fixed:** 10 Aug 2026. Added a `DEFAULT_LIMIT` (30/hour) fallback in `checkRateLimit`, applied to any feature without its own entry, replacing the `return true`. Per-feature tuned limits should still be added as real usage patterns become known — this is a backstop, not a claim that 30/hour is the right number for every feature (e.g. `assistant` chat likely wants its own, higher limit).
+**Evidence:** new test `tests/ai-gateway-rate-limit-default.test.ts` — mocks the provider chain and the Supabase RPC backstop, then calls `callAI` with `feature: 'assistant'` (a real, previously-unlimited `AIFeature`) 30 times successfully and asserts the 31st fails with `reason: 'rate_limit'`; a second test confirms anonymous (no `userId`) calls remain unthrottled by design. Suite: **279/279**. TypeScript unchanged at 36. Lint clean on both touched files — the 2 pre-existing `no-explicit-any` errors in `lib/ai-gateway/index.ts` are unrelated lines untouched by this change (confirmed via `git stash` diff before/after).
 
 ---
 
@@ -164,10 +173,6 @@ Fix: deactivate the 27, and teach the scraper that marker.
 ### DATA-03 · Link verification never runs
 `link_status` is `NULL` on all 4,175 rows. The `link_status` and `link_checked_at` columns already exist; nothing populates them.
 Scale check: my own 303-URL sweep took under 2 minutes at concurrency 10, so a full nightly pass over ~4,000 is roughly 7 minutes.
-
-### SEC-01 · AI rate limiting covers 4 of 17 features
-`RATE_LIMITS` in `lib/ai-gateway/index.ts` defines only `resume_parser`, `resume_ats`, `resume_optimizer`, `skill_extraction`. `checkRateLimit` does `if (!limit) return true`, so `jd_intelligence`, `evidence_evaluation`, `resume_ats_v2_*`, `hr_coaching`, `assistant`, `schema_repair`, `resume_polish` and `resume_target` are **unlimited**. An authenticated user can drain the provider quota.
-Fix: a default limit instead of `return true`.
 
 ---
 
@@ -235,8 +240,8 @@ Fix: a default limit instead of `return true`.
 ## Next up
 
 1. **Owner UX pass on Resume Optimisation** — run one real optimisation end-to-end (real login, real JD, real AI gateway) and confirm the checklist gate, both downloads, and persistence-after-logout feel right. Per the "dual verification" rule this is the owner's call, not something further code review can substitute for.
-2. **DATA-01** — the 376 dead-end apply links
-3. **SEC-01** — rate-limit the other 13 AI features (`resume_polish`/`resume_target` now have limits, from APP-02)
+2. **DATA-01** — the 376 dead-end apply links (needs a production DB write — holding until the owner is back, per their standing rule on database work)
+3. **DATA-02 / DATA-03** — Internshala dead listings, link verification sweep (same DB-write hold)
 4. **Deploy the AI Search agent** (see the handoff document)
 
 ---
@@ -249,8 +254,10 @@ Fix: a default limit instead of `return true`.
 | 10 Aug 2026 | DB-01 – DB-05 fixed and verified; database drift resolved |
 | 10 Aug 2026 | OPS-02 fixed — schema guard added; verified green against production (24/24 objects) |
 | 10 Aug 2026 | APP-01 fixed — copilot mockup unlinked and replaced with an honest placeholder; dead `workspace-tools-panel.tsx` deleted. **No critical issues remain open.** |
-| 10 Aug 2026 | APP-02 built — Resume Optimisation generation wired, ATS-safe PDF export, full UI replacing the APP-01 placeholder. 277/277 tests, TypeScript unchanged at 36, build passes, UI screenshot-verified via a temporary unprotected route (then deleted). Not yet run end-to-end against a real session; not yet deployed. |
+| 10 Aug 2026 | APP-02 built — Resume Optimisation generation wired, ATS-safe PDF export, full UI replacing the APP-01 placeholder. 277/277 tests, TypeScript unchanged at 36, build passes, UI screenshot-verified via a temporary unprotected route (then deleted). Not yet run end-to-end against a real session. |
 | 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
+| 10 Aug 2026 | Committed `3aa4612` (APP-02) and pushed to `restore-june19`. Post-push spot check only: `/resume/copilot` → 307, `/api/cron/health` → 401, matching pre-existing behaviour — **not** a confirmation the new feature works live, since that needs a real session. |
+| 10 Aug 2026 | SEC-01 fixed — default rate limit (30/hour) closes the unlimited-feature gap for every `AIFeature` without a tuned entry. 279/279 tests. |
 
 > The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
 > were live in production from the moment they were run. This deploy shipped the

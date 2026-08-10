@@ -38,6 +38,14 @@ const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
   resume_target:    { max: 10,  windowMs: 86_400_000 },
 }
 
+// SEC-01: `checkRateLimit` previously did `if (!limit) return true`, so any
+// AIFeature without an explicit entry above was completely unlimited — an
+// authenticated user could drain the provider quota through any of them.
+// This is the backstop for every feature the table above doesn't name yet;
+// individual features should still get a tuned entry above when their real
+// usage pattern is known.
+const DEFAULT_LIMIT = { max: 30, windowMs: 3_600_000 }
+
 interface ProviderConfig {
   provider: AIProvider
   model?: string
@@ -147,8 +155,7 @@ async function checkRateLimit(
   feature: string
 ): Promise<boolean> {
   if (!userId) return true
-  const limit = RATE_LIMITS[feature]
-  if (!limit) return true
+  const limit = RATE_LIMITS[feature] ?? DEFAULT_LIMIT
 
   const now = Date.now()
   const key = `${userId}:${feature}`
