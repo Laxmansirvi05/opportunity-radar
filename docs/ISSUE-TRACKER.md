@@ -201,6 +201,29 @@ The "Upload PDF" path had the same root problem for a different reason: `/api/re
 
 ---
 
+### APP-03 · ATS scoring read as keyword matching, not recruiter judgment — **owner-requested, 10 Aug 2026**
+**Found:** the owner gave concrete, worked examples of what the scoring engine should — and did not — distinguish: "certified in CSS" vs "built a project using CSS" vs "learned CSS" should not score the same; a virtual/simulated internship vs a real one should not score the same; a toy project (to-do list, calculator) vs a production-scale one (the owner's own "Opportunity Radar", or comparable system-design-level work) should not score the same. The scoring math (`lib/ats-checker/evidence-scoring.ts`) already had a `TYPE_BONUSES` table differentiating evidence types, but `certification` and `project` were tied at the same value (0.08), and — the larger gap — the evidence-evaluation prompt (`ats-v2-prompts.ts`) never instructed the model to judge a project's own complexity/scale at all, so two very different projects on the same technology could receive identical `evidenceStrength`. Separately, `gapReason` (the field that becomes the suggestion checklist's actual advice text — see `deriveSuggestions` in `tiers.ts`) is a valid, optional schema field the prompt's example output never showed populated, so it was very likely always empty, and every suggestion was silently falling back to `tiers.ts`'s generic templated sentence instead of real feedback.
+
+**Fixed:** 10 Aug 2026.
+1. Rewrote the evidence-evaluation system prompt with an explicit calibration hierarchy: bare skill listing < certification/coursework (capped at "moderate" — proof of studying, not building) < project (scaled by the project's own complexity — toy-scale caps at "moderate", production-shaped can reach "exceptional") < professional experience (scaled by how concrete and quantified the description is, not by the job title alone — a vague "virtual internship" caps at "moderate" the same as a toy project).
+2. Widened `TYPE_BONUSES`: `certification` 0.08 → 0.05, `project` 0.08 → 0.09, so a certification can no longer numerically tie a real project on the same skill.
+3. Made `gapReason` a required, worked-example field in the prompt's output schema whenever `satisfaction` isn't `"complete"`, with explicit instructions to write it the way a mentor would — specific and actionable, not a restatement of the requirement.
+4. Added `certifications`/`achievements` to `ParsedResumeSchema` (see APP-02 above) specifically so this evaluator has a clean signal for "certified" that isn't inferred from a skill string.
+
+**Evidence — a live, real AI proof, not just prompt text review.** Built one test resume with three parallel cases against a real JD: CSS backed only by a certification, HTML used only in a "Personal To-Do List" toy project, and PostgreSQL used in a production-shaped rebuild of the owner's own "Opportunity Radar" description (4,700+ records, multi-provider pipeline, deduplication engine). Ran the actual `evaluateResumeEvidence` → `calculateAtsV2Score` pipeline with real provider calls (Gemini was 403'd during this run; OpenRouter served it, proving the fallback path too):
+
+| Case | satisfaction | evidenceStrength | score |
+|---|---|---|---|
+| CSS — certification only | partial | weak | **45** |
+| HTML — toy project | partial | moderate | **59** |
+| PostgreSQL — production-scale project | complete | exceptional | **100** |
+
+Exactly the ordering requested: certification < toy project < production project. `gapReason` for the two unmet cases came back specific and actionable — e.g. *"A project showcasing more advanced CSS techniques (e.g., responsive layouts, animations, or component styling) would strengthen this area"* — not the old generic fallback. Also added 8 new deterministic unit tests for `scoreRequirement` (`tests/ats-evidence-scoring.test.ts` — no prior coverage existed for this function at all), pinning the certification-never-outscores-project invariant, the quantified-impact bonus, importance weighting, and satisfaction-level monotonicity, so this doesn't silently regress. Suite: **350/350**. TypeScript unchanged at 36. Lint clean.
+
+**Not changed:** `lib/resume-optimizer/generate.ts`'s writing rules (banned AI-tell words, plain strong verbs) already covered the "professional voice / power words" request reasonably well on review — left alone rather than risk destabilizing an already-tested, working prompt.
+
+---
+
 ### SEC-01 · AI rate limiting covered 4 of 17 features — **HIGH**
 **Found:** `RATE_LIMITS` in `lib/ai-gateway/index.ts` defined only `resume_parser`, `resume_ats`, `resume_optimizer`, `skill_extraction` (plus `resume_polish`/`resume_target` added in APP-02). `checkRateLimit` did `if (!limit) return true`, so every other declared `AIFeature` — `jd_intelligence`, `evidence_evaluation`, `resume_ats_v2_*`, `hr_coaching`, `assistant`, `schema_repair`, `resume_extraction`, `resume_optimization`, `resume_ats_jd_extract`, `resume_ats_coaching`, `resume_ats_general_coaching` — was completely unlimited. An authenticated user could drain the provider quota through any of them.
 **Fixed:** 10 Aug 2026. Added a `DEFAULT_LIMIT` (30/hour) fallback in `checkRateLimit`, applied to any feature without its own entry, replacing the `return true`. Per-feature tuned limits should still be added as real usage patterns become known — this is a backstop, not a claim that 30/hour is the right number for every feature (e.g. `assistant` chat likely wants its own, higher limit).

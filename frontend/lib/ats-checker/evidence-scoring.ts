@@ -28,11 +28,16 @@ export const STRENGTH_FACTORS: Record<string, number> = {
   exceptional: 1.0,
 }
 
+// A certification and a project are not interchangeable ways to prove the
+// same skill: a project is evidence of building, a certification is
+// evidence of studying. certification must never sit at or above project —
+// see the calibration rules in ats-v2-prompts.ts, which this reinforces
+// numerically rather than relying on evidenceStrength alone.
 export const TYPE_BONUSES: Record<string, number> = {
   professional_experience: 0.12,
   achievement: 0.12,
-  project: 0.08,
-  certification: 0.08,
+  project: 0.09,
+  certification: 0.05,
   education: 0.06,
   leadership: 0.06,
   listed_skill: 0.03,
