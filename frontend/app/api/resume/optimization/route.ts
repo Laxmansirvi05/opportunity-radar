@@ -100,6 +100,10 @@ export async function POST(req: NextRequest) {
       suggestions: result.suggestions,
       polished_resume: result.polishedResume ?? null,
       polished_score: result.polishedScore ?? null,
+      // Populated when the tier is 'full' but there were zero suggestions —
+      // an already-unlocked run with no checklist to ever trigger this later.
+      target_resume: result.targetResume ?? null,
+      target_score: result.targetScore ?? null,
     })
     .select()
     .single()

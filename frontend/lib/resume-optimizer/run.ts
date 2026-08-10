@@ -33,6 +33,9 @@ export interface StartRunResult {
   polishedResume?: ParsedResume
   polishedScore?: number
   polishedReport?: AtsV2Score
+  targetResume?: ParsedResume
+  targetScore?: number
+  targetReport?: AtsV2Score
   /** Non-fatal: the run still has a real baseline score even if generation failed. */
   warning?: string
 }
@@ -82,6 +85,30 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
       }
     } else {
       result.warning = gen.error || 'Could not generate a polished resume. Your baseline score above is still accurate.'
+    }
+  }
+
+  // A full-tier run with zero suggestions (every requirement already
+  // evidenced) is unlocked from the moment it's created — targetResumeUnlocked
+  // treats an empty checklist as satisfied. There is then no checklist for the
+  // student to ever confirm, so Resume B has to be generated here or it would
+  // simply never exist.
+  if (plan.generatesTarget && suggestions.length === 0) {
+    const targetOutcome = await runTargetGeneration({
+      resume: input.resume,
+      jobDescription: input.jobDescription,
+      targetRole: input.targetRole,
+      companyName: input.companyName,
+      structuredJd: jdRes.data,
+      completedSuggestions: [],
+      userId: input.userId,
+    })
+    if (targetOutcome.success) {
+      result.targetResume = targetOutcome.resume
+      result.targetScore = targetOutcome.score
+      result.targetReport = targetOutcome.report
+    } else if (!result.warning) {
+      result.warning = targetOutcome.error
     }
   }
 

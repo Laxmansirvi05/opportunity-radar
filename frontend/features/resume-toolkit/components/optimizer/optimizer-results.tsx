@@ -120,45 +120,68 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
         </Card>
       )}
 
-      {/* Suggestion checklist — the safety gate for Resume B */}
+      {/* Suggestion checklist. Interactive and gating Resume B for the 'full'
+          tier; for 'polish_only' there is no second resume to unlock (see
+          tierPlan), so the same suggestions are shown as plain advice instead
+          of a checklist implying a gate that doesn't exist for this tier. */}
       {plan.generatesSuggestions && run.suggestions.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Close the gap</CardTitle>
+            <CardTitle className="text-base">{plan.generatesTarget ? "Close the gap" : "Worth strengthening"}</CardTitle>
             <CardDescription>
-              Confirm each item once it is genuinely done. Resume B presents these as real work, so it only unlocks
-              once every item here is checked.
+              {plan.generatesTarget
+                ? "Confirm each item once it is genuinely done. Resume B presents these as real work, so it only unlocks once every item here is checked."
+                : "Your resume is close enough that we're not generating a second version — but these are the spots a recruiter would still notice."}
             </CardDescription>
-            <Progress value={(progress.done / Math.max(progress.total, 1)) * 100} className="mt-2" />
-            <p className="text-xs text-muted-foreground">{progress.done} of {progress.total} confirmed</p>
+            {plan.generatesTarget && (
+              <>
+                <Progress value={(progress.done / Math.max(progress.total, 1)) * 100} className="mt-2" />
+                <p className="text-xs text-muted-foreground">{progress.done} of {progress.total} confirmed</p>
+              </>
+            )}
           </CardHeader>
           <CardContent className="space-y-3">
-            {run.suggestions.map((s) => (
-              <button
-                key={s.id}
-                disabled={pendingId === s.id}
-                onClick={() => toggleSuggestion(s)}
-                className={cn(
-                  "w-full text-left flex items-start gap-3 rounded-lg border p-3 transition-colors disabled:opacity-60",
-                  s.completed ? "border-emerald-500/30 bg-emerald-500/5" : "border-border hover:bg-muted/50"
-                )}
-              >
-                {s.completed ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm">{s.title}</span>
-                    <Badge variant="outline" className={cn("text-[0.65rem] uppercase", importanceColor[s.importance])}>
-                      {s.importance}
-                    </Badge>
+            {run.suggestions.map((s) =>
+              plan.generatesTarget ? (
+                <button
+                  key={s.id}
+                  disabled={pendingId === s.id}
+                  onClick={() => toggleSuggestion(s)}
+                  className={cn(
+                    "w-full text-left flex items-start gap-3 rounded-lg border p-3 transition-colors disabled:opacity-60",
+                    s.completed ? "border-emerald-500/30 bg-emerald-500/5" : "border-border hover:bg-muted/50"
+                  )}
+                >
+                  {s.completed ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{s.title}</span>
+                      <Badge variant="outline" className={cn("text-[0.65rem] uppercase", importanceColor[s.importance])}>
+                        {s.importance}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{s.detail}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{s.detail}</p>
+                </button>
+              ) : (
+                <div key={s.id} className="flex items-start gap-3 rounded-lg border border-border p-3">
+                  <Circle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{s.title}</span>
+                      <Badge variant="outline" className={cn("text-[0.65rem] uppercase", importanceColor[s.importance])}>
+                        {s.importance}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{s.detail}</p>
+                  </div>
                 </div>
-              </button>
-            ))}
+              )
+            )}
           </CardContent>
         </Card>
       )}

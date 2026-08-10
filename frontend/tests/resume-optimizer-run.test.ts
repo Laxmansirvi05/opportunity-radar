@@ -107,6 +107,49 @@ describe('startOptimizationRun', () => {
     expect(outcome.result.warning).toBeUndefined()
   })
 
+  it('a full-tier run with zero suggestions generates Resume B immediately, since there is no checklist to ever unlock it', async () => {
+    extractJDIntelligence.mockResolvedValue({ success: true, data: structuredJd })
+    evaluateResumeEvidence
+      .mockResolvedValueOnce({ success: true, data: matrix('complete') }) // baseline eval — no gaps, so zero suggestions
+      .mockResolvedValueOnce({ success: true, data: matrix('complete') }) // polished eval
+      .mockResolvedValueOnce({ success: true, data: matrix('complete') }) // target eval
+    calculateAtsV2Score
+      .mockReturnValueOnce({ overallScore: 40 }) // baseline — still 'full' tier despite full evidence coverage
+      .mockReturnValueOnce({ overallScore: 75 }) // polished
+      .mockReturnValueOnce({ overallScore: 82 }) // target
+    generatePolishedResume.mockResolvedValue({ success: true, resume: { ...resume, summary: 'Rewritten' } })
+    generateTargetResume.mockResolvedValue({ success: true, resume: { ...resume, summary: 'Rewritten for role' } })
+
+    const outcome = await startOptimizationRun(baseInput)
+
+    expect(outcome.success).toBe(true)
+    if (!outcome.success) return
+    expect(outcome.result.tier).toBe('full')
+    expect(outcome.result.suggestions).toHaveLength(0)
+    expect(outcome.result.targetResume).toBeDefined()
+    expect(outcome.result.targetScore).toBe(82)
+    expect(generateTargetResume).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not attempt Resume B when the full-tier run has suggestions still pending', async () => {
+    extractJDIntelligence.mockResolvedValue({ success: true, data: structuredJd })
+    evaluateResumeEvidence
+      .mockResolvedValueOnce({ success: true, data: matrix('none') }) // baseline — has a real gap
+      .mockResolvedValueOnce({ success: true, data: matrix('complete') }) // polished eval
+    calculateAtsV2Score
+      .mockReturnValueOnce({ overallScore: 40 })
+      .mockReturnValueOnce({ overallScore: 75 })
+    generatePolishedResume.mockResolvedValue({ success: true, resume: { ...resume, summary: 'Rewritten' } })
+
+    const outcome = await startOptimizationRun(baseInput)
+
+    expect(outcome.success).toBe(true)
+    if (!outcome.success) return
+    expect(outcome.result.suggestions.length).toBeGreaterThan(0)
+    expect(outcome.result.targetResume).toBeUndefined()
+    expect(generateTargetResume).not.toHaveBeenCalled()
+  })
+
   it('a 90+ baseline generates nothing, even though the AI could technically be called', async () => {
     extractJDIntelligence.mockResolvedValue({ success: true, data: structuredJd })
     evaluateResumeEvidence.mockResolvedValueOnce({ success: true, data: matrix('complete') })

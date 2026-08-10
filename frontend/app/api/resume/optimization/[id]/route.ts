@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { runTargetGeneration } from '@/lib/resume-optimizer/run'
-import { targetResumeUnlocked, type Suggestion } from '@/lib/resume-optimizer/tiers'
+import { targetResumeUnlocked, tierPlan, type Suggestion, type OptimizationTier } from '@/lib/resume-optimizer/tiers'
 import type { ParsedResume } from '@/types/resume'
 
 // ---------------------------------------------------------------------------
@@ -72,6 +72,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     i === index ? { ...s, completed, completed_at: completed ? new Date().toISOString() : null } : s
   )
   const unlocked = targetResumeUnlocked(updatedSuggestions)
+  // polish_only derives suggestions as advice but never generates a Resume B
+  // (tierPlan.generatesTarget is false for that tier) — without this check,
+  // confirming a polish_only checklist would still trigger a generation call
+  // for a resume the UI has nowhere to show or download.
+  const generatesTarget = tierPlan(run.tier as OptimizationTier).generatesTarget
 
   const update: Record<string, unknown> = { suggestions: updatedSuggestions }
 
@@ -84,7 +89,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   let warning: string | null = null
 
-  if (unlocked && !run.target_resume) {
+  if (generatesTarget && unlocked && !run.target_resume) {
     const outcome = await runTargetGeneration({
       resume: run.source_resume as ParsedResume,
       jobDescription: run.job_description as string,
