@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { listResumes } from '@/features/resume-toolkit/services/resume-actions';
+import { getCareerInsights } from '@/features/resume-toolkit/services/career-insights';
 import { ResumeListClient } from '@/features/resume-toolkit/components/resume-list-client';
 
 export default async function ResumeToolkitPrototype() {
-  const result = await listResumes();
+  const [result, insights] = await Promise.all([listResumes(), getCareerInsights()]);
   const resumes = result.success ? result.resumes : [];
 
   return (
@@ -200,7 +201,10 @@ export default async function ResumeToolkitPrototype() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
-          RIGHT COLUMN — Career Insights
+          RIGHT COLUMN — Career Insights (real data only; every field
+          below is computed live in getCareerInsights() from this user's
+          own rows, with an honest empty state when there isn't enough
+          history yet — never a filled-in placeholder number).
           ═══════════════════════════════════════════════════════════ */}
       <div className="shrink-0" style={{ width: '280px' }}>
         <div style={{
@@ -215,40 +219,64 @@ export default async function ResumeToolkitPrototype() {
             Career Insights
           </h2>
 
-          {/* Resume Strength */}
+          {/* Recent ATS Scores */}
           <div style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
               <span style={{ fontSize: '13px', fontWeight: 700, color: '#434655', lineHeight: 1.3 }}>
-                Resume<br />Strength
+                Recent<br />ATS Scores
               </span>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#004ac6', lineHeight: 1.3, textAlign: 'right' }}>
-                +12% this<br />month
-              </span>
+              {insights.scoreHistory.length >= 2 && (
+                <span style={{
+                  fontSize: '14px', fontWeight: 700, lineHeight: 1.3, textAlign: 'right',
+                  color: insights.scoreHistory[insights.scoreHistory.length - 1].score >= insights.scoreHistory[0].score ? '#006f64' : '#943700',
+                }}>
+                  {insights.scoreHistory[insights.scoreHistory.length - 1].score >= insights.scoreHistory[0].score ? '+' : ''}
+                  {insights.scoreHistory[insights.scoreHistory.length - 1].score - insights.scoreHistory[0].score} vs first check
+                </span>
+              )}
             </div>
 
-            {/* Bar chart */}
-            <div style={{
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-              height: '100px', gap: '6px',
-              paddingBottom: '8px',
-              borderBottom: '1px solid #E2E8F0',
-            }}>
-              <div style={{ flex: 1, backgroundColor: '#dbe1ff', height: '35%', borderRadius: '2px 2px 0 0' }} />
-              <div style={{ flex: 1, backgroundColor: '#dbe1ff', height: '45%', borderRadius: '2px 2px 0 0' }} />
-              <div style={{ flex: 1, backgroundColor: '#b4c5ff', height: '55%', borderRadius: '2px 2px 0 0' }} />
-              <div style={{ flex: 1, backgroundColor: '#004ac6', height: '80%', borderRadius: '2px 2px 0 0' }} />
-              <div style={{ flex: 1, backgroundColor: '#004ac6', height: '95%', borderRadius: '2px 2px 0 0' }} />
-            </div>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              marginTop: '6px',
-              fontSize: '11px', fontWeight: 700, color: '#737686',
-              textTransform: 'uppercase', letterSpacing: '0.01em',
-            }}>
-              <span>MAR</span>
-              <span>APR</span>
-              <span>MAY</span>
-            </div>
+            {insights.scoreHistory.length === 0 ? (
+              <p style={{ fontSize: '13px', color: '#737686', lineHeight: 1.5, margin: 0 }}>
+                Run an ATS check or optimisation to start tracking your scores here.
+              </p>
+            ) : insights.scoreHistory.length === 1 ? (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 700, color: '#004ac6' }}>{insights.scoreHistory[0].score}</span>
+                <span style={{ fontSize: '12px', color: '#737686' }}>{insights.scoreHistory[0].label}</span>
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+                  height: '100px', gap: '6px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #E2E8F0',
+                }}>
+                  {insights.scoreHistory.map((p, i) => (
+                    <div
+                      key={i}
+                      title={`${p.label}: ${p.score}`}
+                      style={{
+                        flex: 1,
+                        backgroundColor: i === insights.scoreHistory.length - 1 ? '#004ac6' : '#dbe1ff',
+                        height: `${Math.max(p.score, 4)}%`,
+                        borderRadius: '2px 2px 0 0',
+                      }}
+                    />
+                  ))}
+                </div>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  marginTop: '6px',
+                  fontSize: '11px', fontWeight: 700, color: '#737686',
+                  textTransform: 'uppercase', letterSpacing: '0.01em',
+                }}>
+                  <span>{formatShortDate(insights.scoreHistory[0].date)}</span>
+                  <span>{formatShortDate(insights.scoreHistory[insights.scoreHistory.length - 1].date)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Divider */}
@@ -263,33 +291,28 @@ export default async function ResumeToolkitPrototype() {
             }}>
               TOP SKILLS DETECTED
             </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              <span style={{
-                padding: '5px 10px', borderRadius: '4px',
-                backgroundColor: '#ededf9',
-                fontSize: '13px', fontWeight: 500, color: '#191b23',
-              }}>React.js</span>
-              <span style={{
-                padding: '5px 10px', borderRadius: '4px',
-                backgroundColor: '#ededf9',
-                fontSize: '13px', fontWeight: 500, color: '#191b23',
-              }}>UX Design</span>
-              <span style={{
-                padding: '5px 10px', borderRadius: '4px',
-                backgroundColor: '#ededf9',
-                fontSize: '13px', fontWeight: 500, color: '#191b23',
-              }}>Typescript</span>
-              <span style={{
-                padding: '5px 10px', borderRadius: '4px',
-                backgroundColor: '#ededf9',
-                fontSize: '13px', fontWeight: 500, color: '#191b23',
-              }}>Figma</span>
-              <span style={{
-                padding: '5px 10px', borderRadius: '4px',
-                backgroundColor: '#f3f3fe', border: '1px dashed #c3c6d7',
-                fontSize: '13px', fontWeight: 500, color: '#434655',
-              }}>+4 more</span>
-            </div>
+            {insights.topSkills.length === 0 ? (
+              <p style={{ fontSize: '13px', color: '#737686', lineHeight: 1.5, margin: 0 }}>
+                Upload a resume in the ATS Checker or Optimiser to see your top skills here.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {insights.topSkills.slice(0, 6).map((skill) => (
+                  <span key={skill} style={{
+                    padding: '5px 10px', borderRadius: '4px',
+                    backgroundColor: '#ededf9',
+                    fontSize: '13px', fontWeight: 500, color: '#191b23',
+                  }}>{skill}</span>
+                ))}
+                {insights.topSkills.length > 6 && (
+                  <span style={{
+                    padding: '5px 10px', borderRadius: '4px',
+                    backgroundColor: '#f3f3fe', border: '1px dashed #c3c6d7',
+                    fontSize: '13px', fontWeight: 500, color: '#434655',
+                  }}>+{insights.topSkills.length - 6} more</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Divider */}
@@ -304,25 +327,41 @@ export default async function ResumeToolkitPrototype() {
             }}>
               MARKET DEMAND
             </h3>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{
-                width: '44px', height: '44px', borderRadius: '8px',
-                backgroundColor: '#6df5e1',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#006f64' }}>trending_up</span>
+            {insights.matchingOpportunities === null ? (
+              <p style={{ fontSize: '13px', color: '#737686', lineHeight: 1.5, margin: 0 }}>
+                Add a resume with listed skills to see how many open opportunities match.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '8px',
+                  backgroundColor: insights.matchingOpportunities > 0 ? '#6df5e1' : '#E2E8F0',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '24px', color: insights.matchingOpportunities > 0 ? '#006f64' : '#737686' }}>
+                    {insights.matchingOpportunities > 0 ? 'trending_up' : 'search_off'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>
+                    {insights.matchingOpportunities > 0 ? `${insights.matchingOpportunities} open role${insights.matchingOpportunities === 1 ? '' : 's'}` : 'No matches yet'}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.4, marginTop: '2px' }}>
+                    {insights.matchingOpportunities > 0
+                      ? 'Currently open and tagged with your top skills.'
+                      : 'None of your listed skills match an open opportunity right now.'}
+                  </span>
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#191b23' }}>High Demand</span>
-                <span style={{ fontSize: '13px', color: '#434655', lineHeight: 1.4, marginTop: '2px' }}>
-                  342 active roles match your profile.
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }

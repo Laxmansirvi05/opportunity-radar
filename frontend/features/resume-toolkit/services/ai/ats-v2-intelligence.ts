@@ -161,7 +161,16 @@ export async function extractJDIntelligence(
       // meaningful requirements" failures on JDs that clearly had plenty.
       // A substantial JD realistically has several distinct requirements;
       // scale the floor with length rather than hard-coding one JD's shape.
-      const minExpected = jdLength > 900 ? 5 : jdLength > 300 ? 3 : 1
+      //
+      // The 900-char band originally topped out at a flat floor of 5 for
+      // ANY longer JD, so a 2000+ char posting with a dozen genuine bullet
+      // requirements could under-extract to exactly 5 and still pass —
+      // confirmed live: the same JD scored 74 (5 requirements extracted,
+      // several gaps) via the Optimiser and 92 (5 requirements, all matched)
+      // via the ATS Checker in two independent extraction calls. Extending
+      // the scale for long JDs forces a retry through the provider chain
+      // instead of silently accepting a coarse, under-extracted structure.
+      const minExpected = jdLength > 2000 ? 8 : jdLength > 1200 ? 6 : jdLength > 900 ? 5 : jdLength > 300 ? 3 : 1
       if (validReqs.length < minExpected) {
         return {
           valid: false as const,
@@ -180,7 +189,11 @@ export async function extractJDIntelligence(
       systemPrompt,
       userPrompt,
       maxTokens: 2500,
-      temperature: 0.1,
+      // Matches evaluateResumeEvidence's 0.0 — extraction is a reading task,
+      // not a creative one, and any temperature above 0 measurably widened
+      // how many requirements the model chose to extract from the same JD
+      // text run to run (see minExpected note above).
+      temperature: 0.0,
       outputFormat: 'json',
     },
     {

@@ -315,6 +315,12 @@ function SuggestionsCard({ suggestions, title }: { suggestions: AtsCheckResponse
                 <Badge className={cn("text-[0.65rem] uppercase", importanceColor[s.importance])} variant="outline">{s.importance}</Badge>
               </div>
               <p className="text-muted-foreground text-sm leading-relaxed">{s.detail}</p>
+              {s.guidance && (
+                <p className="text-foreground/80 text-sm leading-relaxed mt-2">
+                  <span className="font-medium text-primary">How to close this: </span>
+                  {s.guidance}
+                </p>
+              )}
             </div>
           ))}
         </CardContent>
@@ -336,6 +342,12 @@ function SuggestionsCard({ suggestions, title }: { suggestions: AtsCheckResponse
               <div key={s.id} className="space-y-1 rounded-lg border bg-card p-4">
                 <p className="font-semibold text-sm mb-1">{s.title}</p>
                 <p className="text-muted-foreground text-sm leading-relaxed">{s.detail}</p>
+                {s.guidance && (
+                  <p className="text-foreground/80 text-sm leading-relaxed mt-2">
+                    <span className="font-medium text-primary">How to close this: </span>
+                    {s.guidance}
+                  </p>
+                )}
               </div>
             ))}
           </CardContent>

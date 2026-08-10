@@ -22,6 +22,13 @@ export interface Suggestion {
   importance: 'critical' | 'high' | 'medium' | 'low'
   completed: boolean
   completed_at?: string | null
+  /**
+   * Concrete "how" — a project brief and tech stack, where to look for a
+   * course, or a practice plan for a skill. Optional so older persisted
+   * suggestions (stored on resume_optimizations rows before this field
+   * existed) still satisfy the type without a migration.
+   */
+  guidance?: string
 }
 
 /** Satisfaction levels that count as a genuine gap worth acting on. */
@@ -84,6 +91,10 @@ export function deriveSuggestions(
     if (!UNMET.has(evaluation.satisfaction)) continue
 
     const type = typeForCategory(req.category)
+    const siblingTech = (jd.requirements ?? [])
+      .filter((r) => r.id !== req.id && (r.category === 'technical_capability' || r.category === 'tooling_environment'))
+      .map((r) => r.name)
+
     gaps.push({
       id: req.id,
       type,
@@ -95,11 +106,40 @@ export function deriveSuggestions(
       importance: req.importance,
       completed: false,
       completed_at: null,
+      guidance: guidanceFor(type, req.name, siblingTech),
     })
   }
 
   gaps.sort((a, b) => (importanceRank[a.importance] ?? 9) - (importanceRank[b.importance] ?? 9))
   return gaps.slice(0, max)
+}
+
+/**
+ * The concrete "how" behind each suggestion type. Deterministic, not a
+ * separate AI call — the checklist already has the exact JD requirement and
+ * (for projects) its sibling technical requirements, which is enough to give
+ * real direction without another round trip that could fail or drift from
+ * what the requirement actually says.
+ */
+function guidanceFor(type: SuggestionType, requirement: string, siblingTech: string[]): string {
+  switch (type) {
+    case 'project': {
+      const stack = siblingTech.slice(0, 3)
+      const stackNote = stack.length > 0
+        ? ` Pair it with ${stack.join(', ')} if you can — those are the other technologies this job description calls out.`
+        : ''
+      return `Build one small, finished project that genuinely uses ${requirement} — a working demo beats an ambitious unfinished one.${stackNote} Push it to GitHub with a short README explaining what it does and why, then list it under Projects.`
+    }
+    case 'course':
+      return `Look for a short, focused course on ${requirement} (4-10 hours — freeCodeCamp, Coursera, or a well-reviewed YouTube series all work). Finish it, then apply what you learned inside one real project so it's demonstrated, not just listed.`
+    case 'certification':
+      return `Check whether the vendor behind ${requirement} offers an official certification — many have a free or low-cost associate-level option. Once earned, list it under Certifications with the issuing body and date.`
+    case 'education':
+      return `This is about your academic record, not something you can build your way into before applying — if time is limited, prioritise the project and skill items on this list instead.`
+    case 'skill':
+    default:
+      return `Spend a few focused sessions on ${requirement}: read the official docs, work through 2-3 small exercises, then use it inside an existing or new project so it's backed by real work rather than just a listed keyword.`
+  }
 }
 
 function titleFor(type: SuggestionType, requirement: string): string {

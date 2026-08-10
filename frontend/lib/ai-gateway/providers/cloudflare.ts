@@ -64,7 +64,14 @@ export async function callCloudflare(
     }
 
     const rawRes = json.result?.response ?? json.result?.choices?.[0]?.message?.content ?? ''
-    const content = typeof rawRes === 'string' ? rawRes : String(rawRes || '')
+    // Some Cloudflare Workers AI models return `response` as an already-
+    // parsed JSON object rather than a string (observed live on
+    // @cf/meta/llama-3.1-8b-instruct under JSON-mode requests). String(obj)
+    // on a plain object yields the literal text "[object Object]", which
+    // every downstream JSON.parse() call then rejects — silently turning a
+    // perfectly good structured response into a hard failure. Serialize
+    // objects back to JSON text instead of stringifying them.
+    const content = typeof rawRes === 'string' ? rawRes : JSON.stringify(rawRes ?? '')
 
     if (!content || content.trim().length === 0) {
       return {

@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle2, Circle, Download, Lock, RotateCcw, Sparkles, TrendingUp } from "lucide-react"
+import { CheckCircle2, Circle, Loader2, Lock, RotateCcw, Sparkles, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { tierPlan, completionProgress, targetResumeUnlocked, type Suggestion } from "@/lib/resume-optimizer/tiers"
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout"
+import { ResumeMiniPreview } from "./resume-preview"
 import type { OptimizationRun } from "./types"
 
 function scoreColor(score: number) {
@@ -64,24 +66,39 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
   const toggleSuggestion = async (suggestion: Suggestion) => {
     if (pendingId) return
     setPendingId(suggestion.id)
+
+    // Confirming the LAST unconfirmed item is the one PATCH call that also
+    // triggers Resume B generation server-side (2 sequential AI calls, up to
+    // ~80s worst case) — everything else is a plain, fast DB write. Without
+    // this the confirm button just looks frozen for up to a minute with zero
+    // feedback, which is exactly what was reported as "can't check item 5".
+    const willUnlock =
+      !suggestion.completed &&
+      plan.generatesTarget &&
+      !run.target_resume &&
+      run.suggestions.every((s) => s.id === suggestion.id || s.completed)
+    const toastId = willUnlock ? toast.loading("Confirmed — generating your aligned resume, this can take up to a minute...") : undefined
+
     try {
-      const res = await fetch(`/api/resume/optimization/${run.id}`, {
+      const res = await fetchWithTimeout(`/api/resume/optimization/${run.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ suggestionId: suggestion.id, completed: !suggestion.completed }),
-      })
+      }, willUnlock ? 290_000 : 20_000)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Could not update the checklist.")
 
       onRunUpdated(data.run)
 
       if (data.warning) {
-        toast.warning(data.warning)
+        toast.warning(data.warning, { id: toastId })
       } else if (data.run.target_resume && !run.target_resume) {
-        toast.success("Every item is confirmed — Resume B is ready to download.")
+        toast.success("Every item is confirmed — Resume B is ready to download.", { id: toastId })
+      } else if (toastId) {
+        toast.dismiss(toastId)
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Could not update the checklist.")
+      toast.error(err instanceof Error ? err.message : "Could not update the checklist.", { id: toastId })
     } finally {
       setPendingId(null)
     }
@@ -125,15 +142,17 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
                   </div>
                 </div>
                 {run.polished_resume && run.polished_score !== null ? (
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex flex-col gap-3 pt-1">
                     <div className="flex items-baseline gap-1.5">
                       <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className={cn("text-xl font-bold", scoreColor(run.polished_score))}>{run.polished_score}</span>
                       <span className="text-xs text-muted-foreground">scored</span>
                     </div>
-                    <a href={`/api/resume/optimization/${run.id}/download?variant=polished`}>
-                      <Button size="sm"><Download className="mr-1.5 h-3.5 w-3.5" />Download</Button>
-                    </a>
+                    <ResumeMiniPreview
+                      resume={run.polished_resume}
+                      label="Resume A — polished"
+                      downloadHref={`/api/resume/optimization/${run.id}/download?variant=polished`}
+                    />
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground pt-1">
@@ -161,15 +180,17 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
                     Locked until every checklist item is confirmed — it would otherwise claim work that isn&apos;t done yet.
                   </p>
                 ) : run.target_resume && run.target_score !== null ? (
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex flex-col gap-3 pt-1">
                     <div className="flex items-baseline gap-1.5">
                       <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className={cn("text-xl font-bold", scoreColor(run.target_score))}>{run.target_score}</span>
                       <span className="text-xs text-muted-foreground">projected</span>
                     </div>
-                    <a href={`/api/resume/optimization/${run.id}/download?variant=target`}>
-                      <Button size="sm"><Download className="mr-1.5 h-3.5 w-3.5" />Download</Button>
-                    </a>
+                    <ResumeMiniPreview
+                      resume={run.target_resume}
+                      label="Resume B — aligned to role"
+                      downloadHref={`/api/resume/optimization/${run.id}/download?variant=target`}
+                    />
                   </div>
                 ) : (
                   <div className="flex items-center justify-between gap-2 pt-1">
@@ -222,7 +243,9 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
                       s.completed ? "border-emerald-500/30 bg-emerald-500/5" : "border-border hover:bg-muted/50 hover:border-muted-foreground/20"
                     )}
                   >
-                    {s.completed ? (
+                    {pendingId === s.id ? (
+                      <Loader2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5 animate-spin" />
+                    ) : s.completed ? (
                       <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     ) : (
                       <Circle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -235,6 +258,15 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{s.detail}</p>
+                      {s.guidance && (
+                        <p className="text-xs text-foreground/80 mt-1.5 leading-relaxed">
+                          <span className="font-medium text-primary">How to close this: </span>
+                          {s.guidance}
+                        </p>
+                      )}
+                      {pendingId === s.id && (
+                        <p className="text-xs text-primary mt-1">Saving...</p>
+                      )}
                     </div>
                   </button>
                 ) : (
@@ -248,6 +280,12 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{s.detail}</p>
+                      {s.guidance && (
+                        <p className="text-xs text-foreground/80 mt-1.5 leading-relaxed">
+                          <span className="font-medium text-primary">How to close this: </span>
+                          {s.guidance}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )

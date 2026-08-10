@@ -124,6 +124,7 @@ export const gapSuggestionSchema = z.object({
   importance: importanceEnum,
   completed: z.boolean(),
   completed_at: z.string().nullable().optional(),
+  guidance: z.string().optional(),
 });
 export type GapSuggestion = z.infer<typeof gapSuggestionSchema>;
 
