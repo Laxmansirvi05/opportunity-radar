@@ -6,12 +6,32 @@ export function buildJDExtractionPrompt(
   companyName?: string,
   targetRole?: string
 ): { systemPrompt: string; userPrompt: string } {
-  const systemPrompt = `You are an expert ATS Job Description Analyzer.
-Your task is to parse raw job descriptions into structured requirements adhering strictly to JSON output format.
-Category types: hard_requirement, technical_capability, responsibility, experience_level, education, certification, domain_knowledge, tooling_environment, soft_skill, location_auth, preferred_qualification, other.
-Importance levels: critical, high, medium, low.
-Provide a unique slug id for each requirement (e.g. req_react, req_exp_3_years).
-Provide exactQuote from the JD for provenance.
+  const systemPrompt = `You are an expert ATS Job Description Analyzer. Your task is to parse a raw job posting into a
+structured list of requirements a candidate could be scored against. Output ONLY valid JSON. This is an extraction
+task, not an evaluation task — you are not scoring any candidate here, only reading the posting.
+
+RULES:
+1. The Job Description is the primary and only source of truth. Target Role and Company Name are context to help
+   disambiguate ambiguous wording — never invent a requirement because of what the company or role name implies.
+2. Extract EVERY distinct requirement you can find: technical skills/tools, years of experience, education,
+   certifications, domain knowledge, soft skills, location/work-authorization constraints, and responsibilities that
+   imply a capability. A typical real JD yields 8-20 requirements; extracting only 1-2 from a substantial posting is
+   almost always a sign you stopped too early — keep reading the whole text.
+3. Category types: hard_requirement, technical_capability, responsibility, experience_level, education, certification,
+   domain_knowledge, tooling_environment, soft_skill, location_auth, preferred_qualification, other.
+   - Use "preferred_qualification" for anything phrased as "nice to have", "preferred", "bonus", or "a plus" — do NOT
+     mark these as hard_requirement or give them "critical" importance.
+   - Use "hard_requirement" only for genuinely disqualifying constraints (e.g. "must be authorized to work in the US",
+     "must be graduating in 2027", explicit required degree/clearance) — not for ordinary technical skills.
+4. Importance levels: critical (explicitly required / a hard filter), high (clearly required for the role), medium
+   (expected but not a dealbreaker), low (mentioned in passing or clearly preferred-only).
+5. Do NOT extract benefits, perks, EEO/diversity boilerplate, salary, company marketing copy, or generic culture
+   statements as requirements — these are not things a resume can be scored against.
+6. Provide a unique slug id for each requirement (e.g. req_react, req_exp_3_years) and an exactQuote in provenance
+   copied verbatim from the JD text — never paraphrase the quote, never invent a quote that isn't literally present.
+7. If the provided text genuinely contains no extractable requirements (e.g. it is not a job description at all),
+   return an empty requirements array rather than inventing placeholder requirements.
+
 OUTPUT MUST STRICTLY MATCH THIS SCHEMA:
 {
   "requirements": [
@@ -20,8 +40,8 @@ OUTPUT MUST STRICTLY MATCH THIS SCHEMA:
       "name": "Requirement Name (e.g. React.js)",
       "category": "technical_capability",
       "importance": "high",
-      "description": "Brief description",
-      "provenance": { "exactQuote": "extracted quote from JD" }
+      "description": "Brief description of what this requirement means in context",
+      "provenance": { "exactQuote": "extracted quote from JD, verbatim" }
     }
   ]
 }`
@@ -32,7 +52,8 @@ ${jobDescription}
 Target Role: ${targetRole || 'Not specified'}
 Company: ${companyName || 'Not specified'}
 
-Extract structured requirements as a JSON object with a "requirements" array.`
+Extract every distinct requirement as a JSON object with a "requirements" array. Read the entire job description —
+do not stop after the first few lines.`
 
   return { systemPrompt, userPrompt }
 }
@@ -114,7 +135,22 @@ EVALUATION RULES:
       with more moving parts (multiple views, real data, some interaction complexity) would be stronger."
     - Genuinely nothing found: say that clearly, e.g. "Nothing on this resume demonstrates Kubernetes — no
       project, course, or experience mentions it."
-    Never leave gapReason empty or generic when satisfaction is not "complete".`
+    Never leave gapReason empty or generic when satisfaction is not "complete".
+
+14. VARY YOUR PHRASING — DO NOT TEMPLATE. The two example evaluations below (rows "req_react_example" and
+    "req_kubernetes_example" in the schema) show the REASONING PATTERN to follow, not a sentence template to
+    reuse. A common failure mode is copying an example's exact sentence structure and swapping in a new skill
+    name for every row — e.g. writing "You've listed X as a skill, but nothing on your resume shows you've
+    actually built something real with it" identically for HTML, then CSS, then JavaScript, then Bootstrap. That
+    is templating, and it reads as fake to the candidate even when the underlying judgment is correct. Instead:
+    - Write each gapReason and semanticReasoning as if evaluating that ONE requirement in isolation, referencing
+      what THIS resume specifically shows or lacks for THIS requirement — cite the resume's own project names,
+      role titles, or bullet phrasing where relevant, not generic placeholders.
+    - Vary sentence structure and opening words across rows. If evaluating five requirements the resume is weak
+      on, they should not all start with the same clause shape.
+    - If two different requirements genuinely share the same root cause (e.g. no projects at all exist on this
+      resume), you may say so plainly for each, but phrase it differently and reference the specific requirement
+      by name each time — do not produce five near-identical sentences differing only by one substituted word.`
 
   const userPrompt = `CANDIDATE RESUME JSON:
 ${JSON.stringify(resume, null, 2)}
@@ -126,8 +162,8 @@ STRUCTURED JOB DESCRIPTION REQUIREMENTS:
 ${JSON.stringify(structuredJd, null, 2)}
 
 Evaluate each requirement and return a JSON object with an "evaluations" array.
-OUTPUT MUST STRICTLY MATCH THIS SCHEMA (two examples — a fully-satisfied requirement, and a partially-satisfied
-one showing the required gapReason):
+OUTPUT MUST STRICTLY MATCH THIS SCHEMA (three examples showing the REASONING PATTERN, not a sentence template —
+see rule 14: do not copy any of this phrasing verbatim for a different skill):
 {
   "evaluations": [
     {
@@ -148,7 +184,7 @@ one showing the required gapReason):
       ]
     },
     {
-      "capabilityId": "another_slug_id",
+      "capabilityId": "req_react_example",
       "satisfaction": "partial",
       "evidenceStrength": "weak",
       "semanticReasoning": "CSS is listed as a skill and covered by a certification, but nothing on the resume shows it applied in a real project.",
@@ -163,6 +199,14 @@ one showing the required gapReason):
           "confidence": 0.7
         }
       ]
+    },
+    {
+      "capabilityId": "req_kubernetes_example",
+      "satisfaction": "none",
+      "evidenceStrength": "none",
+      "semanticReasoning": "No mention of Kubernetes, container orchestration, or any related tooling appears anywhere in the resume's skills, projects, or experience sections.",
+      "gapReason": "This role expects Kubernetes experience and there's nothing here to point to — not even adjacent exposure like Docker. If you've used it at all, even briefly in a course or side project, add it; otherwise a small project deploying a containerized app would be a reasonable way to start closing this.",
+      "evidenceReferences": []
     }
   ]
 }`

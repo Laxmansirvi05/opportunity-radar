@@ -2,15 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { callAI } from '@/lib/ai-gateway'
-import { buildJDExtractionPrompt, buildAtsCoachingPrompt } from '@/features/resume-toolkit/services/ai/ats-prompts'
-import { atsCheckResponseSchema, atsCoachingSchema, jdExtractionSchema } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
+import { buildAtsCoachingPrompt } from '@/features/resume-toolkit/services/ai/ats-prompts'
+import { atsCheckResponseSchema, atsCoachingSchema } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
+import type { AnalysisError, AtsV2Score } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
+import type { EvidenceMatrix, StructuredJD } from '@/features/resume-toolkit/lib/schema/resume/ats-v2'
 import { calculateAtsReadiness } from '@/lib/ats-checker/readiness'
-import { calculateJobMatch } from '@/lib/ats-checker/job-match'
 import { extractJDIntelligence, evaluateResumeEvidence } from '@/features/resume-toolkit/services/ai/ats-v2-intelligence'
 import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
+import { deriveSuggestions } from '@/lib/ats-checker/gap-suggestions'
+import { computeAcademicRecommendation } from '@/lib/ats-checker/academic-recommendation'
+import { convertResumeDataToParsedResume, looksLikeParsedResume } from '@/lib/resume-optimizer/convert-resume-data'
 import { jsonrepair } from 'jsonrepair'
 import type { ParsedResume } from '@/types/resume'
-import type { AtsCoaching } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
+
+// Targeted mode makes up to 3 sequential AI-gateway calls (JD extraction,
+// evidence evaluation, coaching narration), each with its own multi-provider
+// fallback chain — the same shape of workload that previously needed an
+// explicit maxDuration on /api/resume/optimization after that route was
+// found being killed by Vercel's default timeout mid-pipeline, silently
+// failing every run. This route had no override at all.
+export const maxDuration = 180;
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,15 +56,22 @@ export async function POST(req: NextRequest) {
       jobUrl?: string
     }
 
-    if (!jobDescription || jobDescription.trim().length < 100) {
+    // A job description is now optional: providing one runs a targeted match
+    // against it; omitting one runs a resume-only readiness check instead.
+    // These are two distinct, clearly-labeled modes (see `mode` in the
+    // response) rather than one mode silently degrading into the other.
+    const trimmedJd = (jobDescription ?? '').trim()
+    const hasJd = trimmedJd.length > 0
+
+    if (hasJd && trimmedJd.length < 100) {
       return NextResponse.json({ error: 'Please paste the full job description so we can calculate an accurate targeted match.' }, { status: 400 })
     }
 
-    if (!targetRole || targetRole.trim().length === 0) {
+    if (hasJd && (!targetRole || targetRole.trim().length === 0)) {
       return NextResponse.json({ error: 'Target role is required.' }, { status: 400 })
     }
 
-    if (!companyName || companyName.trim().length === 0) {
+    if (hasJd && (!companyName || companyName.trim().length === 0)) {
       return NextResponse.json({ error: 'Company name is required.' }, { status: 400 })
     }
 
@@ -114,9 +132,25 @@ export async function POST(req: NextRequest) {
       if (dbError || !resume || !resume.parsed_data) {
         return NextResponse.json({ error: 'Saved Resume not found or unparsed.' }, { status: 404 })
       }
-      parsedResumeData = resume.parsed_data as any
+      // resumes.parsed_data is stored in the Resume Builder's shape (basics /
+      // sections.*.items[]), not the flat ParsedResume shape every scoring
+      // engine below reads. Casting it directly used to hand the AI an
+      // object with name/skills/experience all undefined — every
+      // requirement then read as unmet regardless of what the student
+      // actually wrote. Same conversion the Optimiser uses, so both
+      // features read a saved resume identically.
+      const rawSaved = resume.parsed_data as Record<string, unknown>
+      parsedResumeData = looksLikeParsedResume(rawSaved)
+        ? (rawSaved as unknown as ParsedResume)
+        : convertResumeDataToParsedResume(rawSaved)
     } else if (resumeData) {
-      parsedResumeData = resumeData
+      // The upload path now sources this from /api/resume/optimization/extract,
+      // which already returns the flat ParsedResume shape — but guard the
+      // conversion anyway in case a client sends the older Builder shape.
+      const rawUploaded = resumeData as unknown as Record<string, unknown>
+      parsedResumeData = looksLikeParsedResume(rawUploaded)
+        ? resumeData
+        : convertResumeDataToParsedResume(rawUploaded)
     } else {
       return NextResponse.json({ error: 'Must provide either resumeId or resumeData.' }, { status: 400 })
     }
@@ -128,275 +162,129 @@ export async function POST(req: NextRequest) {
     const { normalizeToAtsResume } = await import('@/lib/ats-checker/normalization')
     const normalizedResume = normalizeToAtsResume(parsedResumeData)
 
-    // Helper to normalize legacy JD extraction safely
-    const normalizeLegacyJd = (parsed: any) => {
-      if (!parsed || typeof parsed !== 'object') throw new Error('Invalid JSON')
-      const hardReqs = Array.isArray(parsed.hardRequirements)
-        ? parsed.hardRequirements.map((h: any) => ({
-            rule: typeof h === 'string' ? h : h?.rule || String(h),
-            type: h?.type === 'Eligibility' ? 'Eligibility' : 'Required',
-          }))
-        : []
-      let edu = String(parsed.educationRequirements || 'none').toLowerCase()
-      if (edu.includes('bachelor')) edu = 'bachelors'
-      else if (edu.includes('master')) edu = 'masters'
-      else if (edu.includes('doctor') || edu.includes('phd')) edu = 'doctorate'
-      else if (edu.includes('diploma')) edu = 'diploma'
-      else if (!['doctorate', 'masters', 'bachelors', 'diploma', 'other', 'none'].includes(edu)) {
-        edu = 'other'
-      }
-      return jdExtractionSchema.parse({
-        targetRole: String(parsed.targetRole || targetRole || 'Target Role'),
-        company: parsed.company ? String(parsed.company) : companyName,
-        roleFamily: String(parsed.roleFamily || 'General'),
-        requiredSkills: Array.isArray(parsed.requiredSkills) ? parsed.requiredSkills.map(String) : [],
-        preferredSkills: Array.isArray(parsed.preferredSkills) ? parsed.preferredSkills.map(String) : [],
-        keywords: Array.isArray(parsed.keywords) ? parsed.keywords.map(String) : [],
-        responsibilities: Array.isArray(parsed.responsibilities) ? parsed.responsibilities.map(String) : [],
-        minimumExperienceMonths: typeof parsed.minimumExperienceMonths === 'number' ? parsed.minimumExperienceMonths : null,
-        educationRequirements: edu as any,
-        hardRequirements: hardReqs,
-      })
-    }
+    // Deterministic, JD-independent — always computed regardless of mode.
+    const readiness = calculateAtsReadiness(normalizedResume as any)
+    const academicRecommendation = computeAcademicRecommendation(parsedResumeData.education)
 
-    const normalizeAtsCoaching = (parsed: any): AtsCoaching => {
-      if (!parsed || typeof parsed !== 'object') {
-        return {
-          suggestions: [],
-          suggestedProjects: [],
-          powerWords: [],
-          missingKeywordExplanations: [],
+    if (!hasJd) {
+      const finalResponse = atsCheckResponseSchema.parse({
+        mode: 'resume_only',
+        readiness,
+        suggestions: [],
+        academicRecommendation,
+        analysisError: null,
+        aiFailed: false,
+      })
+
+      if (resumeId && resumeId !== 'sample-frontend-dev') {
+        const { error: insertError } = await supabase.from('resume_ats_reports').insert({
+          resume_id: resumeId,
+          target_job_description: null,
+          score: readiness.score,
+          report_data: finalResponse as any,
+        })
+        if (insertError) {
+          console.error('[ATS] Failed to store resume-only report', insertError)
         }
       }
 
-      const suggestionsArr = parsed.suggestions || parsed.recommendations || parsed.advice || []
-      const suggestions = Array.isArray(suggestionsArr)
-        ? suggestionsArr
-            .map((s: any) => ({
-              title: String(s.title || s.name || s.suggestion || 'Recommendation'),
-              description: String(s.description || s.details || s.reason || 'Actionable recommendation for improving ATS compatibility.'),
-              impact: ['high', 'medium', 'low'].includes(String(s.impact).toLowerCase()) ? (String(s.impact).toLowerCase() as any) : 'medium',
-            }))
-            .slice(0, 10)
-        : []
-
-      const projectsArr = parsed.suggestedProjects || parsed.projects || parsed.projectIdeas || []
-      const suggestedProjects = Array.isArray(projectsArr)
-        ? projectsArr
-            .map((p: any) => ({
-              title: String(p.title || p.name || 'Suggested Project'),
-              description: String(p.description || p.details || 'Project idea to demonstrate key JD skills.'),
-            }))
-            .slice(0, 5)
-        : []
-
-      const wordsArr = parsed.powerWords || parsed.actionVerbs || parsed.keywords || []
-      const powerWords = Array.isArray(wordsArr) ? wordsArr.map(String).slice(0, 20) : []
-
-      const missingArr = parsed.missingKeywordExplanations || parsed.missingKeywords || []
-      const missingKeywordExplanations = Array.isArray(missingArr)
-        ? missingArr
-            .map((m: any) => ({
-              keyword: String(m.keyword || m.name || m.skill || ''),
-              reason: String(m.reason || m.explanation || 'Recommended skill for role alignment.'),
-            }))
-            .filter((m) => m.keyword.length > 0)
-        : []
-
-      return atsCoachingSchema.parse({
-        suggestions,
-        suggestedProjects,
-        powerWords,
-        missingKeywordExplanations,
-      })
+      return NextResponse.json(finalResponse)
     }
 
-    // 1. DETERMINISTIC ATS READINESS (Used internally for Structure points & coaching)
-    const readiness = calculateAtsReadiness(normalizedResume as any)
+    // ── Targeted mode: the single V2 engine — AI extracts structure and
+    // evidence, calculateAtsV2Score computes the final number. On failure,
+    // record exactly which stage failed and why, rather than one generic
+    // message regardless of cause.
+    let atsV2Data: { score: AtsV2Score; evidenceMatrix: EvidenceMatrix; structuredJd: StructuredJD } | undefined
+    let analysisError: AnalysisError | null = null
 
-    let jobMatchResult = undefined
-    let coachingResult = undefined
-    let aiFailed = false
-    let jdExtraction = undefined
-    let atsV2Data = undefined
-
-    // 2. ATS V2 INTELLIGENCE PIPELINE (PRIMARY)
     try {
-      const v2JdRes = await extractJDIntelligence(jobDescription, companyName, targetRole, userId)
-      if (v2JdRes.success && v2JdRes.data) {
-        const v2EvalRes = await evaluateResumeEvidence(parsedResumeData, v2JdRes.data, userId)
-        if (v2EvalRes.success && v2EvalRes.data) {
-          const v2Score = calculateAtsV2Score(v2JdRes.data, v2EvalRes.data, parsedResumeData)
-          atsV2Data = {
-            score: v2Score,
-            evidenceMatrix: v2EvalRes.data,
-            structuredJd: v2JdRes.data,
+      const jdRes = await extractJDIntelligence(trimmedJd, companyName, targetRole, userId)
+      if (!jdRes.success || !jdRes.data) {
+        analysisError = {
+          stage: 'jd_extraction',
+          message: jdRes.error || 'Could not extract structured requirements from the job description.',
+        }
+      } else {
+        const evalRes = await evaluateResumeEvidence(parsedResumeData, jdRes.data, userId)
+        if (!evalRes.success || !evalRes.data) {
+          analysisError = {
+            stage: 'evidence_evaluation',
+            message: evalRes.error || 'Could not evaluate the resume against the extracted requirements.',
           }
+        } else {
+          const score = calculateAtsV2Score(jdRes.data, evalRes.data, parsedResumeData)
+          atsV2Data = { score, evidenceMatrix: evalRes.data, structuredJd: jdRes.data }
         }
       }
     } catch (e) {
-      console.error('[ATS] ATS V2 intelligence pipeline error:', e)
+      console.error('[ATS] V2 pipeline exception:', e)
+      analysisError = {
+        stage: 'unexpected',
+        message: e instanceof Error ? e.message : 'An unexpected error occurred during analysis.',
+      }
     }
 
-    if (!atsV2Data) {
-      aiFailed = true
-    } else {
-      // 3. TARGETED JOB MATCH (LEGACY V3 ENGINE & COACHING)
-      const { systemPrompt: jdSys, userPrompt: jdUser } = buildJDExtractionPrompt(jobDescription, companyName, targetRole)
-      const jdValidator = (content: string) => {
+    let suggestions: ReturnType<typeof deriveSuggestions> = []
+    let coaching: { recruiterVerdict: string; powerWords: string[] } | undefined
+
+    if (atsV2Data) {
+      // Canonical gap checklist — the same deriver the Optimiser uses, so the
+      // two features never show two different sets of gaps for one analysis.
+      suggestions = deriveSuggestions(atsV2Data.structuredJd, atsV2Data.evidenceMatrix)
+
+      // Qualitative narration only, grounded in the already-final V2 result.
+      const { systemPrompt, userPrompt } = buildAtsCoachingPrompt(
+        parsedResumeData,
+        atsV2Data.structuredJd,
+        atsV2Data.evidenceMatrix,
+        atsV2Data.score
+      )
+      const coachValidator = (content: string) => {
         try {
           const repaired = jsonrepair(content)
-          const parsed = JSON.parse(repaired)
-          const normalized = normalizeLegacyJd(parsed)
-          const validSkills = normalized.requiredSkills.filter(s => s.trim().length > 0)
-          if (jobDescription && jobDescription.trim().length > 50 && validSkills.length === 0) {
-             return { valid: false as const, reason: "JD contains content but zero required skills were extracted. Schema failure." }
-          }
+          atsCoachingSchema.parse(JSON.parse(repaired))
           return { valid: true as const }
         } catch (e: any) {
           return { valid: false as const, reason: e.message }
         }
       }
 
-    const jdAiResult = await callAI(
-      { systemPrompt: jdSys, userPrompt: jdUser, maxTokens: 2000, temperature: 0.1, outputFormat: 'json' },
-      { feature: 'resume_ats_jd_extract', userId: userId, validator: jdValidator }
-    )
+      const coachAiResult = await callAI(
+        { systemPrompt, userPrompt, maxTokens: 800, temperature: 0.4, outputFormat: 'json' },
+        { feature: 'resume_ats_coaching', userId, validator: coachValidator }
+      )
 
-    if (jdAiResult.success) {
-      try {
-        const parsedJd = JSON.parse(jsonrepair(jdAiResult.content))
-        jdExtraction = normalizeLegacyJd(parsedJd)
-
-        // DETERMINISTIC Job Match (V3 Engine)
-        jobMatchResult = calculateJobMatch(normalizedResume as any, jdExtraction)
-
-        // AI Coaching Feedback
-        const { systemPrompt: coachSys, userPrompt: coachUser } = buildAtsCoachingPrompt(
-          normalizedResume as any,
-          readiness,
-          jobMatchResult,
-          jdExtraction
-        )
-
-        const coachValidator = (content: string) => {
-          try {
-            const repaired = jsonrepair(content)
-            const parsed = JSON.parse(repaired)
-            const normalized = normalizeAtsCoaching(parsed)
-            atsCoachingSchema.parse(normalized)
-            return { valid: true as const }
-          } catch (e: any) {
-            return { valid: false as const, reason: e.message }
-          }
-        }
-
-        const coachAiResult = await callAI(
-          { systemPrompt: coachSys, userPrompt: coachUser, maxTokens: 2000, temperature: 0.3, outputFormat: 'json' },
-          { feature: 'resume_ats_coaching', userId: userId, validator: coachValidator }
-        )
-
-        if (coachAiResult.success) {
-          const parsedCoach = JSON.parse(jsonrepair(coachAiResult.content))
-          coachingResult = normalizeAtsCoaching(parsedCoach)
-        } else {
-          // Deterministic coaching fallback derived from readiness deductions & missing skills
-          const deterministicSuggestions = (jobMatchResult?.missingRequiredSkills || []).map((skill: string) => ({
-            title: `Add ${skill} experience`,
-            description: `Demonstrate hands-on experience or projects involving ${skill} to satisfy job requirements.`,
-            impact: 'high' as const,
-          })).slice(0, 5)
-
-          coachingResult = {
-            recruiterVerdict: "The resume demonstrates some fundamental alignment with the role, but critical required skills are missing or lack strong evidence. Immediate improvement is needed in targeted experience areas.",
-            suggestions: deterministicSuggestions.length > 0 ? deterministicSuggestions : [
-              {
-                title: 'Quantify impact in experience bullets',
-                description: 'Include measurable outcomes, metrics, or performance improvements in project bullets.',
-                impact: 'medium' as const,
-              }
-            ],
-            suggestedProjects: [
-              {
-                title: 'Full-Stack Project',
-                description: 'Build and deploy a responsive web application highlighting core technologies.',
-              }
-            ],
-            powerWords: ['Developed', 'Engineered', 'Optimized', 'Integrated', 'Implemented'],
-            missingKeywordExplanations: (jobMatchResult?.missingRequiredSkills || []).map((skill: string) => ({
-              keyword: skill,
-              reason: 'Required by position description.',
-            })),
-          }
-        }
-      } catch (e) {
-        console.error('[ATS] Legacy V3 parsing or validation error:', e)
-      }
-    }
-
-    // Default coaching if not set yet
-    if (!coachingResult) {
-      coachingResult = {
-        recruiterVerdict: "Basic assessment completed. Please provide a more detailed resume or job description for a comprehensive recruiter evaluation.",
-        suggestions: [
-          {
-            title: 'Align resume content with job requirements',
-            description: 'Ensure skills and project descriptions explicitly reference requested technical competencies.',
-            impact: 'high',
-          }
-        ],
-        suggestedProjects: [],
-        powerWords: ['Developed', 'Built', 'Implemented', 'Designed'],
-        missingKeywordExplanations: []
-      }
-    }
-    }
-
-    // If ATS V2 failed, we set aiFailed to true.
-    if (!atsV2Data) {
-      aiFailed = true
-    }
-
-    // Deterministic CGPA Improvement Rule
-    if (coachingResult && parsedResumeData.education && parsedResumeData.education.length > 0) {
-      const isCurrentlyPursuing = (edu: any) => {
-        if (!edu.graduation_year) return true;
-        const currentYear = new Date().getFullYear();
-        return edu.graduation_year >= currentYear;
-      };
-      
-      for (const edu of parsedResumeData.education) {
-        const degree = (edu.degree || '').toLowerCase();
-        if (degree.includes('b.tech') || degree.includes('btech') || degree.includes('b.e.') || degree.includes('bachelor of engineering') || degree.includes('bachelor of technology')) {
-          if (isCurrentlyPursuing(edu) && edu.gpa !== undefined && edu.gpa !== null) {
-            const cgpa = edu.gpa;
-            if (cgpa < 7.5) {
-              coachingResult.suggestions.push({
-                title: 'Improve Academic Standing',
-                description: `Your current CGPA is ${cgpa}. Aim to improve it to at least 7.5, as some internship and graduate recruitment processes use academic cutoffs.`,
-                impact: 'high',
-              });
-              break;
-            }
-          }
+      if (coachAiResult.success) {
+        try {
+          coaching = atsCoachingSchema.parse(JSON.parse(jsonrepair(coachAiResult.content)))
+        } catch (e) {
+          console.error('[ATS] Coaching narration parse error:', e)
         }
       }
+      // If narration fails, `coaching` stays undefined and the UI simply
+      // omits the recruiter-verdict card — no fabricated fallback text
+      // standing in for something the AI didn't actually say.
     }
 
     const finalResponse = atsCheckResponseSchema.parse({
+      mode: 'targeted',
       readiness,
-      jobMatch: jobMatchResult,
-      coaching: coachingResult,
-      aiFailed,
       atsV2: atsV2Data,
+      coaching,
+      suggestions,
+      academicRecommendation,
+      analysisError,
+      aiFailed: Boolean(analysisError),
     })
 
-    // Store in DB only if this is a saved resume
-    if (resumeId) {
+    if (resumeId && resumeId !== 'sample-frontend-dev') {
       const { error: insertError } = await supabase.from('resume_ats_reports').insert({
         resume_id: resumeId,
-        target_job_description: jobDescription.slice(0, 5000),
-        score: jobMatchResult ? jobMatchResult.score : readiness.score,
+        target_job_description: jobDescription!.slice(0, 5000),
+        // Always the same score the response actually carries — never a
+        // second engine's number diverging from what's shown on screen.
+        score: atsV2Data ? atsV2Data.score.overallScore : readiness.score,
         report_data: finalResponse as any,
       })
 

@@ -34,11 +34,19 @@ const STORED_RESUME = {
   },
 }
 
+// Captures every `.insert(...)` call made against `resume_ats_reports` so
+// tests can assert on exactly what score got persisted, not just that the
+// request succeeded.
+export const insertCalls: unknown[] = []
+
 function supabaseStub() {
   const chain: Record<string, unknown> = {}
   Object.assign(chain, {
     select: () => chain,
-    insert: () => chain,
+    insert: vi.fn((payload: unknown) => {
+      insertCalls.push(payload)
+      return chain
+    }),
     update: () => chain,
     eq: () => chain,
     single: vi.fn().mockResolvedValue({ data: STORED_RESUME, error: null }),
@@ -165,10 +173,8 @@ describe('ATS V2 Regression Tests', () => {
       const req = createRequest(body);
       const res = await POST(req);
       const json = await res.json();
-      
-      const coaching = json.coaching;
-      const suggestions = coaching.suggestions.map((s: any) => s.title);
-      expect(suggestions).not.toContain('Improve Academic Standing');
+
+      expect(json.academicRecommendation).toBeNull();
     });
 
     it('TEST E: Currently pursuing B.Tech (7.49) (Show recommendation)', async () => {
@@ -188,10 +194,9 @@ describe('ATS V2 Regression Tests', () => {
       const req = createRequest(body);
       const res = await POST(req);
       const json = await res.json();
-      
-      const coaching = json.coaching;
-      const suggestions = coaching.suggestions.map((s: any) => s.title);
-      expect(suggestions).toContain('Improve Academic Standing');
+
+      expect(json.academicRecommendation?.visible).toBe(true);
+      expect(json.academicRecommendation?.observed).toBe('7.49');
     });
 
     it('TEST F: Currently pursuing B.Tech (7.5) (No recommendation)', async () => {
@@ -211,10 +216,8 @@ describe('ATS V2 Regression Tests', () => {
       const req = createRequest(body);
       const res = await POST(req);
       const json = await res.json();
-      
-      const coaching = json.coaching;
-      const suggestions = coaching.suggestions.map((s: any) => s.title);
-      expect(suggestions).not.toContain('Improve Academic Standing');
+
+      expect(json.academicRecommendation).toBeNull();
     });
   });
 
@@ -229,27 +232,109 @@ describe('ATS V2 Regression Tests', () => {
 
     it('TEST G: All V2 providers fail (Expect aiFailed state and no score)', async () => {
       mockExtractJDIntelligence.mockRejectedValue(new Error('AI Failed'));
-      
+
       const req = createRequest(validBody);
       const res = await POST(req);
       const json = await res.json();
-      
+
       expect(json.aiFailed).toBe(true);
       expect(json.atsV2).toBeUndefined();
+      // The real cause (an exception, not "no meaningful requirements")
+      // must be reported accurately, not a generic message regardless
+      // of what actually failed.
+      expect(json.analysisError.stage).toBe('unexpected');
+      expect(json.analysisError.message).toContain('AI Failed');
+      // The resume-only readiness score is still real and shown, never
+      // fabricated to stand in for the targeted match that failed.
+      expect(json.mode).toBe('targeted');
+      expect(json.readiness.score).toBeGreaterThanOrEqual(0);
     });
 
     it('TEST H: Meaningful JD + empty requirement strings (Expect extraction failure, no default score)', async () => {
       // In V2, the jdValidator fails on empty requirement strings and returns { valid: false }.
       // This causes the AI call to fail (or exhaust retries) and ultimately extractJDIntelligence returns success: false.
       mockExtractJDIntelligence.mockResolvedValue({ success: false, error: 'AI provider sequence failed: Validation Error' });
-      
+
       const req = createRequest(validBody);
       const res = await POST(req);
       const json = await res.json();
-      
+
       // We expect aiFailed to be true and no V2 score to be returned
       expect(json.aiFailed).toBe(true);
       expect(json.atsV2).toBeUndefined();
+      expect(json.analysisError.stage).toBe('jd_extraction');
+      expect(json.analysisError.message).toContain('Validation Error');
+    });
+  });
+
+  describe('Resume-only mode (no job description supplied)', () => {
+    it('runs a readiness-only analysis without touching the V2 pipeline at all', async () => {
+      const req = createRequest({
+        resumeId: '123',
+        jobDescription: '',
+      });
+      const res = await POST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.mode).toBe('resume_only');
+      expect(json.atsV2).toBeUndefined();
+      expect(json.analysisError).toBeNull();
+      expect(json.aiFailed).toBe(false);
+      expect(json.readiness.score).toBeGreaterThanOrEqual(0);
+      // No JD was supplied, so there is nothing to extract — the V2 pipeline
+      // must never be invoked for this mode.
+      expect(mockExtractJDIntelligence).not.toHaveBeenCalled();
+      expect(mockEvaluateResumeEvidence).not.toHaveBeenCalled();
+    });
+
+    it('omitting targetRole/companyName is valid when there is no job description', async () => {
+      const req = createRequest({ resumeId: '123', jobDescription: '   ' });
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('DB persistence uses the same score the response shows', () => {
+    it('stores atsV2 overallScore, never a different number, when targeted analysis succeeds', async () => {
+      const VALID_REQUIREMENT = {
+        id: 'req_1',
+        name: 'React',
+        category: 'technical_capability' as const,
+        importance: 'high' as const,
+        description: 'React experience required.',
+        provenance: { exactQuote: 'Experience with React', context: 'Requirements' },
+      }
+      const VALID_EVALUATION = {
+        capabilityId: 'req_1',
+        satisfaction: 'complete' as const,
+        evidenceStrength: 'strong' as const,
+        evidenceReferences: [],
+        confidence: 0.9,
+        semanticReasoning: 'Resume shows direct React project experience.',
+      }
+      mockExtractJDIntelligence.mockResolvedValue({ success: true, data: { requirements: [VALID_REQUIREMENT] } });
+      mockEvaluateResumeEvidence.mockResolvedValue({ success: true, data: { evaluations: [VALID_EVALUATION] } });
+
+      insertCalls.length = 0
+
+      const req = createRequest({
+        resumeId: '123',
+        targetRole: 'Frontend Developer',
+        companyName: 'Acme Corp',
+        jobDescription: 'A'.repeat(150),
+      });
+      const res = await POST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.atsV2).toBeDefined();
+      expect(insertCalls).toHaveLength(1);
+      // The score written to resume_ats_reports must be the exact same
+      // number the response carries — there is only one engine now, so
+      // there is nothing else it could legitimately be, and no way for the
+      // database and the screen to disagree.
+      expect((insertCalls[0] as { score: number }).score).toBe(json.atsV2.score.overallScore);
     });
   });
 });

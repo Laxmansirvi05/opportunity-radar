@@ -51,9 +51,13 @@ export function AtsCheckerDashboard() {
   }, [])
 
   const hasResumeInput = resumeSource === "saved" ? !!resumeId : !!uploadedFile
-  const isValidRole = targetRole.trim().length > 0
-  const isValidCompany = companyName.trim().length > 0
-  const isValidJD = jobDescription.trim().length >= 100
+  // A job description is optional: leaving it blank runs a resume-only
+  // readiness check instead of a targeted match. Role/company and the JD
+  // length floor only apply once a JD has actually been started.
+  const hasJd = jobDescription.trim().length > 0
+  const isValidRole = !hasJd || targetRole.trim().length > 0
+  const isValidCompany = !hasJd || companyName.trim().length > 0
+  const isValidJD = !hasJd || jobDescription.trim().length >= 100
   let isUrlValid = true
   if (jobUrl.trim().length > 0) {
     try {
@@ -80,22 +84,25 @@ export function AtsCheckerDashboard() {
 
       if (resumeSource === "upload" && uploadedFile) {
         toast.loading("Extracting resume data...", { id: "ats-progress" })
-        
+
         const formData = new FormData()
         formData.append("file", uploadedFile)
 
-        const parseRes = await fetch("/api/resume/parse", {
+        // The same dedicated flat-ParsedResume extractor the Optimiser uses
+        // (not /api/resume/parse, which targets the Resume Builder's much
+        // larger nested schema and was found unreliable for this purpose —
+        // see lib/resume-optimizer/extract-resume.ts).
+        const parseRes = await fetch("/api/resume/optimization/extract", {
           method: "POST",
           body: formData,
         })
-        
+
+        const parsed = await parseRes.json()
         if (!parseRes.ok) {
-          const err = await parseRes.json()
-          throw new Error(err.error || "Extraction failed")
+          throw new Error(parsed.error || "Extraction failed")
         }
-        
-        const parsedData = await parseRes.json()
-        payload.resumeData = parsedData
+
+        payload.resumeData = parsed.resume
       } else if (resumeSource === "saved" && resumeId) {
         payload.resumeId = resumeId
       }
@@ -137,9 +144,10 @@ export function AtsCheckerDashboard() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-12">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">Targeted ATS Match</h1>
+        <h1 className="text-3xl font-bold tracking-tight">ATS Analysis</h1>
         <p className="text-muted-foreground">
-          Opportunity Radar evaluates how well your resume matches a specific job role and company using a 100-point deterministic formula.
+          Paste a job description for a targeted match score against that role, or leave it blank for a general
+          resume readiness check — both use the same evidence-based scoring, never keyword matching.
         </p>
       </div>
 
@@ -147,7 +155,7 @@ export function AtsCheckerDashboard() {
         <Card className="bg-card">
           <CardHeader>
             <CardTitle>Analysis Setup</CardTitle>
-            <CardDescription>Select a resume and provide a job description for a targeted match score.</CardDescription>
+            <CardDescription>Select a resume. Add a job description for a targeted match, or skip it for a readiness check.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             
@@ -236,24 +244,40 @@ export function AtsCheckerDashboard() {
               </div>
             )}
 
+            <div className="space-y-2">
+              <Label>Job Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                rows={8}
+                value={jobDescription}
+                placeholder="Paste the complete job posting here for a targeted match — or leave blank for a general resume readiness check..."
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="resize-y"
+              />
+              {!isValidJD && jobDescription.length > 0 && (
+                <p className="text-xs text-destructive">Please paste the full job description so we can calculate an accurate targeted match.</p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Target Role *</Label>
-                <Input 
-                  placeholder="e.g. Frontend Developer" 
-                  value={targetRole} 
-                  onChange={e => setTargetRole(e.target.value)} 
+                <Label>Target Role {hasJd && <span className="text-destructive">*</span>}</Label>
+                <Input
+                  placeholder="e.g. Frontend Developer"
+                  value={targetRole}
+                  onChange={e => setTargetRole(e.target.value)}
+                  disabled={!hasJd}
                 />
                 {!isValidRole && targetRole.length > 0 && (
                   <p className="text-xs text-destructive">Target role is required.</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Company Name *</Label>
-                <Input 
-                  placeholder="e.g. Acme Corp" 
-                  value={companyName} 
-                  onChange={e => setCompanyName(e.target.value)} 
+                <Label>Company Name {hasJd && <span className="text-destructive">*</span>}</Label>
+                <Input
+                  placeholder="e.g. Acme Corp"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  disabled={!hasJd}
                 />
                 {!isValidCompany && companyName.length > 0 && (
                   <p className="text-xs text-destructive">Company name is required.</p>
@@ -263,27 +287,13 @@ export function AtsCheckerDashboard() {
 
             <div className="space-y-2">
               <Label>Job URL (Optional)</Label>
-              <Input 
-                placeholder="https://example.com/jobs/123" 
-                value={jobUrl} 
-                onChange={e => setJobUrl(e.target.value)} 
+              <Input
+                placeholder="https://example.com/jobs/123"
+                value={jobUrl}
+                onChange={e => setJobUrl(e.target.value)}
               />
               {!isUrlValid && (
                 <p className="text-xs text-destructive">Please enter a valid URL.</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Job Description *</Label>
-              <Textarea
-                rows={8}
-                value={jobDescription}
-                placeholder="Paste the complete job posting here..."
-                onChange={(e) => setJobDescription(e.target.value)}
-                className="resize-y"
-              />
-              {!isValidJD && jobDescription.length > 0 && (
-                <p className="text-xs text-destructive">Please paste the full job description so we can calculate an accurate targeted match.</p>
               )}
             </div>
 
@@ -296,7 +306,7 @@ export function AtsCheckerDashboard() {
               ) : (
                 <>
                   <Search className="mr-2 h-4 w-4" />
-                  Analyze Targeted Match
+                  {hasJd ? "Analyze Targeted Match" : "Check Resume Readiness"}
                 </>
               )}
             </Button>

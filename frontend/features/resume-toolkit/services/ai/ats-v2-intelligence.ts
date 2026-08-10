@@ -148,9 +148,27 @@ export async function extractJDIntelligence(
       const parsed = JSON.parse(repaired)
       const normalized = normalizeStructuredJd(parsed)
       const validReqs = normalized.requirements.filter(r => r.name && r.name.trim().length > 0)
-      if (jobDescription && jobDescription.trim().length > 50 && validReqs.length === 0) {
+      const jdLength = jobDescription ? jobDescription.trim().length : 0
+
+      if (jdLength > 50 && validReqs.length === 0) {
         return { valid: false as const, reason: "JD contains content but zero requirements were extracted. Schema failure." }
       }
+
+      // A zero-requirement check alone let a technically-non-empty but
+      // badly under-extracted response (e.g. 1 requirement pulled from a
+      // JD that plainly lists a dozen) pass validation and never retry
+      // across the provider chain — this was the actual cause of "no
+      // meaningful requirements" failures on JDs that clearly had plenty.
+      // A substantial JD realistically has several distinct requirements;
+      // scale the floor with length rather than hard-coding one JD's shape.
+      const minExpected = jdLength > 900 ? 5 : jdLength > 300 ? 3 : 1
+      if (validReqs.length < minExpected) {
+        return {
+          valid: false as const,
+          reason: `Under-extraction: only ${validReqs.length} requirement(s) found for a ${jdLength}-character job description (expected at least ${minExpected}). Schema failure.`,
+        }
+      }
+
       return { valid: true as const }
     } catch (e: any) {
       return { valid: false as const, reason: `Validation Error: ${e.message}` }

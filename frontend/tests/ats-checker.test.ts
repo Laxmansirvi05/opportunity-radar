@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { calculateAtsReadiness } from '@/lib/ats-checker/readiness'
-import { calculateJobMatch } from '@/lib/ats-checker/job-match'
 import { normalizeSkillArray } from '@/lib/ats-checker/normalization'
 import type { ParsedResume } from '@/types/resume'
-import type { JDExtraction } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 
 const baseResume: ParsedResume = {
   name: "Test User",
@@ -169,63 +167,5 @@ describe('ATS Gaming Resistance & Edge Cases', () => {
     }
     const result = calculateAtsReadiness(strongFresher)
     expect(result.score).toBeGreaterThanOrEqual(85) // Strong fresher should score well
-  })
-})
-
-describe('calculateJobMatch', () => {
-  const jd = {
-    targetRole: 'Frontend Developer',
-    roleFamily: 'Software Engineering',
-    requiredSkills: ['react', 'typescript', 'tailwind'],
-    preferredSkills: ['node', 'graphql'],
-    keywords: ['frontend', 'ui', 'components'],
-    responsibilities: ['Build UIs', 'Optimize performance'],
-    minimumExperienceMonths: 24,
-    educationRequirements: 'bachelors' as const,
-    hardRequirements: []
-  }
-
-  const strongResume = {
-    name: 'John',
-    skills: ['react', 'typescript', 'tailwind', 'node'],
-    experience: [{ company: 'Tech', role: 'Frontend Developer', start_date: '2020', bullets: ['Built React apps using TypeScript and Tailwind.', 'Optimized frontend performance.'] }],
-    projects: [],
-    education: [{ institution: 'State Univ', degree: 'BS Computer Science', degree_level: 'bachelors' as const }]
-  }
-
-  it('matches highly with aligned JD', () => {
-    const result = calculateJobMatch(strongResume as ParsedResume, jd as any)
-    expect(result.score).toBeGreaterThanOrEqual(80)
-    expect(result.categories.requiredSkills.score).toBe(30) // Max requiredSkills score is 30
-    expect(result.evidencedSkills).toContain('react')
-    expect(result.evidencedSkills).toContain('typescript')
-  })
-
-  it('deducts for missing skills', () => {
-    const weakJd = {
-      ...jd,
-      requiredSkills: ['python', 'django']
-    }
-    const result = calculateJobMatch(strongResume as ParsedResume, weakJd as any)
-    expect(result.categories.requiredSkills.score).toBe(0)
-    expect(result.missingRequiredSkills).toContain('python')
-    expect(result.missingRequiredSkills).toContain('django')
-  })
-
-  it('penalizes keyword stuffed resume for Job Match', () => {
-    const keywordStuffed = {
-      name: 'Spammer',
-      skills: ['react', 'typescript', 'tailwind', 'node', 'graphql', 'aws', 'docker', 'kubernetes'],
-      experience: [{
-        company: 'Spam Inc',
-        role: 'Dev',
-        start_date: '2023',
-        bullets: ['Did some coding.'] // none of the skills mentioned here
-      }],
-      projects: [],
-      education: []
-    }
-    const result = calculateJobMatch(keywordStuffed as ParsedResume, jd as any)
-    expect(result.score).toBeLessThan(60) // Should score very poorly on Job Match because skills are listed but not evidenced
   })
 })

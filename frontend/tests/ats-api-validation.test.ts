@@ -54,12 +54,12 @@ describe('ATS API Validation', () => {
     expect(json.error).toBe('Company name is required.')
   })
 
-  it('rejects missing job description', async () => {
+  it('treats a missing job description as resume-only mode, not a validation error', async () => {
     const req = createRequest({ ...validBody, jobDescription: '' })
     const res = await POST(req)
-    expect(res.status).toBe(400)
-    const json = await res.json()
-    expect(json.error).toMatch(/Please paste the full job description/)
+    // No JD means no targeted match was requested at all — this is a valid,
+    // deliberate mode, not something to reject.
+    expect(res.status).not.toBe(400)
   })
 
   it('rejects short job description (e.g., "frontend developer")', async () => {

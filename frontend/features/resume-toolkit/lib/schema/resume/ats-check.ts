@@ -2,58 +2,21 @@ import { z } from "zod";
 import { importanceEnum, structuredJDSchema, evidenceMatrixSchema } from "./ats-v2";
 
 // ---------------------------------------------------------------------------
-// Shared / UI Schemas
-// ---------------------------------------------------------------------------
-export const atsSuggestionSchema = z.object({
-  title: z.string().min(1).describe("Short title of the suggestion."),
-  description: z.string().min(1).describe("Detailed actionable description. Must be labeled as a recommendation, not a fact."),
-  impact: z.enum(["high", "medium", "low"]).describe("Expected impact level of this suggestion."),
-});
-export type AtsSuggestion = z.infer<typeof atsSuggestionSchema>;
-
-export const atsSuggestedProjectSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().min(1),
-});
-export type AtsSuggestedProject = z.infer<typeof atsSuggestedProjectSchema>;
-
-// ---------------------------------------------------------------------------
-// JD Extraction Schema (AI)
-// ---------------------------------------------------------------------------
-export const jdExtractionSchema = z.object({
-  targetRole: z.string(),
-  company: z.string().optional(),
-  roleFamily: z.string().describe("e.g. Frontend, Backend, Data Science, Design, Sales"),
-  requiredSkills: z.array(z.string()),
-  preferredSkills: z.array(z.string()),
-  keywords: z.array(z.string()),
-  responsibilities: z.array(z.string()),
-  minimumExperienceMonths: z.number().nullable(),
-  educationRequirements: z.enum(['doctorate', 'masters', 'bachelors', 'diploma', 'other', 'none']),
-  hardRequirements: z.array(z.object({
-    rule: z.string(),
-    type: z.enum(['Required', 'Eligibility'])
-  })).describe("Explicit disqualifying rules from JD e.g. 'Must be graduating in 2027', 'Needs clearance'"),
-});
-export type JDExtraction = z.infer<typeof jdExtractionSchema>;
-
-// ---------------------------------------------------------------------------
-// Qualitative Coaching Schema (AI)
+// Qualitative Coaching Schema (AI) — narration only, never a second score.
+// The score, matched/missing requirements and the checklist are already
+// final by the time this runs; this schema exists only for a human-voiced
+// verdict and generic power words, nothing that could compete with or
+// contradict the deterministic engine's output.
 // ---------------------------------------------------------------------------
 export const atsCoachingSchema = z.object({
-  recruiterVerdict: z.string().optional().describe("A concise 2-4 sentence HR/Recruiter assessment of the candidate's fit for the role."),
-  suggestions: z.array(atsSuggestionSchema).max(10),
-  suggestedProjects: z.array(atsSuggestedProjectSchema).max(5),
+  recruiterVerdict: z.string().min(1).describe("A concise 2-4 sentence HR/Recruiter assessment of the candidate's fit for the role, grounded in the already-computed evidence evaluation."),
   powerWords: z.array(z.string()).max(20),
-  missingKeywordExplanations: z.array(z.object({
-    keyword: z.string(),
-    reason: z.string()
-  }))
 });
 export type AtsCoaching = z.infer<typeof atsCoachingSchema>;
 
 // ---------------------------------------------------------------------------
-// ATS Readiness Result (Deterministic)
+// ATS Readiness Result (Deterministic, JD-independent — used for resume_only
+// mode, and as supplementary context alongside a targeted analysis).
 // ---------------------------------------------------------------------------
 export const atsCategoryScoreSchema = z.object({
   score: z.number(),
@@ -77,32 +40,9 @@ export const atsReadinessResultSchema = z.object({
 export type AtsReadinessResult = z.infer<typeof atsReadinessResultSchema>;
 
 // ---------------------------------------------------------------------------
-// Job Match Result (Deterministic V3)
-// ---------------------------------------------------------------------------
-export const jobMatchResultSchema = z.object({
-  score: z.number().int().min(0).max(100),
-  categories: z.object({
-    requiredSkills: atsCategoryScoreSchema, // 30
-    roleAlignment: atsCategoryScoreSchema, // 20
-    experienceRelevance: atsCategoryScoreSchema, // 15
-    projectEvidence: atsCategoryScoreSchema, // 15
-    keywordCoverage: atsCategoryScoreSchema, // 10
-    educationAlignment: atsCategoryScoreSchema, // 5
-    atsStructure: atsCategoryScoreSchema, // 5
-  }),
-  evidencedSkills: z.array(z.string()),
-  listedSkills: z.array(z.string()),
-  missingRequiredSkills: z.array(z.string()),
-  missingPreferredSkills: z.array(z.string()),
-  hardRequirements: z.array(z.object({
-    rule: z.string(),
-    status: z.enum(['Met', 'Not Met', 'Unknown'])
-  })),
-});
-export type JobMatchResult = z.infer<typeof jobMatchResultSchema>;
-
-// ---------------------------------------------------------------------------
-// V2 Scoring Schemas
+// V2 Scoring Schemas (Deterministic — the one and only scoring engine for
+// targeted mode; AI supplies structured extraction and evidence judgments,
+// this is what turns those into the actual 0-100 number.)
 // ---------------------------------------------------------------------------
 export const requirementScoreSchema = z.object({
   requirementId: z.string(),
@@ -162,12 +102,6 @@ export const atsV2ScoreSchema = z.object({
   hardRequirements: hardRequirementResultSchema,
   confidence: scoreConfidenceSchema,
   scoreCappedReason: z.string().optional(),
-  cgpaRecommendation: z.object({
-    visible: z.boolean(),
-    message: z.string(),
-    observed: z.string().optional(),
-    rule: z.string().optional()
-  }).optional()
 });
 
 export type RequirementScore = z.infer<typeof requirementScoreSchema>;
@@ -177,17 +111,63 @@ export type ScoreConfidence = z.infer<typeof scoreConfidenceSchema>;
 export type AtsV2Score = z.infer<typeof atsV2ScoreSchema>;
 
 // ---------------------------------------------------------------------------
-// Full Output for UI
+// Gap checklist (deterministic — see lib/ats-checker/gap-suggestions.ts).
+// Shared shape between the ATS Checker and the Optimiser so they never
+// present two different sets of gaps for the same analysis.
+// ---------------------------------------------------------------------------
+export const gapSuggestionSchema = z.object({
+  id: z.string(),
+  type: z.enum(['project', 'course', 'skill', 'certification', 'education']),
+  title: z.string(),
+  detail: z.string(),
+  requirement: z.string(),
+  importance: importanceEnum,
+  completed: z.boolean(),
+  completed_at: z.string().nullable().optional(),
+});
+export type GapSuggestion = z.infer<typeof gapSuggestionSchema>;
+
+// ---------------------------------------------------------------------------
+// Academic recommendation (deterministic, mode-agnostic — see
+// lib/ats-checker/academic-recommendation.ts).
+// ---------------------------------------------------------------------------
+export const academicRecommendationSchema = z.object({
+  visible: z.boolean(),
+  message: z.string(),
+  observed: z.string(),
+  rule: z.string(),
+});
+export type AcademicRecommendationResult = z.infer<typeof academicRecommendationSchema>;
+
+// ---------------------------------------------------------------------------
+// Analysis error — the REAL reason a targeted analysis could not be
+// completed, surfaced to the UI instead of one hardcoded generic message
+// regardless of which stage actually failed.
+// ---------------------------------------------------------------------------
+export const analysisErrorSchema = z.object({
+  stage: z.enum(['jd_extraction', 'evidence_evaluation', 'unexpected']),
+  message: z.string(),
+});
+export type AnalysisError = z.infer<typeof analysisErrorSchema>;
+
+// ---------------------------------------------------------------------------
+// Full Output for UI — ONE canonical result. `mode` says which kind of
+// analysis this is; everything the UI renders is read from this object,
+// never independently recomputed by a component or a second engine.
 // ---------------------------------------------------------------------------
 export const atsCheckResponseSchema = z.object({
+  mode: z.enum(['resume_only', 'targeted']),
   readiness: atsReadinessResultSchema,
-  jobMatch: jobMatchResultSchema.optional(), // Only present if JD is provided
-  coaching: atsCoachingSchema.optional(), // Qualitative feedback (always present unless AI fails)
-  aiFailed: z.boolean().default(false), // True if AI failed but deterministic ran
   atsV2: z.object({
     score: atsV2ScoreSchema,
     evidenceMatrix: evidenceMatrixSchema,
     structuredJd: structuredJDSchema,
-  }).optional(),
+  }).optional(), // present only when mode === 'targeted' and analysis succeeded
+  coaching: atsCoachingSchema.optional(),
+  suggestions: z.array(gapSuggestionSchema).default([]),
+  academicRecommendation: academicRecommendationSchema.nullable().default(null),
+  analysisError: analysisErrorSchema.nullable().default(null),
+  /** Derived from analysisError !== null; kept as its own field for simpler UI/test checks. */
+  aiFailed: z.boolean().default(false),
 });
 export type AtsCheckResponse = z.infer<typeof atsCheckResponseSchema>;

@@ -1,109 +1,61 @@
 import type { ParsedResume } from '@/types/resume'
-import type { JDExtraction, AtsReadinessResult, JobMatchResult } from '../../lib/schema/resume/ats-check'
+import type { AtsV2Score } from '../../lib/schema/resume/ats-check'
+import type { StructuredJD, EvidenceMatrix } from '../../lib/schema/resume/ats-v2'
 
-export function buildJDExtractionPrompt(jobDescription: string, companyContext?: string, targetRoleContext?: string) {
-  const systemPrompt = `You are an expert Job Description analyzer.
-Extract strict structured requirements from the provided job description and contextual information.
-Do NOT invent requirements. Do NOT evaluate any resume.
-Output ONLY valid JSON matching the schema below.
-
-SCHEMA:
-{
-  "targetRole": "string",
-  "company": "string or null",
-  "roleFamily": "string (e.g. Frontend, Backend, Data Science, Design, Sales, etc.)",
-  "requiredSkills": ["string"],
-  "preferredSkills": ["string"],
-  "keywords": ["string"],
-  "responsibilities": ["string"],
-  "minimumExperienceMonths": number | null,
-  "educationRequirements": "doctorate" | "masters" | "bachelors" | "diploma" | "other" | "none",
-  "hardRequirements": [
-    {
-      "rule": "string",
-      "type": "Required" | "Eligibility"
-    }
-  ]
-}
-
-Rules:
-- Job Description is the primary source of truth.
-- Target Role may help disambiguate the JD, but Company Name is context only. Never invent requirements because of the company name.
-- For minimumExperienceMonths, convert years to months (e.g. 2 years = 24). If not specified, return null.
-- "Nice to have", "preferred", "bonus" -> preferredSkills, NOT requiredSkills. Keep required and preferred skills separate.
-- Extract distinct technical skills, tools, and methodologies. Do not guess.
-- Extract softer skills or industry terms into keywords.
-- Do NOT extract benefits, EEO text, company marketing, salary, or generic HR language as keywords.
-- hardRequirements: Capture explicit disqualifying rules (e.g., 'Must be graduating in 2027', 'Needs clearance', 'Work authorization required').
-- educationRequirements must exactly match one of the enum values.`
-
-  const userPrompt = `Target Role Context: ${targetRoleContext || 'None'}
-Company Context: ${companyContext || 'None'}
-
-JOB DESCRIPTION:
-${jobDescription}`
-
-  return { systemPrompt, userPrompt }
-}
-
+/**
+ * Purely qualitative narration on top of the deterministic V2 score — a
+ * recruiter's voice, not a second opinion. The score, the matched/missing
+ * requirements and the improvement checklist are already final by the time
+ * this runs (calculateAtsV2Score + deriveSuggestions); this call is not
+ * allowed to recompute or contradict any of it, only to narrate it.
+ */
 export function buildAtsCoachingPrompt(
   resume: ParsedResume,
-  readiness: AtsReadinessResult,
-  jobMatch?: JobMatchResult,
-  jd?: JDExtraction
+  structuredJd: StructuredJD,
+  evidenceMatrix: EvidenceMatrix,
+  score: AtsV2Score
 ) {
-  const systemPrompt = `You are an expert career coach helping a candidate improve their resume for a SPECIFIC role.
-You are provided with:
-1. The student's structured resume.
-2. The Targeted ATS Match Score and deductions.
-3. The extracted Job Requirements.
+  const systemPrompt = `You are an expert technical recruiter giving a candidate a short, honest verbal debrief after screening their
+resume against a specific role. You are given the FINAL, already-computed evidence evaluation and score — your job is
+only to narrate it in plain, human language, not to recompute or second-guess it.
 
-Your task is to provide QUALITATIVE COACHING based on the facts provided.
-DO NOT recalculate the score. The score is already final.
-DO NOT claim the candidate possesses skills, projects, or certifications they do not have.
-Clearly distinguish between FACTS (what is in their resume) and RECOMMENDATIONS (what they should add).
+DO NOT recalculate the score, satisfaction levels, or evidence strength — they are final.
+DO NOT claim the candidate possesses skills, projects, or certifications not present in the evaluation you were given.
+DO NOT restate the checklist of missing requirements — that is shown separately. Your job is the holistic verdict and
+some strong action verbs, nothing else.
 
 Output ONLY valid JSON matching the schema below.
 
 SCHEMA:
 {
-  "recruiterVerdict": "string (A concise 2-4 sentence HR/Recruiter assessment of the candidate's fit for the role. Be factual, objective, and grounded in the provided resume data)",
-  "suggestions": [
-    {
-      "title": "string",
-      "description": "string (MUST be actionable and labeled as a recommendation)",
-      "impact": "high" | "medium" | "low"
-    }
-  ],
-  "suggestedProjects": [
-    {
-      "title": "string",
-      "description": "string (Brief description of a project to fill skill gaps)"
-    }
-  ],
-  "powerWords": ["string", "string"],
-  "missingKeywordExplanations": [
-    {
-      "keyword": "string",
-      "reason": "string (Why this missing keyword matters for the role)"
-    }
-  ]
+  "recruiterVerdict": "string (2-4 sentences, first-person recruiter voice, e.g. what stands out, what's a real concern, and the honest bottom line — grounded ONLY in the evidence evaluation you were given, referencing specific things you were told the candidate did or didn't demonstrate)",
+  "powerWords": ["string", "string"]
 }
 
 Rules:
-- Max 10 suggestions, max 5 projects, max 20 power words.
-- Base your coaching on the "Deductions" and "Missing Skills" provided in the input context.
-- Focus heavily on bridging the missing required skills and hard requirements.
-- The recruiterVerdict MUST evaluate the candidate holistically based on factual evidence provided. DO NOT manufacture evidence.`
+- powerWords: 8-20 strong action verbs the candidate could use to sharpen their own bullet points; not required to relate to specific gaps, just generally strong resume verbs (e.g. "Engineered", "Reduced", "Shipped").
+- The recruiterVerdict must read like a person who actually reviewed this resume wrote it, not a template — reference the specific band/score context you were given (e.g. "This scores in the moderate range mainly because...").`
 
   const userContext = {
-    resume,
-    readinessDeductions: readiness.categories,
-    jobMatchDeductions: jobMatch?.categories,
-    missingRequiredSkills: jobMatch?.missingRequiredSkills,
-    missingPreferredSkills: jobMatch?.missingPreferredSkills,
-    hardRequirementsStatus: jobMatch?.hardRequirements,
-    jobRequirements: jd
+    overallScore: score.overallScore,
+    band: score.band,
+    capabilityScore: score.capabilityScore,
+    qualityScore: score.qualityScore,
+    roleTitle: structuredJd.roleTitle,
+    companyName: structuredJd.companyName,
+    requirementEvaluations: score.requirements.map((r) => {
+      const ev = evidenceMatrix.evaluations.find((e) => e.capabilityId === r.requirementId)
+      return {
+        requirement: r.requirementName,
+        importance: r.importance,
+        satisfaction: r.satisfaction,
+        evidenceStrength: r.evidenceStrength,
+        reasoning: r.semanticReasoning,
+        citedEvidence: ev?.evidenceReferences.slice(0, 2).map((e) => e.exactText) ?? [],
+      }
+    }),
+    hardRequirements: score.hardRequirements,
+    resumeSummary: resume.summary,
   }
 
   return { systemPrompt, userPrompt: JSON.stringify(userContext, null, 2) }
