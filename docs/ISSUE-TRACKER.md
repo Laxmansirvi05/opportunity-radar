@@ -150,6 +150,14 @@ Two design points, both learned from this incident rather than assumed:
 
 **Evidence:** 2 new tests in `tests/resume-optimizer-run.test.ts` (zero-suggestions auto-generates Resume B; pending suggestions do not). Suite: **296/296**. TypeScript unchanged at 36. Lint clean. Re-verified the UI fix visually via the same temporary-unprotected-route method, confirming a `polish_only` fixture run renders "Worth strengthening" with no Resume B section anywhere on the page — checked via `get_page_text`, not just a screenshot glance. Route deleted after.
 
+**Full production verification pass, 10 Aug 2026, before calling this done:**
+- **Schema:** every column the code reads/writes on `resume_optimizations` confirmed present in production with the expected type via `information_schema.columns` — no drift between code and deployed schema.
+- **RLS:** confirmed enabled (`relrowsecurity = true`) with all four policies (`SELECT`/`INSERT`/`UPDATE`/`DELETE`) present and each keyed on `auth.uid() = user_id`, read directly from `pg_policy`.
+- **Routes live:** hit all five endpoints in production unauthenticated — `POST`/`GET /api/resume/optimization`, `GET`/`PATCH /api/resume/optimization/[id]`, `GET .../download` all return **401**; `/resume/copilot` returns **307** to login. Proves the deployment actually shipped and the auth boundary holds, not just that the build compiled.
+- **Third bug found and fixed:** `resume_optimizations.original_resume_id` had `ON DELETE CASCADE` back to `resumes`, inherited from the original (pre-APP-02) migration. `deleteResume()` in `resume-actions.ts` performs a real hard `DELETE` on a saved resume — so a student picking "Saved Resume" to start a run, then later deleting that resume from `/resume`, would silently lose the **entire optimisation run**, including a completed, checklist-confirmed Resume B, even though `source_resume` is stored as its own JSONB snapshot specifically so the run doesn't depend on the original resume still existing (per that migration's own comment). Fixed with `supabase/migrations/20260810150000_fix_resume_optimizations_resume_fk.sql`: `ON DELETE SET NULL` instead. Applied directly to production and verified via `pg_constraint` (`confdeltype` changed from `c` to `n`). `user_id`'s own `ON DELETE CASCADE` was left alone — that one's correct, an account deletion should take its optimisation runs with it.
+- **Schema guard:** re-ran `verifySchema()` against production after the constraint change — **all 24 objects still `ok`**.
+- Full gate one more time: **296/296** tests, TypeScript unchanged at 36, production build clean.
+
 ---
 
 ### SEC-01 · AI rate limiting covered 4 of 17 features — **HIGH**
