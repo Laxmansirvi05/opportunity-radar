@@ -14,6 +14,7 @@ import { Search, UploadCloud, FileText, Loader2, ArrowLeft, History } from "luci
 import { cn } from "@/lib/utils"
 import { OptimizerResults } from "./optimizer-results"
 import type { OptimizationRun, RunSummary } from "./types"
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout"
 
 type ResumeSource = "saved" | "upload"
 
@@ -113,11 +114,15 @@ export function ResumeOptimizerDashboard() {
       }
 
       toast.loading("Scoring your resume against this role — this can take up to a minute...", { id: "optimizer-progress" })
-      const res = await fetch("/api/resume/optimization", {
+      // A generous but bounded timeout — a full run can legitimately chain
+      // up to ~6 sequential AI calls with provider fallback, just under the
+      // route's own 300s server-side ceiling, so the client surfaces a
+      // clear message instead of an indefinite spinner if something hangs.
+      const res = await fetchWithTimeout("/api/resume/optimization", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      }, 290_000)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Could not run the optimisation.")
 

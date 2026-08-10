@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Search, UploadCloud, FileText, Loader2 } from "lucide-react"
 import type { AtsCheckResponse } from "../../lib/schema/resume/ats-check"
 import { AtsResults } from "./ats-results"
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout"
 
 type ResumeSource = "saved" | "upload"
 
@@ -109,11 +110,16 @@ export function AtsCheckerDashboard() {
 
       toast.loading("Analyzing ATS Compatibility...", { id: "ats-progress" })
 
-      const checkRes = await fetch("/api/resume/ats-check", {
+      // A generous but bounded timeout — the route can legitimately take up
+      // to ~170s in the worst case (multiple AI provider fallbacks across
+      // several sequential calls), just under its own 180s server-side
+      // ceiling, so the client surfaces a clear message instead of an
+      // indefinite spinner if something really does hang.
+      const checkRes = await fetchWithTimeout("/api/resume/ats-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
+      }, 170_000)
 
       if (!checkRes.ok) {
         const err = await checkRes.json()
