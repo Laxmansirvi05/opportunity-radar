@@ -31,6 +31,11 @@ const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
   resume_ats:       { max: 10,  windowMs: 3_600_000 },
   resume_optimizer: { max: 20,  windowMs: 86_400_000 },
   skill_extraction: { max: 500, windowMs: 3_600_000 },
+  // Resume optimisation: each run makes at most one generation call per
+  // variant (plus a single guarded retry inside generate.ts itself), so a
+  // per-day cap here bounds provider spend without blocking normal iteration.
+  resume_polish:    { max: 10,  windowMs: 86_400_000 },
+  resume_target:    { max: 10,  windowMs: 86_400_000 },
 }
 
 interface ProviderConfig {

@@ -124,6 +124,26 @@ Two design points, both learned from this incident rather than assumed:
 
 ---
 
+### APP-02 · Resume Optimisation — generation wired, PDF export, full UI — **the handoff prompt's stated next task**
+**Found:** `lib/resume-optimizer/generate.ts` (Resume A/B generation, fabrication-guarded) existed with zero importers. No route, no PDF export, `/resume/copilot` was still the honest placeholder from APP-01.
+
+**Built:** 10 Aug 2026, in the order the handoff prompt specified.
+1. **`lib/resume-optimizer/run.ts`** — orchestrates a run: `extractJDIntelligence` → `evaluateResumeEvidence` → `calculateAtsV2Score` for the real baseline → `decideTier` → `deriveSuggestions` → `generatePolishedResume` where the tier calls for it, scored again with `calculateAtsV2Score` (never the model's own claim). A generated resume that cannot be scored is not shown — an unscored resume presented as scored would be exactly the fabrication this feature exists to avoid.
+2. **`POST /api/resume/optimization`** (start a run, persists to `resume_optimizations`) · **`GET /api/resume/optimization`** and **`GET /api/resume/optimization/[id]`** (list/fetch — this is what makes a run survive logout) · **`PATCH /api/resume/optimization/[id]`** (checklist toggle; triggers Resume B generation once `targetResumeUnlocked()` flips true; **un-checking a suggestion after Resume B exists clears `target_resume`/`target_score`**, since it would otherwise keep presenting un-confirmed work as done).
+3. **`lib/resume-optimizer/pdf.tsx`** — ATS-safe PDF via `@react-pdf/renderer`: single column, no colour, no tables, Helvetica (no font embedding needed). Deliberately not built on the vendored `packages/pdf` (Reactive Resume fork) to stay clear of the unresolved AGPL question in LEGAL-01.
+4. **`features/resume-toolkit/components/optimizer/`** replaces the `/resume/copilot` placeholder: intake form (saved resume or upload, JD/role/company), baseline score always shown, tier message, suggestion checklist with progress bar, Resume A/B cards with the download gate, and a past-runs list. Re-linked from `resume-list-client.tsx` (unlinked there since APP-01).
+5. Added `resume_polish` / `resume_target` to `RATE_LIMITS` (10/day each) — the handoff flagged these as declared `AIFeature`s with no limit, i.e. unlimited (SEC-01-adjacent). The other 13 unlimited features are still open under SEC-01.
+
+**Evidence:**
+- 11 new tests (9 orchestration in `tests/resume-optimizer-run.test.ts` — mocking the AI-facing calls to assert the tier/warning/fabrication-safe branches independent of what the real scoring engine returns for a fixture resume; 2 PDF in `tests/resume-optimizer-pdf.test.ts` — **round-trips the actual generated PDF bytes through `pdf-parse`** and asserts the candidate's name, company, bullet text and skills come back as real extractable text, not an image). Suite: **277/277**.
+- `npx tsc --noEmit`: **36 errors — unchanged baseline.** `npx eslint` clean on every touched file.
+- `npm run build`: passes; all five new routes (`/api/resume/optimization`, `/api/resume/optimization/[id]`, `/api/resume/optimization/[id]/download`, plus the rebuilt `/resume/copilot` page) compile and register correctly.
+- UI rendered and screenshotted via a temporary unprotected route (both the intake form and, with a fixture run, the results/checklist/lock view), then the route was deleted — same method APP-01 used, for the same reason: the five real accounts in `auth.users` are not mine to sign into.
+
+**Not verified — say so plainly:** no end-to-end run against a real logged-in session or the live AI gateway/provider chain — that needs a real account, which I did not create or sign into. No production deploy yet. The owner should run one real optimisation end-to-end (per the "dual verification" rule — UX is the owner's call) before this is called done.
+
+---
+
 ## ⬜ Open — Critical
 
 *(none)*
@@ -202,21 +222,21 @@ Fix: a default limit instead of `return true`.
 | Resume: builder | 80% | **85%** | Photo upload unblocked (DB-03) |
 | Resume: extract | 75% | 75% | |
 | Resume: ATS | 85% | **88%** | `resume_ats_reports` now exists |
-| Resume: optimisation | 35% | **45%** | Persistence unblocked; mockup replaced with an honest placeholder; generation not yet wired |
+| Resume: optimisation | 35% | **90%** | Generation wired, ATS-safe PDF export, full UI (APP-02). Code-complete and test/build-verified; not yet run end-to-end against a live session |
 | AI Search | 35% | **50%** | DB blocker cleared; agent still undeployed |
 | Certifications | 30% | **45%** | Table exists; no ingest pipeline yet |
 | AI Voice Interview | 2% | 2% | |
 | Auth | 90% | 90% | |
 | Profile / Settings / Notifications | 85% | **90%** | Nightly cron fixed (DB-02) |
-| **Overall** | **~58%** | **~63%** | |
+| **Overall** | **~58%** | **~66%** | |
 
 ---
 
 ## Next up
 
-1. **Finish resume optimisation** — now unblocked: wire `lib/resume-optimizer/generate.ts`, score both resumes through `calculateAtsV2Score`, add the ATS-safe PDF export. This is what replaces the placeholder page from APP-01
+1. **Owner UX pass on Resume Optimisation** — run one real optimisation end-to-end (real login, real JD, real AI gateway) and confirm the checklist gate, both downloads, and persistence-after-logout feel right. Per the "dual verification" rule this is the owner's call, not something further code review can substitute for.
 2. **DATA-01** — the 376 dead-end apply links
-3. **SEC-01** — rate-limit the other 13 AI features
+3. **SEC-01** — rate-limit the other 13 AI features (`resume_polish`/`resume_target` now have limits, from APP-02)
 4. **Deploy the AI Search agent** (see the handoff document)
 
 ---
@@ -229,6 +249,7 @@ Fix: a default limit instead of `return true`.
 | 10 Aug 2026 | DB-01 – DB-05 fixed and verified; database drift resolved |
 | 10 Aug 2026 | OPS-02 fixed — schema guard added; verified green against production (24/24 objects) |
 | 10 Aug 2026 | APP-01 fixed — copilot mockup unlinked and replaced with an honest placeholder; dead `workspace-tools-panel.tsx` deleted. **No critical issues remain open.** |
+| 10 Aug 2026 | APP-02 built — Resume Optimisation generation wired, ATS-safe PDF export, full UI replacing the APP-01 placeholder. 277/277 tests, TypeScript unchanged at 36, build passes, UI screenshot-verified via a temporary unprotected route (then deleted). Not yet run end-to-end against a real session; not yet deployed. |
 | 10 Aug 2026 | Committed `f28e6c4` and deployed to production from `restore-june19` (the production branch). Deployment `opportunity-radar-h5741titk` Ready. Post-deploy check: `/` and `/login` return 200; `/search`, `/tracker`, `/resume`, `/certifications`, `/ai-search` all 307 to `/login?next=…` with the destination preserved. |
 
 > The schema fixes applied directly to the Supabase database, so DB-01 – DB-05
