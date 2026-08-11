@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/search', icon: 'search', label: 'Search' },
   { href: '/tracker', icon: 'assignment_turned_in', label: 'Tracker' },
   { href: '/resume', icon: 'description', label: 'Resume' },
+  { href: '/interview', icon: 'record_voice_over', label: 'Mock Interview' },
   { href: '/certifications', icon: 'school', label: 'Certifications' },
   { href: '/dashboard', icon: 'dashboard', label: 'Command Center' },
   { href: '/assistant', icon: 'smart_toy', label: 'AI Assistant' },
