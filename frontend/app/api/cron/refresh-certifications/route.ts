@@ -13,9 +13,11 @@ import { upsertCertifications } from '@/lib/certifications/upsert'
  * see lib/certifications/ingest.ts for why courses are never expired on a
  * schedule.
  *
- * collectCertifications()'s defaults (12,000 Coursera courses, 250 each of
+ * collectCertifications()'s defaults (16,000 Coursera courses, 250 each of
  * Simplilearn/edX) are kept below each catalogue's true size to stay inside
- * Vercel's cron duration ceiling — a live run at these defaults took ~132s.
+ * Vercel's cron duration ceiling — a live run at 12,000 Coursera took ~132s;
+ * the Coursera leg is bulk paginated JSON (no per-course fetch), so raising
+ * the cap mainly adds more 100-row pages rather than materially more time.
  */
 export const maxDuration = 280
 

@@ -32,6 +32,10 @@
     {
       "path": "/api/cron/refresh-certifications",
       "schedule": "0 4 * * 0"
+    },
+    {
+      "path": "/api/cron/certification-link-sweep",
+      "schedule": "30 2 * * *"
     }
   ]
 }

@@ -194,3 +194,75 @@ export async function sweepLinkHealth(db: Db, options: SweepOptions = {}): Promi
   result.elapsedMs = now() - startedAt
   return result
 }
+
+// ── Certifications sweep ────────────────────────────────────────────────
+
+async function updateChunkedCertifications(
+  db: Db,
+  rows: { id: string; status: number; checkedAt: string }[],
+  chunkSize = CHUNK
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const slice = rows.slice(i, i + chunkSize)
+    await Promise.all(
+      slice.map((r) =>
+        db.from('certifications').update({ link_status: r.status, link_checked_at: r.checkedAt }).eq('id', r.id)
+      )
+    )
+  }
+}
+
+/**
+ * Same HTTP-verification logic as {@link sweepLinkHealth}, aimed at
+ * `certifications.url` instead of `opportunities.apply_url`. Deliberately
+ * has no expire/delete step — certifications are never removed on a
+ * schedule (see ingest.ts's header comment on why). A dead result is just
+ * recorded on the row via `link_status`; get-catalogue.ts filters
+ * unambiguously-dead, already-checked rows out of what students see, but
+ * the row itself is left in place for a human to review or for the next
+ * refresh to correct if the course comes back.
+ */
+export async function sweepCertificationLinks(db: Db, options: SweepOptions = {}): Promise<SweepResult> {
+  const limit = options.limit ?? 4200
+  const concurrency = options.concurrency ?? 25
+  const timeoutMs = options.timeoutMs ?? 10_000
+  const timeBudgetMs = options.timeBudgetMs ?? 270_000
+  const now = options.now ?? (() => Date.now())
+  const startedAt = now()
+
+  const { data, error } = await db
+    .from('certifications')
+    .select('id, url')
+    .order('link_checked_at', { ascending: true, nullsFirst: true })
+    .limit(limit)
+
+  if (error || !data) {
+    return { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: now() - startedAt }
+  }
+
+  const rows = data as { id: string; url: string }[]
+
+  const result: SweepResult = { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: 0 }
+  const toWrite: { id: string; status: number; checkedAt: string }[] = []
+
+  for (let i = 0; i < rows.length; i += concurrency) {
+    if (now() - startedAt > timeBudgetMs) break
+
+    const batch = rows.slice(i, i + concurrency)
+    const outcomes = await Promise.all(
+      batch.map(async (row) => ({ row, check: await checkUrl(row.url, timeoutMs) }))
+    )
+
+    const checkedAt = new Date().toISOString()
+    for (const { row, check } of outcomes) {
+      result.checked++
+      toWrite.push({ id: row.id, status: check.status, checkedAt })
+      if (classifyLinkStatus(check.status) === 'dead') result.dead++
+      else result.ok++
+    }
+  }
+
+  await updateChunkedCertifications(db, toWrite)
+  result.elapsedMs = now() - startedAt
+  return result
+}
