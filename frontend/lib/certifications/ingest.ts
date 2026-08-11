@@ -715,7 +715,7 @@ export async function fetchW3Schools(runAt: string): Promise<CertificationRecord
 
 /** Everything, deduplicated on canonical URL. */
 export async function collectCertifications(
-  maxCoursera = 16000,
+  maxCoursera = 20000,
   maxSimplilearn = 250,
   maxEdx = 250
 ): Promise<CertificationRecord[]> {

@@ -25,6 +25,13 @@ export interface Certification {
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced'] as const
 type Level = (typeof LEVELS)[number]
 
+const LEVEL_STYLES: Record<string, string> = {
+  Beginner: 'bg-secondary-container text-on-secondary-container',
+  Intermediate: 'bg-tertiary-container text-on-tertiary-container',
+  Advanced: 'bg-primary-container text-on-primary-container',
+}
+const TOPICS_PREVIEW_COUNT = 3
+
 /**
  * Certifications browser, mirroring the Search page's layout: a left
  * filters sidebar sits flush against the nav rail as a full-height flex
@@ -200,49 +207,74 @@ export function CertificationsClient({
               </div>
             ) : (
               <>
-                {items.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelected(c)}
-                    className="text-left bg-surface border border-outline-variant rounded-2xl px-[23px] py-[19px] shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-[19px] group"
-                  >
-                    <CompanyLogo
-                      src={c.provider_logo}
-                      name={c.provider}
-                      alt={`${c.provider} logo`}
-                      containerClassName="w-[58px] h-[58px] rounded-lg bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
-                      imageClassName="w-[38px] h-[38px] object-contain"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[24px] font-semibold text-on-background truncate group-hover:text-primary transition-colors leading-snug">
-                        {c.title}
-                      </h3>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-base text-on-surface-variant truncate">{c.provider}</p>
-                        {c.level && (
-                          <span className="text-[17px] text-on-surface-variant/80 shrink-0">· {c.level}</span>
-                        )}
-                        {c.duration && (
-                          <span className="text-[17px] text-on-surface-variant/80 shrink-0">· {c.duration}</span>
-                        )}
+                {items.map((c) => {
+                  const extraTopics = (c.topics?.length ?? 0) - TOPICS_PREVIEW_COUNT
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelected(c)}
+                      className="text-left bg-surface border border-outline-variant rounded-lg px-4 py-3 shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-3 group"
+                    >
+                      <CompanyLogo
+                        src={c.provider_logo}
+                        name={c.provider}
+                        alt={`${c.provider} logo`}
+                        containerClassName="w-10 h-10 rounded-md bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
+                        imageClassName="w-6 h-6 object-contain"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[15px] font-semibold text-on-background truncate group-hover:text-primary transition-colors leading-snug">
+                          {c.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <p className="text-xs text-on-surface-variant truncate">{c.provider}</p>
+                          {c.duration && (
+                            <span className="text-xs text-on-surface-variant/80 shrink-0">· {c.duration}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                          {c.level && (
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shrink-0 ${
+                                LEVEL_STYLES[c.level] ?? 'bg-surface-container text-on-surface-variant'
+                              }`}
+                            >
+                              {c.level}
+                            </span>
+                          )}
+                          {c.has_certificate && (
+                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-container text-on-surface-variant shrink-0">
+                              <span className="material-symbols-outlined text-[11px]">workspace_premium</span>
+                              Certificate
+                            </span>
+                          )}
+                          {c.topics?.slice(0, TOPICS_PREVIEW_COUNT).map((t) => (
+                            <span key={t} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-container text-on-surface-variant shrink-0">
+                              {t}
+                            </span>
+                          ))}
+                          {extraTopics > 0 && (
+                            <span className="text-[10px] text-on-surface-variant/70 shrink-0">+{extraTopics} more</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span
-                        className={`px-3 py-1.5 rounded text-[17px] font-bold ${
-                          c.is_free
-                            ? 'bg-secondary-container text-on-secondary-container'
-                            : 'bg-surface-container text-on-surface-variant'
-                        }`}
-                      >
-                        {c.is_free ? 'Free' : 'Paid'}
-                      </span>
-                      <span className="material-symbols-outlined text-[31px] text-outline group-hover:text-primary transition-colors">
-                        chevron_right
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`px-2 py-1 rounded text-[11px] font-bold ${
+                            c.is_free
+                              ? 'bg-secondary-container text-on-secondary-container'
+                              : 'bg-surface-container text-on-surface-variant'
+                          }`}
+                        >
+                          {c.is_free ? 'Free' : 'Paid'}
+                        </span>
+                        <span className="material-symbols-outlined text-xl text-outline group-hover:text-primary transition-colors">
+                          chevron_right
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
 
                 {(hasMore || loading) && (
                   <div ref={sentinelRef} className="flex items-center justify-center py-6 text-xs text-on-surface-variant">
@@ -479,7 +511,7 @@ function CertificationsFiltersSidebar({
         </FilterSection>
 
         <FilterSection title="Provider">
-          <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
+          <div className="flex flex-col gap-1.5">
             {topProviders.map(([p, count]) => (
               <label key={p} className="flex items-center gap-2 cursor-pointer group">
                 <input

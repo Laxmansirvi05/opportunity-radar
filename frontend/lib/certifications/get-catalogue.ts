@@ -102,7 +102,9 @@ async function fetchTopProviders(): Promise<[string, number][]> {
       counts.set(row.provider, (counts.get(row.provider) ?? 0) + 1)
     }
   }
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12)
+  // Shown in full in the sidebar with no inner scroll, so this is a real cap
+  // on how many checkboxes render, not just a "top N" preview.
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 24)
 }
 
 export const getTopCertificationProviders = unstable_cache(fetchTopProviders, ['certifications-top-providers-v1'], {
