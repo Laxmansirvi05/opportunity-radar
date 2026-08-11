@@ -3019,4 +3019,4 @@ INSERT INTO public.opportunities (title, company_name, description, apply_url, l
         NOW()
       )
 
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;

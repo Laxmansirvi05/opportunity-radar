@@ -1,7 +1,7 @@
 -- Create resumes bucket
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES 
 ('resumes', 'resumes', false, 5242880, '{application/pdf}')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- RLS Policies for resumes bucket
 CREATE POLICY "Users can view their own resumes" ON storage.objects FOR SELECT USING (bucket_id = 'resumes' AND auth.uid() = owner);
