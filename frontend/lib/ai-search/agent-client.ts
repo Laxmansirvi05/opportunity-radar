@@ -12,6 +12,19 @@
 
 export const AGENT_BASE_URL = process.env.AI_AGENT_URL ?? 'http://localhost:4300'
 
+/**
+ * job-server itself has no internal-auth concept — the shared secret is
+ * enforced at the reverse-proxy layer in front of it (see the agent repo's
+ * deploy/Caddyfile), which is what actually makes it safe to have
+ * AI_AGENT_URL be a public hostname instead of a private-network-only
+ * address. Unset locally (dev talks to job-server directly on localhost,
+ * no proxy in the way); required once deployed behind Caddy.
+ */
+function agentAuthHeaders(): HeadersInit {
+  const secret = process.env.AI_AGENT_INTERNAL_SECRET
+  return secret ? { 'X-Internal-Secret': secret } : {}
+}
+
 /** Poll cadence and ceiling, both taken from the agent's guide. */
 export const POLL_INTERVAL_MS = 15_000
 export const POLL_TIMEOUT_MS = 30 * 60_000
@@ -141,6 +154,7 @@ export async function submitResume(file: Blob, filename: string): Promise<string
     res = await fetch(`${AGENT_BASE_URL}/api/jobs`, {
       method: 'POST',
       body: form,
+      headers: agentAuthHeaders(),
       // Generous: this call only enqueues, but the service is single-threaded
       // and can be busy accepting.
       signal: AbortSignal.timeout(60_000),
@@ -169,6 +183,7 @@ export async function fetchJob(agentJobId: string): Promise<AgentJob> {
     res = await fetch(`${AGENT_BASE_URL}/api/jobs/${encodeURIComponent(agentJobId)}`, {
       signal: AbortSignal.timeout(30_000),
       cache: 'no-store',
+      headers: agentAuthHeaders(),
     })
   } catch (e) {
     throw new AgentError(
