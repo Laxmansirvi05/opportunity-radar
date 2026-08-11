@@ -11,12 +11,17 @@ const PAGE_SIZE = 48
 // filter is applied client-side to whatever page comes back — which can
 // strip a page down to very few (or zero) rows per server page if the
 // combination is narrow, since results aren't sorted by duration at all.
-// This bounds how many extra server round-trips one call will chase before
-// returning control to the UI, so a near-empty combination can't spin
-// forever inside a single call — but see the component's `hasMore` handling:
-// a call returning zero matches must NOT be treated as "no results" on its
-// own, only as "keep going," or a sparse-but-real bucket looks broken.
-const MAX_CONTINUATIONS = 20
+// MAX_PAGES bounds how many pages one call scans before returning control to
+// the UI, so a near-empty combination can't spin forever inside a single
+// call — but see the component's `hasMore` handling: a call returning zero
+// matches must NOT be treated as "no results" on its own, only as "keep
+// going," or a sparse-but-real bucket looks broken. Pages are fetched in
+// concurrent batches rather than one at a time — sequentially awaiting 20+
+// round trips (the previous approach) took several seconds per call, which
+// is indistinguishable from "broken" to someone watching a duration filter
+// that hasn't found a match yet.
+const MAX_PAGES = 40
+const BATCH_CONCURRENCY = 8
 const DEBOUNCE_MS = 200
 
 export interface CertificationFiltersState {
@@ -80,34 +85,48 @@ export function useCertificationResults(
         levels: [...filters.levels],
         providers: [...filters.providers],
       }
-      const attempts = filters.durations.size > 0 ? MAX_CONTINUATIONS : 1
+      const durationActive = filters.durations.size > 0
+      const maxPages = durationActive ? MAX_PAGES : 1
 
       let collected: Certification[] = []
       let cursor = offset
       let exhausted = false
       let total: number | null = null
+      let pagesScanned = 0
 
-      for (let i = 0; i < attempts; i++) {
-        const res = await fetchCertificationsPage(supabase, queryFilters, cursor, PAGE_SIZE)
+      while (pagesScanned < maxPages && !exhausted && collected.length < PAGE_SIZE) {
+        const batchSize = Math.min(BATCH_CONCURRENCY, maxPages - pagesScanned)
+        // Offsets are computed up front (not from the previous response's
+        // length), so every page in the batch can be requested at once —
+        // they're independent range queries against a stable, indexed sort
+        // order, not a dependent chain.
+        const offsets = Array.from({ length: batchSize }, (_, i) => cursor + i * PAGE_SIZE)
+        const results = await Promise.all(
+          offsets.map((o) => fetchCertificationsPage(supabase, queryFilters, o, PAGE_SIZE))
+        )
         if (requestIdRef.current !== requestId) return null // superseded by a newer filter/search change
 
-        if (total === null) total = res.count
-        cursor += res.data.length
+        // Processed in offset order (Promise.all preserves input order
+        // regardless of resolution timing), so cursor/exhaustion tracking
+        // stays correct even though the requests themselves ran concurrently.
+        for (const res of results) {
+          if (total === null) total = res.count
+          cursor += res.data.length
+          pagesScanned++
 
-        const kept =
-          filters.durations.size > 0
+          const kept = durationActive
             ? res.data.filter((c) => {
                 const bucket = durationBucket(c.duration)
                 return bucket != null && filters.durations.has(bucket)
               })
             : res.data
-        collected = collected.concat(kept)
+          collected = collected.concat(kept)
 
-        if (res.data.length < PAGE_SIZE) {
-          exhausted = true
-          break
+          if (res.data.length < PAGE_SIZE) {
+            exhausted = true
+            break // later offsets in this batch are past the end; their results are empty and safe to drop
+          }
         }
-        if (collected.length >= PAGE_SIZE) break
       }
 
       return { collected, cursor, exhausted, total }

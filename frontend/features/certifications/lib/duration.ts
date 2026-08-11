@@ -23,19 +23,32 @@ export type DurationBucketKey = (typeof DURATION_BUCKETS)[number]['key']
 export function estimateHours(duration: string | null): number | null {
   if (!duration) return null
   const d = duration.toLowerCase()
-  const hourMatch = /(\d+(?:\.\d+)?)\s*hours?/.exec(d)
+  // The `\+?` handles freeCodeCamp's own "1000+ hours" (its Full Stack
+  // Developer cert's real, literal duration string) — without it, the "+"
+  // between the number and "hours" broke the match entirely and the row
+  // never matched any bucket.
+  const hourMatch = /(\d+(?:\.\d+)?)\+?\s*hours?/.exec(d)
   const minMatch = /(\d+)\s*min/.exec(d)
   const weekMatch = /(\d+)\s*weeks?/.exec(d)
   const monthMatch = /(\d+)\s*months?/.exec(d)
+  const yearMatch = /(\d+)\s*years?/.exec(d)
   const dayMatch = /(\d+)\s*days?/.exec(d)
 
-  if (hourMatch && !weekMatch) {
+  // Longest unit present wins — a string carrying both a coarse and a fine
+  // unit ("2 years, 10 hours") describes the coarse one as the real
+  // duration, not the other way round. Missing this meant edX's ISO-8601
+  // durations rendered as "1 year"/"2 years" (see isoDurationToHuman in
+  // ingest.ts) never matched hourMatch, monthMatch, weekMatch, or dayMatch
+  // and so silently fell through to null — those rows never matched any
+  // duration bucket at all, regardless of which one a student picked.
+  if (yearMatch) return parseInt(yearMatch[1], 10) * 52 * 5
+  if (monthMatch) return parseInt(monthMatch[1], 10) * 4.3 * 5
+  if (weekMatch) return parseInt(weekMatch[1], 10) * 5
+  if (hourMatch) {
     let hours = parseFloat(hourMatch[1])
     if (minMatch) hours += parseInt(minMatch[1], 10) / 60
     return hours
   }
-  if (weekMatch) return parseInt(weekMatch[1], 10) * 5
-  if (monthMatch) return parseInt(monthMatch[1], 10) * 4.3 * 5
   if (dayMatch) return parseInt(dayMatch[1], 10) * 2
   if (minMatch) return parseInt(minMatch[1], 10) / 60
   return null
