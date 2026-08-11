@@ -8,6 +8,7 @@ export interface Certification {
   title: string
   provider: string
   provider_logo: string | null
+  certificate_image: string | null
   description: string | null
   url: string
   is_free: boolean
@@ -19,25 +20,81 @@ export interface Certification {
 }
 
 type PriceFilter = 'all' | 'free' | 'paid'
+const LEVELS = ['Beginner', 'Intermediate', 'Advanced'] as const
+type Level = (typeof LEVELS)[number]
+
+const DURATION_BUCKETS = [
+  { key: 'short', label: 'Under 5 hours' },
+  { key: 'medium', label: '5–20 hours' },
+  { key: 'long', label: '20–100 hours' },
+  { key: 'extended', label: '100+ hours' },
+] as const
+type DurationBucket = (typeof DURATION_BUCKETS)[number]['key']
 
 /**
- * Certifications browser.
- *
- * Intentionally simpler than opportunity search: certifications have no
- * deadline, so there is nothing to sort by urgency and no freshness to signal.
- * A search box and a free/paid toggle are the only controls a student needs,
- * which is exactly the brief.
+ * Best-effort hour estimate from the source's own free-text duration string
+ * ("300 hours", "1 hour 30 minutes", "6 weeks", "P10W" already converted to
+ * "10 weeks" upstream) — used only to sort a record into a filter bucket.
+ * The original text is what's ever shown to the student; this number is
+ * never displayed. Weeks/months are converted with a stated ~5hrs/week
+ * assumption (a common self-paced MOOC norm), which is why it's a bucket
+ * range rather than a precise figure.
+ */
+function estimateHours(duration: string | null): number | null {
+  if (!duration) return null
+  const d = duration.toLowerCase()
+  const hourMatch = /(\d+(?:\.\d+)?)\s*hours?/.exec(d)
+  const minMatch = /(\d+)\s*min/.exec(d)
+  const weekMatch = /(\d+)\s*weeks?/.exec(d)
+  const monthMatch = /(\d+)\s*months?/.exec(d)
+  const dayMatch = /(\d+)\s*days?/.exec(d)
+
+  if (hourMatch && !weekMatch) {
+    let hours = parseFloat(hourMatch[1])
+    if (minMatch) hours += parseInt(minMatch[1], 10) / 60
+    return hours
+  }
+  if (weekMatch) return parseInt(weekMatch[1], 10) * 5
+  if (monthMatch) return parseInt(monthMatch[1], 10) * 4.3 * 5
+  if (dayMatch) return parseInt(dayMatch[1], 10) * 2
+  if (minMatch) return parseInt(minMatch[1], 10) / 60
+  return null
+}
+
+function durationBucket(duration: string | null): DurationBucket | null {
+  const hours = estimateHours(duration)
+  if (hours == null) return null
+  if (hours < 5) return 'short'
+  if (hours < 20) return 'medium'
+  if (hours < 100) return 'long'
+  return 'extended'
+}
+
+/**
+ * Certifications browser, mirroring the Search page's layout: a left
+ * filters sidebar (static on desktop, a drawer on mobile) next to the
+ * results list. Certifications have no deadline, so there is nothing to
+ * sort by urgency — Price, Level and Duration are the filter dimensions
+ * that actually apply here.
  */
 export function CertificationsClient({ initial }: { initial: Certification[] }) {
   const [query, setQuery] = useState('')
   const [price, setPrice] = useState<PriceFilter>('all')
+  const [levels, setLevels] = useState<Set<Level>>(new Set())
+  const [durations, setDurations] = useState<Set<DurationBucket>>(new Set())
   const [selected, setSelected] = useState<Certification | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
     return initial.filter((c) => {
       if (price === 'free' && !c.is_free) return false
       if (price === 'paid' && c.is_free) return false
+      if (levels.size > 0 && !(c.level && levels.has(c.level as Level))) return false
+      if (durations.size > 0) {
+        const bucket = durationBucket(c.duration)
+        if (!bucket || !durations.has(bucket)) return false
+      }
       if (!q) return true
       return (
         c.title.toLowerCase().includes(q) ||
@@ -45,7 +102,31 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
         (c.topics ?? []).some((t) => t.toLowerCase().includes(q))
       )
     })
-  }, [initial, query, price])
+  }, [initial, query, price, levels, durations])
+
+  const activeFilterCount = (price !== 'all' ? 1 : 0) + levels.size + durations.size
+
+  const toggleLevel = (l: Level) => {
+    setLevels((prev) => {
+      const next = new Set(prev)
+      if (next.has(l)) next.delete(l)
+      else next.add(l)
+      return next
+    })
+  }
+  const toggleDuration = (d: DurationBucket) => {
+    setDurations((prev) => {
+      const next = new Set(prev)
+      if (next.has(d)) next.delete(d)
+      else next.add(d)
+      return next
+    })
+  }
+  const clearAllFilters = () => {
+    setPrice('all')
+    setLevels(new Set())
+    setDurations(new Set())
+  }
 
   // Close the detail panel on Escape, matching the rest of the app's dialogs.
   useEffect(() => {
@@ -57,14 +138,28 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-container-lowest overflow-hidden">
-      {/* Header: search + the two filters */}
-      <div className="p-4 md:p-8 border-b border-outline-variant bg-surface shrink-0">
-        <div className="max-w-5xl mx-auto w-full flex flex-col gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-on-background">Certifications</h1>
-            <p className="text-sm text-on-surface-variant mt-1">
-              Courses and certifications you can start any time — no deadlines.
-            </p>
+      {/* Header: title + search */}
+      <div className="p-4 md:p-8 pb-4 md:pb-6 border-b border-outline-variant bg-surface shrink-0">
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-on-background">Certifications</h1>
+              <p className="text-sm text-on-surface-variant mt-1">
+                {initial.length.toLocaleString('en-IN')} courses and certifications you can start any time — no deadlines.
+              </p>
+            </div>
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="md:hidden shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-outline-variant bg-surface text-sm font-semibold text-on-surface cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">tune</span>
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-primary text-on-primary text-[10px] flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
 
           <div className="relative">
@@ -80,81 +175,86 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
               className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-shadow"
             />
           </div>
-
-          <div className="flex items-center gap-2" role="group" aria-label="Filter by price">
-            {([
-              { key: 'all', label: 'All' },
-              { key: 'free', label: 'Free' },
-              { key: 'paid', label: 'Paid' },
-            ] as const).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setPrice(key)}
-                aria-pressed={price === key}
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors cursor-pointer ${
-                  price === key
-                    ? 'bg-primary text-on-primary border-primary shadow-sm'
-                    : 'bg-surface text-on-surface-variant border-outline-variant hover:bg-surface-container'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-            <span className="ml-auto text-sm text-on-surface-variant">
-              {results.length.toLocaleString('en-IN')} {results.length === 1 ? 'certification' : 'certifications'}
-            </span>
-          </div>
         </div>
       </div>
 
-      {/* Results */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-5xl mx-auto w-full flex flex-col gap-3 pb-24">
-          {results.length === 0 ? (
-            <div className="bg-surface border border-dashed border-outline-variant rounded-2xl p-12 flex flex-col items-center text-center">
-              <span className="material-symbols-outlined text-outline text-[48px] mb-3">school</span>
-              <h2 className="font-bold text-on-surface mb-1">No certifications found</h2>
-              <p className="text-sm text-on-surface-variant max-w-md">
-                Try a different search term, or clear the price filter.
-              </p>
+      {/* Body: sidebar + results */}
+      <div className="flex-1 flex overflow-hidden max-w-6xl mx-auto w-full">
+        <CertificationsFiltersSidebar
+          isOpen={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          price={price}
+          setPrice={setPrice}
+          levels={levels}
+          toggleLevel={toggleLevel}
+          durations={durations}
+          toggleDuration={toggleDuration}
+          clearAllFilters={clearAllFilters}
+          activeFilterCount={activeFilterCount}
+        />
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="w-full flex flex-col gap-3 pb-24">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-on-surface-variant">
+                {results.length.toLocaleString('en-IN')} {results.length === 1 ? 'certification' : 'certifications'}
+              </span>
             </div>
-          ) : (
-            results.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setSelected(c)}
-                className="text-left bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-4 group"
-              >
-                <CompanyLogo
-                  src={c.provider_logo}
-                  name={c.provider}
-                  alt={`${c.provider} logo`}
-                  containerClassName="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
-                  imageClassName="w-8 h-8 object-contain"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-on-background truncate group-hover:text-primary transition-colors">
-                    {c.title}
-                  </h3>
-                  <p className="text-sm text-on-surface-variant truncate">{c.provider}</p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span
-                    className={`px-2.5 py-1 rounded-md text-xs font-bold ${
-                      c.is_free
-                        ? 'bg-secondary-container text-on-secondary-container'
-                        : 'bg-surface-container text-on-surface-variant'
-                    }`}
-                  >
-                    {c.is_free ? 'Free' : 'Paid'}
-                  </span>
-                  <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">
-                    chevron_right
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
+
+            {results.length === 0 ? (
+              <div className="bg-surface border border-dashed border-outline-variant rounded-2xl p-12 flex flex-col items-center text-center">
+                <span className="material-symbols-outlined text-outline text-[48px] mb-3">school</span>
+                <h2 className="font-bold text-on-surface mb-1">No certifications found</h2>
+                <p className="text-sm text-on-surface-variant max-w-md">
+                  Try a different search term, or clear some filters.
+                </p>
+              </div>
+            ) : (
+              results.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelected(c)}
+                  className="text-left bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-4 group"
+                >
+                  <CompanyLogo
+                    src={c.provider_logo}
+                    name={c.provider}
+                    alt={`${c.provider} logo`}
+                    containerClassName="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
+                    imageClassName="w-8 h-8 object-contain"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-on-background truncate group-hover:text-primary transition-colors">
+                      {c.title}
+                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm text-on-surface-variant truncate">{c.provider}</p>
+                      {c.level && (
+                        <span className="text-[11px] text-on-surface-variant/80 shrink-0">· {c.level}</span>
+                      )}
+                      {c.duration && (
+                        <span className="text-[11px] text-on-surface-variant/80 shrink-0">· {c.duration}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold ${
+                        c.is_free
+                          ? 'bg-secondary-container text-on-secondary-container'
+                          : 'bg-surface-container text-on-surface-variant'
+                      }`}
+                    >
+                      {c.is_free ? 'Free' : 'Paid'}
+                    </span>
+                    <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">
+                      chevron_right
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -193,6 +293,20 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
             </div>
 
             <div className="p-6 overflow-y-auto flex flex-col gap-5">
+              {selected.certificate_image && (
+                <div className="rounded-xl border border-outline-variant/60 bg-surface-container-lowest p-4 flex flex-col items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-aspect-ratio badge art from many source domains */}
+                  <img
+                    src={selected.certificate_image}
+                    alt={`${selected.title} certificate preview`}
+                    className="max-h-40 object-contain"
+                  />
+                  <span className="text-[11px] text-on-surface-variant uppercase tracking-wider font-semibold">
+                    Certificate preview
+                  </span>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <Chip label={selected.price_label ?? (selected.is_free ? 'Free' : 'Paid')} highlight={selected.is_free} />
                 {selected.duration && <Chip label={selected.duration} />}
@@ -242,6 +356,134 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Filters sidebar ──────────────────────────────────────────────────────
+
+function CertificationsFiltersSidebar({
+  isOpen,
+  onClose,
+  price,
+  setPrice,
+  levels,
+  toggleLevel,
+  durations,
+  toggleDuration,
+  clearAllFilters,
+  activeFilterCount,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  price: PriceFilter
+  setPrice: (p: PriceFilter) => void
+  levels: Set<Level>
+  toggleLevel: (l: Level) => void
+  durations: Set<DurationBucket>
+  toggleDuration: (d: DurationBucket) => void
+  clearAllFilters: () => void
+  activeFilterCount: number
+}) {
+  return (
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-on-background/30 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 w-72 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out
+          md:static md:h-full md:translate-x-0 md:w-60 md:shadow-none md:border-r md:border-outline-variant md:z-auto
+          overflow-y-auto p-6 shrink-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-lg font-bold text-on-background">Filters</h2>
+          <div className="flex items-center gap-2">
+            {activeFilterCount > 0 && (
+              <button onClick={clearAllFilters} className="text-primary text-xs font-medium hover:underline cursor-pointer">
+                Clear all
+              </button>
+            )}
+            <button
+              className="md:hidden text-on-surface-variant p-2 hover:bg-surface-container rounded-full transition-colors cursor-pointer"
+              onClick={onClose}
+              aria-label="Close filters"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <FilterSection title="Price">
+          <div className="flex flex-col gap-3">
+            {([
+              { key: 'all', label: 'All' },
+              { key: 'free', label: 'Free' },
+              { key: 'paid', label: 'Paid' },
+            ] as const).map((opt) => (
+              <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="price"
+                  checked={price === opt.key}
+                  onChange={() => setPrice(opt.key)}
+                  className="w-4 h-4 border-outline text-primary focus:ring-primary cursor-pointer"
+                />
+                <span className="text-sm text-on-surface">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </FilterSection>
+
+        <FilterSection title="Level">
+          <div className="flex flex-col gap-3">
+            {LEVELS.map((l) => (
+              <label key={l} className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={levels.has(l)}
+                  onChange={() => toggleLevel(l)}
+                  className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer"
+                />
+                <span className="text-sm text-on-surface">{l}</span>
+              </label>
+            ))}
+          </div>
+        </FilterSection>
+
+        <FilterSection title="Duration">
+          <div className="flex flex-col gap-3">
+            {DURATION_BUCKETS.map((b) => (
+              <label key={b.key} className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={durations.has(b.key)}
+                  onChange={() => toggleDuration(b.key)}
+                  className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer"
+                />
+                <span className="text-sm text-on-surface">{b.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-[11px] text-on-surface-variant/70 mt-3 leading-relaxed">
+            Estimated from each provider&apos;s own listed duration — exact hours vary by pace.
+          </p>
+        </FilterSection>
+      </aside>
+    </>
+  )
+}
+
+function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-8">
+      <h3 className="text-[11px] font-semibold text-on-surface-variant mb-4 uppercase tracking-wider">{title}</h3>
+      {children}
     </div>
   )
 }

@@ -10,16 +10,33 @@ import * as cheerio from 'cheerio'
  * reconciliation machinery that governs opportunities does not apply here.
  *
  * Sources are limited to catalogues that are genuinely reachable without
- * credentials. edX (401), Class Central (403) and Udemy (403 — public course
- * pages, robots.txt, and sitemap all return 403, re-verified 11 Aug 2026)
- * were probed and rejected rather than approximated — the same discipline
- * applied to employer boards.
+ * credentials. Class Central (403) and Udemy (403 — public course pages,
+ * robots.txt, and sitemap all return 403, re-verified 11 Aug 2026) were
+ * probed and rejected rather than approximated, as were LinkedIn Learning,
+ * Pluralsight, Google Cloud Skills Boost and IBM SkillsBuild (all
+ * unreachable without an authenticated session or a working public catalog
+ * URL, checked 11 Aug 2026) — the same discipline applied to employer
+ * boards. edX and Udacity WERE previously assumed blocked but were
+ * re-checked directly: edX's search/catalog API is gated, but individual
+ * course pages carry real schema.org Course JSON-LD and are reachable via
+ * the site's own sitemap; Udacity's /catalog page embeds a full real
+ * ItemList of Course records directly, no per-page crawl needed.
+ *
+ * Beyond the direct platform integrations below, Coursera's own partner
+ * network surfaces 300+ genuinely distinct providers (universities and
+ * companies — Google, IBM, Duke, Yale, Meta, etc.) under their own real
+ * names via the `provider` field, not folded into a generic "Coursera"
+ * label.
  */
 
 export interface CertificationRecord {
   title: string
   provider: string
   provider_logo: string | null
+  /** Real per-certification badge/certificate preview image, only when the
+   *  source actually provides one — never provider_logo repurposed, never
+   *  a generic stand-in. */
+  certificate_image: string | null
   description: string | null
   url: string
   canonical_url: string | null
@@ -50,6 +67,7 @@ interface CourseraCourse {
   partnerIds?: string[]
   certificates?: string[]
   domainTypes?: { domainId?: string; subdomainId?: string }[]
+  primaryLanguages?: string[]
 }
 
 async function getJson<T>(url: string, timeoutMs = 20000): Promise<T | null> {
@@ -95,8 +113,12 @@ function toHttps(url: string | null | undefined): string | null {
 export async function fetchCoursera(maxCourses: number, runAt: string): Promise<CertificationRecord[]> {
   const partners = await loadCourseraPartners()
   const out: CertificationRecord[] = []
-  const FIELDS = 'name,slug,description,photoUrl,workload,partnerIds,certificates,domainTypes'
+  const FIELDS = 'name,slug,description,photoUrl,workload,partnerIds,certificates,domainTypes,primaryLanguages'
 
+  // Filtering to English-only means fewer than 100 per page survive, so
+  // pagination has to keep going on primaryLanguages accepted count, not raw
+  // page size — otherwise a request for 3000 English courses would silently
+  // stop after 30 pages even though most of those pages contributed nothing.
   for (let start = 0; out.length < maxCourses; start += 100) {
     const d = await getJson<{ elements?: CourseraCourse[]; paging?: { next?: string } }>(
       `${COURSERA_COURSES}?limit=100&start=${start}&fields=${FIELDS}`
@@ -106,10 +128,15 @@ export async function fetchCoursera(maxCourses: number, runAt: string): Promise<
 
     for (const c of els) {
       if (!c.slug || !c.name) continue
+      // English-only, per the owner's request. Treat a missing language
+      // list as unknown rather than English — safer than letting an
+      // untagged non-English course through.
+      if (!c.primaryLanguages?.includes('en')) continue
       const partner = partners.get(String(c.partnerIds?.[0] ?? ''))
       const url = `https://www.coursera.org/learn/${c.slug}`
 
       out.push({
+        certificate_image: null,
         title: c.name,
         provider: partner?.name ?? 'Coursera',
         provider_logo: toHttps(partner?.logo ?? c.photoUrl ?? null),
@@ -173,6 +200,7 @@ export function fetchFreeCodeCamp(runAt: string): CertificationRecord[] {
       title: c.title,
       provider: 'freeCodeCamp',
       provider_logo: 'https://www.google.com/s2/favicons?domain=freecodecamp.org&sz=128',
+      certificate_image: null,
       description:
         `A free, self-paced ${c.title} certification from freeCodeCamp. Complete the projects to earn a verified certificate at no cost.`,
       url,
@@ -244,7 +272,10 @@ export async function fetchMicrosoftLearn(runAt: string): Promise<CertificationR
     out.push({
       title: c.title,
       provider: 'Microsoft',
-      provider_logo: toHttps(c.icon_url) || 'https://www.google.com/s2/favicons?domain=microsoft.com&sz=128',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=microsoft.com&sz=128',
+      // Microsoft Learn's own badge artwork for this specific certification —
+      // a real, per-credential image, not the brand logo repeated.
+      certificate_image: toHttps(c.icon_url),
       description: stripHtml(c.subtitle),
       url: c.url,
       canonical_url: canonicalizeUrl(c.url),
@@ -267,7 +298,10 @@ export async function fetchMicrosoftLearn(runAt: string): Promise<CertificationR
     out.push({
       title: p.title,
       provider: 'Microsoft Learn',
-      provider_logo: toHttps(p.icon_url) || 'https://www.google.com/s2/favicons?domain=microsoft.com&sz=128',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=microsoft.com&sz=128',
+      // A trophy/achievement badge for completing the path — real, not the
+      // brand logo.
+      certificate_image: toHttps(p.icon_url),
       description: stripHtml(p.summary),
       url: p.url,
       canonical_url: canonicalizeUrl(p.url),
@@ -370,6 +404,7 @@ async function fetchSimplilearnCoursePage(url: string, runAt: string): Promise<C
     title: c.name,
     provider: 'Simplilearn',
     provider_logo: 'https://www.google.com/s2/favicons?domain=simplilearn.com&sz=128',
+    certificate_image: null,
     // The page's own description/subtitle is templated boilerplate on nearly
     // every listing (often just the title repeated) rather than real
     // per-course copy — an honest generic line beats presenting that as if
@@ -423,15 +458,277 @@ export async function fetchSimplilearn(runAt: string, maxCourses = 200): Promise
   return results.filter((r): r is CertificationRecord => r !== null)
 }
 
+// ── edX ──────────────────────────────────────────────────────────────────
+// Course pages carry a rich schema.org Course block (real inLanguage,
+// educationalLevel, offers, timeRequired, provider) — far more complete
+// than Simplilearn's. URLs are discovered from edX's own sitemap, which
+// mixes English and translated paths (a Spanish course can live at an
+// un-prefixed /learn/... URL, not just under /es/), so language is
+// filtered from the fetched page's real inLanguage field, not the URL.
+
+const EDX_SITEMAP = 'https://www.edx.org/sitemap.xml'
+const EDX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36'
+
+function looksLikeEdxCourse(url: string): boolean {
+  try {
+    const u = new URL(url)
+    const segments = u.pathname.split('/').filter(Boolean)
+    return segments.length === 3 && segments[0] === 'learn'
+  } catch {
+    return false
+  }
+}
+
+/** ISO 8601 duration ("P10W", "PT6H", "P1M") -> a short human string. */
+function isoDurationToHuman(iso: string | undefined): string | null {
+  if (!iso) return null
+  const m = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso)
+  if (!m) return null
+  const [, years, months, weeks, days, hours] = m
+  if (weeks) return `${weeks} week${weeks === '1' ? '' : 's'}`
+  if (months) return `${months} month${months === '1' ? '' : 's'}`
+  if (years) return `${years} year${years === '1' ? '' : 's'}`
+  if (days) return `${days} day${days === '1' ? '' : 's'}`
+  if (hours) return `${hours} hour${hours === '1' ? '' : 's'}`
+  return null
+}
+
+interface EdxOffer {
+  category?: string
+  price?: number
+  priceCurrency?: string
+}
+
+interface EdxCourse {
+  '@type'?: string
+  name?: string
+  description?: string
+  inLanguage?: string
+  educationalLevel?: string
+  isAccessibleForFree?: boolean
+  timeRequired?: string
+  provider?: { name?: string }[]
+  offers?: EdxOffer[]
+}
+
+async function fetchEdxCoursePage(url: string, runAt: string): Promise<CertificationRecord | null> {
+  const res = await fetchWithRetry(url, { headers: { 'User-Agent': EDX_UA } }, { maxRetries: 1, timeoutMs: 12000 })
+  if (!res.ok) return null
+  const html = await res.text()
+  const $ = cheerio.load(html)
+
+  let course: EdxCourse | null = null
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (course) return
+    try {
+      const parsed = JSON.parse($(el).contents().text())
+      const graph = parsed?.['@graph'] ?? [parsed]
+      const found = graph.find((g: EdxCourse) => g?.['@type'] === 'Course')
+      if (found) course = found as EdxCourse
+    } catch {
+      // Not every ld+json block is valid/relevant JSON — skip it.
+    }
+  })
+  if (!course) return null
+  const c = course as EdxCourse
+  // English-only per the owner's request — the real signal, not the URL.
+  if (!c.name || c.inLanguage !== 'en') return null
+
+  const paidOffer = c.offers?.find((o) => (o.category ?? '').toLowerCase() === 'paid' && o.price != null)
+  const isFree = Boolean(c.isAccessibleForFree) && !paidOffer
+  const priceLabel = isFree
+    ? 'Free'
+    : paidOffer
+      ? `${paidOffer.priceCurrency === 'USD' ? '$' : (paidOffer.priceCurrency ?? '') + ' '}${paidOffer.price}`
+      : c.isAccessibleForFree
+        ? 'Free to audit · paid certificate'
+        : 'Paid'
+
+  const provider = c.provider?.[0]?.name ?? 'edX'
+  const segments = new URL(url).pathname.split('/').filter(Boolean)
+  const topic = titleCase(segments[1])
+
+  return {
+    title: c.name,
+    provider,
+    provider_logo: 'https://www.google.com/s2/favicons?domain=edx.org&sz=128',
+    certificate_image: null,
+    description: c.description ? c.description.slice(0, 2000) : null,
+    url,
+    canonical_url: canonicalizeUrl(url),
+    is_free: isFree,
+    price_label: priceLabel,
+    level: c.educationalLevel ? titleCase(c.educationalLevel) : null,
+    duration: isoDurationToHuman(c.timeRequired),
+    topics: [topic],
+    has_certificate: true,
+    source: 'edx',
+    source_id: segments.join('/'),
+    last_seen_at: runAt,
+  }
+}
+
+export async function fetchEdx(runAt: string, maxCourses = 200): Promise<CertificationRecord[]> {
+  const res = await fetchWithRetry(EDX_SITEMAP, { headers: { 'User-Agent': EDX_UA } }, { maxRetries: 2, timeoutMs: 20000 })
+  if (!res.ok) return []
+  const xml = await res.text()
+  const urls = Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g)).map((m) => m[1])
+  const candidates = urls.filter(looksLikeEdxCourse).slice(0, maxCourses)
+
+  const results = await mapLimit(candidates, 8, (url) =>
+    fetchEdxCoursePage(url, runAt).catch(() => null)
+  )
+  return results.filter((r): r is CertificationRecord => r !== null)
+}
+
+// ── Udacity ──────────────────────────────────────────────────────────────
+// The /catalog page embeds its full real course list as one schema.org
+// ItemList directly in the page — no per-course crawl needed. Small
+// catalogue (~24 flagship Nanodegree programs), genuinely Udacity's whole
+// offering rather than a partial scrape.
+
+export async function fetchUdacity(runAt: string): Promise<CertificationRecord[]> {
+  const res = await fetchWithRetry(
+    'https://www.udacity.com/catalog',
+    { headers: { 'User-Agent': EDX_UA } },
+    { maxRetries: 2, timeoutMs: 15000 }
+  )
+  if (!res.ok) return []
+  const html = await res.text()
+  const $ = cheerio.load(html)
+
+  let items: { item?: { name?: string; url?: string; description?: string } }[] = []
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const parsed = JSON.parse($(el).contents().text())
+      if (parsed?.['@type'] === 'ItemList' && Array.isArray(parsed.itemListElement)) {
+        items = parsed.itemListElement
+      }
+    } catch {
+      // Skip invalid/irrelevant blocks.
+    }
+  })
+
+  const out: CertificationRecord[] = []
+  for (const { item } of items) {
+    if (!item?.name || !item?.url) continue
+    out.push({
+      title: item.name,
+      provider: 'Udacity',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=udacity.com&sz=128',
+      certificate_image: null,
+      description: item.description ? item.description.slice(0, 2000) : null,
+      url: item.url,
+      canonical_url: canonicalizeUrl(item.url),
+      // Nanodegree programs are Udacity's paid flagship offering.
+      is_free: false,
+      price_label: 'Paid',
+      level: null,
+      duration: null,
+      topics: [],
+      has_certificate: true,
+      source: 'udacity',
+      source_id: item.url.split('/').pop() ?? item.name,
+      last_seen_at: runAt,
+    })
+  }
+  return out
+}
+
+// ── W3Schools ────────────────────────────────────────────────────────────
+// A small, fixed, known set of real certification exam pages — the entire
+// catalogue, not a partial scrape (mirrors freeCodeCamp's approach). Each
+// page carries a real schema.org Product block with a genuine certificate
+// preview image and real price.
+
+const W3SCHOOLS_CERTS = [
+  { slug: 'cert_html', page: 'html-certificate' },
+  { slug: 'cert_css', page: 'css-certificate' },
+  { slug: 'cert_javascript', page: 'javascript-certificate' },
+  { slug: 'cert_python', page: 'python-certificate' },
+  { slug: 'cert_sql', page: 'sql-certificate' },
+  { slug: 'cert_php', page: 'php-certificate' },
+  { slug: 'cert_jquery', page: 'jquery-certificate' },
+  { slug: 'cert_bootstrap', page: 'bootstrap-certificate' },
+  { slug: 'cert_xml', page: 'xml-certificate' },
+  { slug: 'cert_java', page: 'java-certificate' },
+  { slug: 'cert_datascience', page: 'data-science-certificate' },
+  { slug: 'cert_frontend', page: 'front-end-certificate' },
+]
+
+interface W3SchoolsProduct {
+  name?: string
+  image?: string
+  description?: string
+  offers?: { price?: number; priceCurrency?: string }
+}
+
+async function fetchW3SchoolsCert(entry: { slug: string; page: string }, runAt: string): Promise<CertificationRecord | null> {
+  const url = `https://www.w3schools.com/cert/${entry.slug}.asp`
+  const res = await fetchWithRetry(url, { headers: { 'User-Agent': EDX_UA } }, { maxRetries: 1, timeoutMs: 12000 })
+  if (!res.ok) return null
+  const html = await res.text()
+  const $ = cheerio.load(html)
+
+  let product: W3SchoolsProduct | null = null
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (product) return
+    try {
+      const parsed = JSON.parse($(el).contents().text())
+      if (parsed?.['@type'] === 'Product') product = parsed as W3SchoolsProduct
+    } catch {
+      // Skip invalid/irrelevant blocks.
+    }
+  })
+  if (!product) return null
+  const p = product as W3SchoolsProduct
+  if (!p.name) return null
+
+  return {
+    title: p.name,
+    provider: 'W3Schools',
+    provider_logo: 'https://www.google.com/s2/favicons?domain=w3schools.com&sz=128',
+    // The Product schema's own image IS the real certificate artwork —
+    // W3Schools' exam pages literally show what you'll receive.
+    certificate_image: toHttps(p.image ?? null),
+    description: p.description ? stripHtml(p.description) : null,
+    url,
+    canonical_url: canonicalizeUrl(url),
+    is_free: false,
+    price_label: p.offers?.price != null ? `${p.offers.priceCurrency === 'USD' ? '$' : ''}${p.offers.price}` : 'Paid',
+    level: null,
+    duration: null,
+    topics: [entry.page.replace('-certificate', '')].map(titleCase),
+    has_certificate: true,
+    source: 'w3schools',
+    source_id: entry.slug,
+    last_seen_at: runAt,
+  }
+}
+
+export async function fetchW3Schools(runAt: string): Promise<CertificationRecord[]> {
+  const results = await mapLimit(W3SCHOOLS_CERTS, 4, (entry) =>
+    fetchW3SchoolsCert(entry, runAt).catch(() => null)
+  )
+  return results.filter((r): r is CertificationRecord => r !== null)
+}
+
 /** Everything, deduplicated on canonical URL. */
-export async function collectCertifications(maxCoursera = 3000, maxSimplilearn = 200): Promise<CertificationRecord[]> {
+export async function collectCertifications(
+  maxCoursera = 12000,
+  maxSimplilearn = 250,
+  maxEdx = 250
+): Promise<CertificationRecord[]> {
   const runAt = new Date().toISOString()
-  const [coursera, msLearn, simplilearn] = await Promise.all([
+  const [coursera, msLearn, simplilearn, edx, udacity, w3schools] = await Promise.all([
     fetchCoursera(maxCoursera, runAt),
     fetchMicrosoftLearn(runAt),
     fetchSimplilearn(runAt, maxSimplilearn),
+    fetchEdx(runAt, maxEdx),
+    fetchUdacity(runAt),
+    fetchW3Schools(runAt),
   ])
-  const all = [...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn]
+  const all = [...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn, ...edx, ...udacity, ...w3schools]
 
   const seen = new Set<string>()
   const deduped: CertificationRecord[] = []

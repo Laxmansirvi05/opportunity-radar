@@ -8,12 +8,14 @@ import { upsertCertifications } from '@/lib/certifications/upsert'
  * GET /api/cron/refresh-certifications
  *
  * Weekly refresh of the certifications catalogue (Coursera, Microsoft Learn,
- * freeCodeCamp, Simplilearn). Unlike the opportunities crons there is no
- * reconciliation/deletion step afterwards — see lib/certifications/ingest.ts
- * for why courses are never expired on a schedule.
+ * freeCodeCamp, Simplilearn, edX, Udacity, W3Schools). Unlike the
+ * opportunities crons there is no reconciliation/deletion step afterwards —
+ * see lib/certifications/ingest.ts for why courses are never expired on a
+ * schedule.
  *
- * maxCoursera is kept below the full catalogue (23k+ courses) to stay inside
- * Vercel's cron duration ceiling; raise it if the plan's limit allows more.
+ * collectCertifications()'s defaults (12,000 Coursera courses, 250 each of
+ * Simplilearn/edX) are kept below each catalogue's true size to stay inside
+ * Vercel's cron duration ceiling — a live run at these defaults took ~132s.
  */
 export const maxDuration = 280
 
@@ -27,7 +29,7 @@ export async function GET(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const records = await collectCertifications(1500, 250)
+    const records = await collectCertifications()
     const { upserted, errors } = await upsertCertifications(supabase, records)
 
     return NextResponse.json({ success: true, fetched: records.length, upserted, errors })
