@@ -136,9 +136,7 @@ function PreviewModal({ resume, label, downloadHref, onClose }: {
           </div>
         </div>
         <div className="overflow-y-auto p-6 bg-neutral-100 dark:bg-neutral-900">
-          {/* max-w-xl avoided: --spacing-xl in app/globals.css collides with Tailwind's
-              container scale and silently resolves max-w-xl to a few px project-wide. */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mx-auto" style={{ maxWidth: '36rem' }}>
+          <div className="bg-white rounded-lg shadow-sm p-6 mx-auto max-w-xl">
             <ResumeDocument resume={resume} />
           </div>
         </div>

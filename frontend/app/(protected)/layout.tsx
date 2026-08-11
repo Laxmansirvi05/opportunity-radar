@@ -43,7 +43,7 @@ export default async function ProtectedLayout({
         {/* min-h-0 lets full-height children (search, tracker) own their own
             scrolling instead of overflowing this container and leaving a dead
             band of layout padding beneath the last card. */}
-        <main className="flex-1 min-h-0 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full overflow-x-hidden gap-xl">
+        <main className="flex-1 min-h-0 p-margin-mobile md:p-gutter max-w-container-max mx-auto w-full overflow-x-hidden gap-10">
           {children}
         </main>
       </div>

@@ -237,11 +237,27 @@
   --color-outline-variant: #c3c6d7;
 
   /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 40px;
+  /* UI-03: this project used to define --spacing-{xs,sm,md,lg,xl} as
+     4/8/16/24/40px for p-md/gap-md-style utilities. Verified directly against
+     Tailwind v4's compiled CSS output that max-w-{xs,sm,md,lg,xl} (unlike
+     2xl and up, which read a separate --container-* scale) are hard-wired to
+     `max-width: var(--spacing-<key>)` — so those five keys were never free
+     to reuse for anything else; whatever value they held became the
+     max-width for max-w-xs/sm/md/lg/xl project-wide too. That's the actual
+     mechanism behind a bug worked around locally 4 times without ever being
+     traced to its root (see docs/ISSUE-TRACKER.md) — max-w-md was silently
+     16px instead of 28rem everywhere, not just where someone had noticed and
+     patched it. Fixed at the root in two steps: every p-xs/gap-md/etc. call
+     site was mechanically rewritten to Tailwind's own numeric scale first
+     (xs->1, sm->2, md->4, lg->6, xl->10 — exact pixel matches for the old
+     4/8/16/24/40px), freeing these keys up entirely; now they're redefined
+     below to the values max-w-{xs,sm,md,lg,xl} are actually documented to
+     have, restoring every max-w-{xs,sm,md,lg,xl} in the app at once. */
+  --spacing-xs: 20rem;
+  --spacing-sm: 24rem;
+  --spacing-md: 28rem;
+  --spacing-lg: 32rem;
+  --spacing-xl: 36rem;
   --spacing-gutter: 24px;
   --spacing-margin-mobile: 16px;
 }

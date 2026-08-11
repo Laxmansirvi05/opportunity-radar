@@ -216,9 +216,7 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{plan.generatesTarget ? "Close the gap" : "Worth strengthening"}</p>
-                {/* max-w-md avoided: --spacing-md in app/globals.css collides with Tailwind's
-                    container scale and silently resolves max-w-md to 16px project-wide. */}
-                <p className="text-xs text-muted-foreground mt-0.5" style={{ maxWidth: '28rem' }}>
+                <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
                   {plan.generatesTarget
                     ? "Confirm each item once it's genuinely done — Resume B unlocks only once all are checked."
                     : "Your resume is close enough that we're not generating a second version, but a recruiter would still notice these."}

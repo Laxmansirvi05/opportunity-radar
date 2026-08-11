@@ -8,7 +8,7 @@ export function MobileBottomNav() {
 
   return (
     <nav className="md:hidden bg-surface border-t border-outline-variant fixed bottom-0 left-0 w-full z-50 pb-safe premium-shadow">
-      <ul className="flex justify-around items-center h-16 px-md">
+      <ul className="flex justify-around items-center h-16 px-4">
         <li>
           <Link
             href="/hub"

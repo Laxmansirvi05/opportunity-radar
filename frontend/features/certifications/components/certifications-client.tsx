@@ -123,13 +123,21 @@ export function CertificationsClient({
   }, [selected])
 
   // Duration is filtered client-side after the fact (no stored column to
-  // filter server-side on — see lib/duration.ts), so the server's count is
-  // an overcount whenever it's active. Showing a false precise number would
-  // be worse than an honest "X shown so far".
+  // filter server-side on — see lib/duration.ts), so the server's `total`
+  // is a count of price/level/provider/search matches only — it does not
+  // know about the duration bucket at all, and stays fixed no matter which
+  // duration checkbox is ticked. Showing it while a duration filter is
+  // active reads as "the filter did nothing." Once duration is active, the
+  // only honest count is what's actually been collected: `items.length`,
+  // exact once the scan is exhausted (`!hasMore`), a running "X+" while it's
+  // still scanning for more matches.
+  const durationActive = filters.durations.size > 0
   const countLabel =
-    total != null
+    !durationActive && total != null
       ? `${total.toLocaleString('en-IN')} ${total === 1 ? 'certification' : 'certifications'}`
-      : `${items.length.toLocaleString('en-IN')}+ certifications shown`
+      : hasMore
+        ? `${items.length.toLocaleString('en-IN')}+ certifications shown`
+        : `${items.length.toLocaleString('en-IN')} ${items.length === 1 ? 'certification' : 'certifications'}`
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-surface-container-lowest">
@@ -201,7 +209,7 @@ export function CertificationsClient({
               <div className="bg-surface border border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center text-center">
                 <span className="material-symbols-outlined text-outline text-[40px] mb-2">school</span>
                 <h2 className="font-bold text-on-surface mb-1 text-sm">No certifications found</h2>
-                <p className="text-xs text-on-surface-variant max-w-md">
+                <p className="text-xs text-on-surface-variant max-w-md w-full">
                   Try a different search term, or clear some filters.
                 </p>
               </div>

@@ -182,8 +182,7 @@ export function HubClient({ currentUserId, currentUserSender, initialMessages, i
           <div className="flex flex-col items-center justify-center h-full text-center">
             <span className="material-symbols-outlined text-[48px] text-error mb-4">error</span>
             <h2 className="text-xl font-bold text-on-surface mb-2">Failed to load conversation</h2>
-            {/* max-w-md avoided: see UI-03 (--spacing-md in globals.css collides with the container scale) */}
-            <p className="text-on-surface-variant" style={{ maxWidth: '28rem' }}>{initialError}</p>
+            <p className="text-on-surface-variant max-w-md">{initialError}</p>
           </div>
         ) : visibleMessages.length === 0 ? (
           <HubEmptyState />

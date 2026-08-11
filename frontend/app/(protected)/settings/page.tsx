@@ -28,9 +28,9 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-xl max-w-3xl mx-auto w-full pb-16">
-      <header className="mb-lg">
-        <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-xs">
+    <div className="flex flex-col gap-10 max-w-3xl mx-auto w-full pb-16">
+      <header className="mb-6">
+        <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-1">
           Settings
         </h2>
         <p className="font-body-md text-body-md text-on-surface-variant">Manage your account preferences and security.</p>

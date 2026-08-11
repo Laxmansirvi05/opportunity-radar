@@ -172,17 +172,17 @@ export default async function DashboardPage() {
   const hasNoTrackerItems = !savedCount && appliedCount === 0 && interviewCount === 0 && offerCount === 0
 
   return (
-    <div className="flex flex-col gap-xl">
+    <div className="flex flex-col gap-10">
       {/* Header Section */}
-      <header className="mb-sm py-2 flex flex-col md:flex-row md:justify-between md:items-center gap-md">
+      <header className="mb-2 py-2 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div className="flex flex-col gap-2">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-on-background">
             Action Station: {displayName}
           </h2>
           <p className="text-base md:text-lg text-on-surface-variant">Focus on today&apos;s highest-impact career opportunities.</p>
         </div>
-        <div className="flex gap-sm">
-          <Link href="/search" className="flex-1 md:flex-none bg-primary text-on-primary font-label-md text-label-md font-semibold px-md py-sm rounded-xl hover:opacity-90 transition-opacity shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+        <div className="flex gap-2">
+          <Link href="/search" className="flex-1 md:flex-none bg-primary text-on-primary font-label-md text-label-md font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity shadow-sm flex items-center justify-center gap-2 cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">bolt</span>
             Apply Now
           </Link>
@@ -197,25 +197,25 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2 flex flex-col gap-gutter">
 
           {/* Progress Summary */}
-          <section className="bg-surface border border-outline-variant rounded-2xl p-md shadow-sm">
-            <h3 className="font-headline-sm text-on-background mb-md flex items-center gap-2 border-b border-outline-variant pb-sm font-bold">
+          <section className="bg-surface border border-outline-variant rounded-2xl p-4 shadow-sm">
+            <h3 className="font-headline-sm text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-2 font-bold">
               <span className="material-symbols-outlined text-primary">analytics</span>
               Progress Summary
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-sm">
-              <div className="bg-surface-container-lowest p-sm rounded-lg border border-outline-variant/30 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30 text-center">
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Profile</p>
                 <p className={`font-bold ${isProfileComplete ? 'text-primary' : 'text-error'}`}>{isProfileComplete ? '100%' : '50%'}</p>
               </div>
-              <div className="bg-surface-container-lowest p-sm rounded-lg border border-outline-variant/30 text-center">
+              <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30 text-center">
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Resume</p>
                 <p className={`font-bold ${hasResume ? 'text-primary' : 'text-error'}`}>{hasResume ? 'Uploaded' : 'Missing'}</p>
               </div>
-              <div className="bg-surface-container-lowest p-sm rounded-lg border border-outline-variant/30 text-center">
+              <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30 text-center">
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Saved</p>
                 <p className="font-bold text-on-background">{savedCount || 0}</p>
               </div>
-              <div className="bg-surface-container-lowest p-sm rounded-lg border border-outline-variant/30 text-center">
+              <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30 text-center">
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Applied</p>
                 <p className="font-bold text-on-background">{appliedCount}</p>
               </div>
@@ -223,15 +223,15 @@ export default async function DashboardPage() {
           </section>
 
           {/* Recommended Next Actions */}
-          <section className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-md">
-            <h3 className="font-headline-sm text-on-background mb-md flex items-center gap-2 border-b border-outline-variant pb-sm font-bold">
+          <section className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4">
+            <h3 className="font-headline-sm text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-2 font-bold">
               <span className="material-symbols-outlined text-primary">next_plan</span>
               Recommended Next Actions
             </h3>
             {recommendations.length > 0 ? (
-              <div className="space-y-sm">
+              <div className="space-y-2">
                 {recommendations.map((rec) => (
-                  <Link href={rec.link} key={rec.id} className="flex items-center gap-md p-sm bg-surface-container-lowest rounded-xl border border-transparent hover:border-primary transition-all cursor-pointer group shadow-sm">
+                  <Link href={rec.link} key={rec.id} className="flex items-center gap-4 p-2 bg-surface-container-lowest rounded-xl border border-transparent hover:border-primary transition-all cursor-pointer group shadow-sm">
                     <div className="w-10 h-10 bg-primary-container/10 rounded-full flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-all">
                       <span className="material-symbols-outlined">{rec.icon}</span>
                     </div>
@@ -253,8 +253,8 @@ export default async function DashboardPage() {
           </section>
 
           {/* Fresh Opportunities */}
-          <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md">
-            <div className="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
+          <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-4 border-b border-outline-variant pb-2">
               <h3 className="font-headline-sm text-on-background flex items-center gap-2 font-bold">
                 <span className="material-symbols-outlined text-secondary">new_releases</span>
                 Fresh Opportunities
@@ -286,8 +286,8 @@ export default async function DashboardPage() {
           <DashboardAlerts initialAlerts={alerts} />
 
           {/* Tracker Snapshot */}
-          <section className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-md">
-            <h3 className="font-headline-sm text-on-background mb-md flex items-center gap-2 border-b border-outline-variant pb-sm font-bold">
+          <section className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4">
+            <h3 className="font-headline-sm text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-2 font-bold">
               <span className="material-symbols-outlined text-primary">view_kanban</span>
               Snapshot
             </h3>
@@ -349,8 +349,8 @@ export default async function DashboardPage() {
 
       {/* Recently Viewed - Full Width */}
       {recentlyViewed.length > 0 && (
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md">
-          <div className="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
+        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4">
+          <div className="flex justify-between items-center mb-4 border-b border-outline-variant pb-2">
             <h3 className="font-headline-sm text-on-background flex items-center gap-2 font-bold">
               <span className="material-symbols-outlined text-secondary">history</span>
               Recently Viewed

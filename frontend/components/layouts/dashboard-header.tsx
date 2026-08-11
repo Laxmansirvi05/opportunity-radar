@@ -37,9 +37,9 @@ export function DashboardHeader({ user, avatarUrl, userName }: DashboardHeaderPr
   }, [])
 
   return (
-    <nav className="md:hidden bg-surface text-primary border-b border-outline-variant flex justify-between items-center px-lg h-16 w-full sticky top-0 z-50 premium-shadow">
+    <nav className="md:hidden bg-surface text-primary border-b border-outline-variant flex justify-between items-center px-6 h-16 w-full sticky top-0 z-50 premium-shadow">
       <div className="font-headline-sm text-headline-sm font-bold text-primary">Opportunity Radar</div>
-      <div className="flex gap-md text-primary items-center">
+      <div className="flex gap-4 text-primary items-center">
         <Link href="/notifications" aria-label="Notifications" className="relative flex items-center justify-center w-8 h-8">
           <span className="material-symbols-outlined cursor-pointer hover:text-primary-fixed-dim transition-colors duration-100">notifications</span>
           {unreadCount > 0 && (

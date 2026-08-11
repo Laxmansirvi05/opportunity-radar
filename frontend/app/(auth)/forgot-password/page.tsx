@@ -93,8 +93,8 @@ function ForgotPasswordContent() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center">
-      <header className="w-full flex justify-center py-xl bg-surface border-b border-outline-variant">
-        <div className="flex items-center gap-sm">
+      <header className="w-full flex justify-center py-10 bg-surface border-b border-outline-variant">
+        <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center">
             <span className="material-symbols-outlined text-white text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>radar</span>
           </div>
@@ -103,40 +103,40 @@ function ForgotPasswordContent() {
       </header>
 
       <main className="flex-grow flex items-center justify-center w-full px-margin-mobile relative">
-        <div className={`max-w-[440px] w-full bg-surface-container-lowest p-xl rounded-xl border transition-all duration-300 ${isSuccess ? 'border-secondary/30' : 'border-outline-variant'}`}>
+        <div className={`max-w-[440px] w-full bg-surface-container-lowest p-10 rounded-xl border transition-all duration-300 ${isSuccess ? 'border-secondary/30' : 'border-outline-variant'}`}>
           
           {/* Step 1: Request Reset (if not verified and not successful) */}
           {!isVerified && !isSuccess && (
-            <div className="space-y-lg">
-              <div className="text-center mb-xl">
-                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-sm">Forgot password?</h1>
+            <div className="space-y-6">
+              <div className="text-center mb-10">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-2">Forgot password?</h1>
                 <p className="font-body-md text-body-md text-on-surface-variant">No worries, it happens. Enter the email address associated with your account and we&apos;ll send you a recovery link.</p>
               </div>
-              <form onSubmit={handleSendResetLink} className="space-y-md">
+              <form onSubmit={handleSendResetLink} className="space-y-4">
                 {errorMessage && (
-                  <div className="p-sm bg-error/10 border border-error/20 rounded-lg flex items-start gap-xs text-error">
+                  <div className="p-2 bg-error/10 border border-error/20 rounded-lg flex items-start gap-1 text-error">
                     <span className="material-symbols-outlined text-[18px]">error</span>
                     <p className="font-body-sm text-body-sm mt-0.5">{errorMessage}</p>
                   </div>
                 )}
-                <div className="space-y-xs">
-                  <label className="font-label-md text-label-md text-on-surface-variant block ml-xs" htmlFor="email">Email Address</label>
+                <div className="space-y-1">
+                  <label className="font-label-md text-label-md text-on-surface-variant block ml-1" htmlFor="email">Email Address</label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-[20px]">mail</span>
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px]">mail</span>
                     <input 
                       id="email" 
                       name="email"
                       type="email" 
                       required 
                       placeholder="name@university.edu" 
-                      className="w-full pl-xl pr-md py-md bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none" 
+                      className="w-full pl-10 pr-4 py-4 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none" 
                     />
                   </div>
                 </div>
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className="w-full py-md px-lg bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container active:scale-[0.98] transition-all flex items-center justify-center gap-sm shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full py-4 px-6 bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <span className="material-symbols-outlined animate-spin">progress_activity</span>
@@ -148,8 +148,8 @@ function ForgotPasswordContent() {
                   )}
                 </button>
               </form>
-              <div className="pt-lg flex flex-col items-center gap-md border-t border-outline-variant">
-                <Link href="/login" className="flex items-center gap-xs font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">
+              <div className="pt-6 flex flex-col items-center gap-4 border-t border-outline-variant">
+                <Link href="/login" className="flex items-center gap-1 font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">
                   <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                   <span>Back to Log In</span>
                 </Link>
@@ -159,22 +159,22 @@ function ForgotPasswordContent() {
 
           {/* Step 2: Set New Password (if verified and not successful) */}
           {isVerified && !isSuccess && (
-            <div className="space-y-lg">
-              <div className="text-center mb-xl">
-                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-sm">Reset password</h1>
+            <div className="space-y-6">
+              <div className="text-center mb-10">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface mb-2">Reset password</h1>
                 <p className="font-body-md text-body-md text-on-surface-variant">Enter a new, strong password below.</p>
               </div>
-              <form onSubmit={handleUpdatePassword} className="space-y-md">
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
                 {errorMessage && (
-                  <div className="p-sm bg-error/10 border border-error/20 rounded-lg flex items-start gap-xs text-error">
+                  <div className="p-2 bg-error/10 border border-error/20 rounded-lg flex items-start gap-1 text-error">
                     <span className="material-symbols-outlined text-[18px]">error</span>
                     <p className="font-body-sm text-body-sm mt-0.5">{errorMessage}</p>
                   </div>
                 )}
-                <div className="space-y-xs">
-                  <label className="font-label-md text-label-md text-on-surface-variant block ml-xs" htmlFor="password">New Password</label>
+                <div className="space-y-1">
+                  <label className="font-label-md text-label-md text-on-surface-variant block ml-1" htmlFor="password">New Password</label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
                     <input 
                       id="password" 
                       name="password"
@@ -182,14 +182,14 @@ function ForgotPasswordContent() {
                       required 
                       minLength={6}
                       placeholder="Enter new password" 
-                      className="w-full pl-xl pr-md py-md bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none" 
+                      className="w-full pl-10 pr-4 py-4 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none" 
                     />
                   </div>
                 </div>
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className="w-full py-md px-lg bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container active:scale-[0.98] transition-all flex items-center justify-center gap-sm shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full py-4 px-6 bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <span className="material-symbols-outlined animate-spin">progress_activity</span>
@@ -203,12 +203,12 @@ function ForgotPasswordContent() {
 
           {/* Step 3: Success State (Shared for Reset Link Sent OR Password Updated) */}
           {isSuccess && (
-            <div className="space-y-lg text-center animate-in fade-in zoom-in duration-300">
-              <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-lg">
+            <div className="space-y-6 text-center animate-in fade-in zoom-in duration-300">
+              <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="material-symbols-outlined text-secondary text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
               </div>
               <div>
-                <h2 className="font-headline-md text-headline-md text-on-surface mb-sm">
+                <h2 className="font-headline-md text-headline-md text-on-surface mb-2">
                   {isVerified ? 'Password updated' : 'Check your inbox'}
                 </h2>
                 <p className="font-body-md text-body-md text-on-surface-variant">
@@ -219,20 +219,20 @@ function ForgotPasswordContent() {
               </div>
               {!isVerified && (
                 <>
-                  <div className="bg-surface-container-low p-md rounded-lg text-left">
-                    <p className="font-label-sm text-label-sm text-on-surface-variant mb-xs">Didn&apos;t receive the email?</p>
+                  <div className="bg-surface-container-low p-4 rounded-lg text-left">
+                    <p className="font-label-sm text-label-sm text-on-surface-variant mb-1">Didn&apos;t receive the email?</p>
                     <p className="font-body-md text-body-md text-on-surface">Check your spam folder or try again.</p>
                   </div>
                   <button 
                     onClick={resetView}
-                    className="w-full py-md border border-outline-variant text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-container-high transition-all cursor-pointer"
+                    className="w-full py-4 border border-outline-variant text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-container-high transition-all cursor-pointer"
                   >
                     Resend link
                   </button>
                 </>
               )}
-              <div className="pt-lg">
-                <Link href="/login" className="flex items-center justify-center gap-xs font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">
+              <div className="pt-6">
+                <Link href="/login" className="flex items-center justify-center gap-1 font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">
                   <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                   <span>Return to Log In</span>
                 </Link>
@@ -250,10 +250,10 @@ function ForgotPasswordContent() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-xl mt-auto border-t border-outline-variant bg-surface">
-        <div className="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center px-gutter gap-md">
+      <footer className="w-full py-10 mt-auto border-t border-outline-variant bg-surface">
+        <div className="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center px-gutter gap-4">
           <p className="font-label-sm text-label-sm text-on-surface-variant">© 2026 Opportunity Radar</p>
-          <div className="flex gap-lg">
+          <div className="flex gap-6">
             <Link href="/terms" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Terms of Service</Link>
             <Link href="/privacy" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</Link>
             <Link href="/support" className="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors">Support</Link>

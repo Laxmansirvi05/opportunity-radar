@@ -80,9 +80,9 @@ export function PreFlightCheck({ onReady }: { onReady: () => void }) {
   return (
     <div className="bg-surface border border-outline-variant rounded-xl p-6 flex flex-col items-center text-center gap-4">
       <span className="material-symbols-outlined text-primary text-[40px]">mic</span>
-      <div>
+      <div className="w-full max-w-sm">
         <h2 className="font-bold text-on-surface mb-1">Check your microphone</h2>
-        <p className="text-sm text-on-surface-variant max-w-sm">
+        <p className="text-sm text-on-surface-variant">
           We need mic access to run the interview. Speak after granting access — the bar below should move.
         </p>
       </div>

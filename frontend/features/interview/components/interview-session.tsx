@@ -174,9 +174,9 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
     return (
       <div className="flex flex-col items-center gap-4 py-20 text-center">
         <span className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden />
-        <div>
+        <div className="w-full max-w-sm">
           <h1 className="font-bold text-on-background">Scoring your interview…</h1>
-          <p className="text-sm text-on-surface-variant mt-1 max-w-sm">This updates automatically — no need to refresh.</p>
+          <p className="text-sm text-on-surface-variant mt-1">This updates automatically — no need to refresh.</p>
         </div>
       </div>
     )
@@ -213,7 +213,7 @@ function StatusCard({ title, body }: { title: string; body: string }) {
   return (
     <div className="bg-surface border border-outline-variant rounded-xl p-8 flex flex-col items-center text-center gap-3">
       <h1 className="font-bold text-on-background">{title}</h1>
-      <p className="text-sm text-on-surface-variant max-w-sm">{body}</p>
+      <p className="text-sm text-on-surface-variant max-w-sm w-full">{body}</p>
       <Link
         href="/interview"
         className="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold cursor-pointer"

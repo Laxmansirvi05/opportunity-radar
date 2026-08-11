@@ -39,7 +39,7 @@ export default async function SavedOpportunitiesPage() {
   )
 
   return (
-    <div className="max-w-container-max mx-auto space-y-lg pb-16">
+    <div className="max-w-container-max mx-auto space-y-6 pb-16">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link

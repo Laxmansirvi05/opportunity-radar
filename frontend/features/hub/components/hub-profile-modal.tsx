@@ -79,11 +79,7 @@ export function HubProfileModal({ senderId, sender, onClose }: HubProfileModalPr
 
       {/* Modal Content */}
       <div
-        // max-w-md avoided: --spacing-md in app/globals.css collides with
-        // Tailwind's container scale and silently resolves max-w-md to 16px
-        // project-wide (see UI-03 in the issue tracker).
-        className="relative bg-surface rounded-3xl shadow-xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[85vh]"
-        style={{ maxWidth: '28rem' }}
+        className="relative bg-surface rounded-3xl shadow-xl w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[85vh]"
         role="dialog"
         aria-modal="true"
       >

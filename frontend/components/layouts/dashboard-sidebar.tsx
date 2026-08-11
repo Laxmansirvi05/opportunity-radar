@@ -32,9 +32,9 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
   const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
 
   return (
-    <aside className="hidden lg:flex flex-col h-screen p-md overflow-y-auto bg-surface border-r border-outline-variant w-64 sticky top-0 z-40 shrink-0">
+    <aside className="hidden lg:flex flex-col h-screen p-4 overflow-y-auto bg-surface border-r border-outline-variant w-64 sticky top-0 z-40 shrink-0">
       {/* Logo */}
-      <div className="mb-xl flex items-center gap-sm px-sm pt-sm">
+      <div className="mb-10 flex items-center gap-2 px-2 pt-2">
         <div className="w-10 h-10 bg-primary-container text-on-primary-container rounded-xl flex items-center justify-center">
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>radar</span>
         </div>
@@ -45,7 +45,7 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-sm">
+      <nav className="flex-1 flex flex-col gap-2">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
@@ -54,8 +54,8 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
               href={item.href}
               className={
                 isActive
-                  ? 'flex items-center gap-md px-md py-sm rounded-xl bg-primary-container text-on-primary-container transition-all shadow-sm font-medium'
-                  : 'flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all'
+                  ? 'flex items-center gap-4 px-4 py-2 rounded-xl bg-primary-container text-on-primary-container transition-all shadow-sm font-medium'
+                  : 'flex items-center gap-4 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-all'
               }
             >
               <span
@@ -73,25 +73,25 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
       </nav>
 
       {/* Bottom section */}
-      <div className="mt-auto pt-lg border-t border-outline-variant">
+      <div className="mt-auto pt-6 border-t border-outline-variant">
         <Link
           href="/ai-search"
-          className="flex items-center justify-center gap-2 w-full bg-primary text-on-primary font-label-md text-label-md font-semibold py-sm rounded-xl hover:opacity-90 transition-opacity mb-md shadow-sm cursor-pointer"
+          className="flex items-center justify-center gap-2 w-full bg-primary text-on-primary font-label-md text-label-md font-semibold py-2 rounded-xl hover:opacity-90 transition-opacity mb-4 shadow-sm cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
           AI Search
         </Link>
-        <div className="flex flex-col gap-xs">
+        <div className="flex flex-col gap-1">
           <Link
             href="/settings"
-            className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
+            className="flex items-center gap-4 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
           >
             <span className="material-symbols-outlined">settings</span>
             <span className="font-label-md text-label-md">Settings</span>
           </Link>
           <Link
             href="/support"
-            className="flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
+            className="flex items-center gap-4 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-all"
           >
             <span className="material-symbols-outlined">help</span>
             <span className="font-label-md text-label-md">Support</span>
@@ -100,7 +100,7 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
           <form action={logoutAction}>
             <button
               type="submit"
-              className="w-full flex items-center gap-md px-md py-sm rounded-xl text-on-surface-variant hover:bg-surface-container transition-all text-left cursor-pointer"
+              className="w-full flex items-center gap-4 px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-all text-left cursor-pointer"
             >
               <span className="material-symbols-outlined">logout</span>
               <span className="font-label-md text-label-md">Sign Out</span>
@@ -108,7 +108,7 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
           </form>
         </div>
         {/* User info chip */}
-        <div className="mt-md flex items-center gap-sm px-sm py-xs bg-surface-container rounded-xl">
+        <div className="mt-4 flex items-center gap-2 px-2 py-1 bg-surface-container rounded-xl">
           <div className="relative w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-semibold text-sm shrink-0 overflow-hidden border-2 border-surface-container-lowest">
             {avatarUrl ? (
               <Image src={avatarUrl} alt="Profile" fill className="object-cover" sizes="40px" />
