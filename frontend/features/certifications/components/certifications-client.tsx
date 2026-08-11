@@ -139,20 +139,20 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-container-lowest overflow-hidden">
       {/* Header: title + search */}
-      <div className="p-4 md:p-8 pb-4 md:pb-6 border-b border-outline-variant bg-surface shrink-0">
-        <div className="max-w-6xl mx-auto w-full flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
+      <div className="px-4 md:px-6 pt-4 md:pt-5 pb-3 md:pb-4 border-b border-outline-variant bg-surface shrink-0">
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-on-background">Certifications</h1>
-              <p className="text-sm text-on-surface-variant mt-1">
+              <h1 className="text-xl font-bold text-on-background leading-tight">Certifications</h1>
+              <p className="text-xs text-on-surface-variant mt-0.5">
                 {initial.length.toLocaleString('en-IN')} courses and certifications you can start any time — no deadlines.
               </p>
             </div>
             <button
               onClick={() => setFiltersOpen(true)}
-              className="md:hidden shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-outline-variant bg-surface text-sm font-semibold text-on-surface cursor-pointer"
+              className="md:hidden shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface text-xs font-semibold text-on-surface cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">tune</span>
+              <span className="material-symbols-outlined text-[16px]">tune</span>
               Filters
               {activeFilterCount > 0 && (
                 <span className="w-4 h-4 rounded-full bg-primary text-on-primary text-[10px] flex items-center justify-center">
@@ -163,7 +163,7 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
           </div>
 
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[19px] pointer-events-none">
               search
             </span>
             <input
@@ -172,7 +172,7 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search certifications, providers or topics…"
               aria-label="Search certifications"
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-shadow"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-shadow"
             />
           </div>
         </div>
@@ -193,19 +193,19 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
           activeFilterCount={activeFilterCount}
         />
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="w-full flex flex-col gap-3 pb-24">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm text-on-surface-variant">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="w-full flex flex-col gap-2 pb-24">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-xs font-medium text-on-surface-variant">
                 {results.length.toLocaleString('en-IN')} {results.length === 1 ? 'certification' : 'certifications'}
               </span>
             </div>
 
             {results.length === 0 ? (
-              <div className="bg-surface border border-dashed border-outline-variant rounded-2xl p-12 flex flex-col items-center text-center">
-                <span className="material-symbols-outlined text-outline text-[48px] mb-3">school</span>
-                <h2 className="font-bold text-on-surface mb-1">No certifications found</h2>
-                <p className="text-sm text-on-surface-variant max-w-md">
+              <div className="bg-surface border border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center text-center">
+                <span className="material-symbols-outlined text-outline text-[40px] mb-2">school</span>
+                <h2 className="font-bold text-on-surface mb-1 text-sm">No certifications found</h2>
+                <p className="text-xs text-on-surface-variant max-w-md">
                   Try a different search term, or clear some filters.
                 </p>
               </div>
@@ -214,21 +214,21 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
                 <button
                   key={c.id}
                   onClick={() => setSelected(c)}
-                  className="text-left bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-4 group"
+                  className="text-left bg-surface border border-outline-variant rounded-xl px-3.5 py-3 shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-3 group"
                 >
                   <CompanyLogo
                     src={c.provider_logo}
                     name={c.provider}
                     alt={`${c.provider} logo`}
-                    containerClassName="w-12 h-12 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
-                    imageClassName="w-8 h-8 object-contain"
+                    containerClassName="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
+                    imageClassName="w-6 h-6 object-contain"
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-on-background truncate group-hover:text-primary transition-colors">
+                    <h3 className="text-[15px] font-semibold text-on-background truncate group-hover:text-primary transition-colors leading-snug">
                       {c.title}
                     </h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm text-on-surface-variant truncate">{c.provider}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs text-on-surface-variant truncate">{c.provider}</p>
                       {c.level && (
                         <span className="text-[11px] text-on-surface-variant/80 shrink-0">· {c.level}</span>
                       )}
@@ -237,9 +237,9 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span
-                      className={`px-2.5 py-1 rounded-md text-xs font-bold ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                         c.is_free
                           ? 'bg-secondary-container text-on-secondary-container'
                           : 'bg-surface-container text-on-surface-variant'
@@ -247,7 +247,7 @@ export function CertificationsClient({ initial }: { initial: Certification[] }) 
                     >
                       {c.is_free ? 'Free' : 'Paid'}
                     </span>
-                    <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-[20px] text-outline group-hover:text-primary transition-colors">
                       chevron_right
                     </span>
                   </div>
@@ -395,82 +395,82 @@ function CertificationsFiltersSidebar({
       )}
       <aside
         className={`
-          fixed inset-y-0 left-0 w-72 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out
-          md:static md:h-full md:translate-x-0 md:w-60 md:shadow-none md:border-r md:border-outline-variant md:z-auto
-          overflow-y-auto p-6 shrink-0
+          fixed inset-y-0 left-0 w-64 bg-surface shadow-2xl z-50 transform transition-transform duration-300 ease-in-out
+          md:static md:h-full md:translate-x-0 md:w-52 md:shadow-none md:border-r md:border-outline-variant md:z-auto
+          overflow-y-auto p-4 shrink-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-lg font-bold text-on-background">Filters</h2>
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-sm font-bold text-on-background uppercase tracking-wide">Filters</h2>
           <div className="flex items-center gap-2">
             {activeFilterCount > 0 && (
-              <button onClick={clearAllFilters} className="text-primary text-xs font-medium hover:underline cursor-pointer">
+              <button onClick={clearAllFilters} className="text-primary text-[11px] font-medium hover:underline cursor-pointer">
                 Clear all
               </button>
             )}
             <button
-              className="md:hidden text-on-surface-variant p-2 hover:bg-surface-container rounded-full transition-colors cursor-pointer"
+              className="md:hidden text-on-surface-variant p-1.5 hover:bg-surface-container rounded-full transition-colors cursor-pointer"
               onClick={onClose}
               aria-label="Close filters"
             >
-              <span className="material-symbols-outlined">close</span>
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         </div>
 
         <FilterSection title="Price">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             {([
               { key: 'all', label: 'All' },
               { key: 'free', label: 'Free' },
               { key: 'paid', label: 'Paid' },
             ] as const).map((opt) => (
-              <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
+              <label key={opt.key} className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="radio"
                   name="price"
                   checked={price === opt.key}
                   onChange={() => setPrice(opt.key)}
-                  className="w-4 h-4 border-outline text-primary focus:ring-primary cursor-pointer"
+                  className="w-3.5 h-3.5 border-outline text-primary focus:ring-primary cursor-pointer"
                 />
-                <span className="text-sm text-on-surface">{opt.label}</span>
+                <span className="text-[13px] text-on-surface">{opt.label}</span>
               </label>
             ))}
           </div>
         </FilterSection>
 
         <FilterSection title="Level">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             {LEVELS.map((l) => (
-              <label key={l} className="flex items-center gap-3 cursor-pointer group">
+              <label key={l} className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={levels.has(l)}
                   onChange={() => toggleLevel(l)}
-                  className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer"
+                  className="w-3.5 h-3.5 rounded border-outline text-primary focus:ring-primary cursor-pointer"
                 />
-                <span className="text-sm text-on-surface">{l}</span>
+                <span className="text-[13px] text-on-surface">{l}</span>
               </label>
             ))}
           </div>
         </FilterSection>
 
         <FilterSection title="Duration">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
             {DURATION_BUCKETS.map((b) => (
-              <label key={b.key} className="flex items-center gap-3 cursor-pointer group">
+              <label key={b.key} className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={durations.has(b.key)}
                   onChange={() => toggleDuration(b.key)}
-                  className="w-4 h-4 rounded border-outline text-primary focus:ring-primary cursor-pointer"
+                  className="w-3.5 h-3.5 rounded border-outline text-primary focus:ring-primary cursor-pointer"
                 />
-                <span className="text-sm text-on-surface">{b.label}</span>
+                <span className="text-[13px] text-on-surface">{b.label}</span>
               </label>
             ))}
           </div>
-          <p className="text-[11px] text-on-surface-variant/70 mt-3 leading-relaxed">
+          <p className="text-[10.5px] text-on-surface-variant/70 mt-2 leading-snug">
             Estimated from each provider&apos;s own listed duration — exact hours vary by pace.
           </p>
         </FilterSection>
@@ -481,8 +481,8 @@ function CertificationsFiltersSidebar({
 
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-8">
-      <h3 className="text-[11px] font-semibold text-on-surface-variant mb-4 uppercase tracking-wider">{title}</h3>
+    <div className="mb-5">
+      <h3 className="text-[10px] font-semibold text-on-surface-variant mb-2.5 uppercase tracking-wider">{title}</h3>
       {children}
     </div>
   )
