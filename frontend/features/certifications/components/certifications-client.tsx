@@ -197,7 +197,7 @@ export function CertificationsClient({
               <span className="text-sm font-medium text-on-surface-variant">{countLabel}</span>
             </div>
 
-            {items.length === 0 && !loading ? (
+            {items.length === 0 && !loading && !hasMore ? (
               <div className="bg-surface border border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center text-center">
                 <span className="material-symbols-outlined text-outline text-[40px] mb-2">school</span>
                 <h2 className="font-bold text-on-surface mb-1 text-sm">No certifications found</h2>
@@ -213,29 +213,29 @@ export function CertificationsClient({
                     <button
                       key={c.id}
                       onClick={() => setSelected(c)}
-                      className="text-left bg-surface border border-outline-variant rounded-lg px-[17px] py-[13px] shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-[13px] group"
+                      className="text-left bg-surface border border-outline-variant rounded-lg px-[18px] py-[14px] shadow-sm hover:border-primary hover:shadow-md transition-all cursor-pointer flex items-center gap-[14px] group"
                     >
                       <CompanyLogo
                         src={c.provider_logo}
                         name={c.provider}
                         alt={`${c.provider} logo`}
-                        containerClassName="w-[42px] h-[42px] rounded-md bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
-                        imageClassName="w-[26px] h-[26px] object-contain"
+                        containerClassName="w-11 h-11 rounded-md bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 overflow-hidden shrink-0"
+                        imageClassName="w-[27px] h-[27px] object-contain"
                       />
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-[16px] font-semibold text-on-background truncate group-hover:text-primary transition-colors leading-snug">
+                        <h3 className="text-[17px] font-semibold text-on-background truncate group-hover:text-primary transition-colors leading-snug">
                           {c.title}
                         </h3>
                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                          <p className="text-[13px] text-on-surface-variant truncate">{c.provider}</p>
+                          <p className="text-sm text-on-surface-variant truncate">{c.provider}</p>
                           {c.duration && (
-                            <span className="text-[13px] text-on-surface-variant/80 shrink-0">· {c.duration}</span>
+                            <span className="text-sm text-on-surface-variant/80 shrink-0">· {c.duration}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                           {c.level && (
                             <span
-                              className={`px-[7px] py-[3px] rounded text-[11px] font-bold uppercase tracking-wide shrink-0 ${
+                              className={`px-2 py-[3px] rounded text-[12px] font-bold uppercase tracking-wide shrink-0 ${
                                 LEVEL_STYLES[c.level] ?? 'bg-surface-container text-on-surface-variant'
                               }`}
                             >
@@ -243,24 +243,24 @@ export function CertificationsClient({
                             </span>
                           )}
                           {c.has_certificate && (
-                            <span className="flex items-center gap-0.5 px-[7px] py-[3px] rounded text-[11px] font-medium bg-surface-container text-on-surface-variant shrink-0">
-                              <span className="material-symbols-outlined text-xs">workspace_premium</span>
+                            <span className="flex items-center gap-0.5 px-2 py-[3px] rounded text-[12px] font-medium bg-surface-container text-on-surface-variant shrink-0">
+                              <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
                               Certificate
                             </span>
                           )}
                           {c.topics?.slice(0, TOPICS_PREVIEW_COUNT).map((t) => (
-                            <span key={t} className="px-[7px] py-[3px] rounded text-[11px] font-medium bg-surface-container text-on-surface-variant shrink-0">
+                            <span key={t} className="px-2 py-[3px] rounded text-[12px] font-medium bg-surface-container text-on-surface-variant shrink-0">
                               {t}
                             </span>
                           ))}
                           {extraTopics > 0 && (
-                            <span className="text-[11px] text-on-surface-variant/70 shrink-0">+{extraTopics} more</span>
+                            <span className="text-[12px] text-on-surface-variant/70 shrink-0">+{extraTopics} more</span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span
-                          className={`px-[9px] py-[5px] rounded text-xs font-bold ${
+                          className={`px-2.5 py-[5px] rounded text-[13px] font-bold ${
                             c.is_free
                               ? 'bg-secondary-container text-on-secondary-container'
                               : 'bg-surface-container text-on-surface-variant'
@@ -268,7 +268,7 @@ export function CertificationsClient({
                         >
                           {c.is_free ? 'Free' : 'Paid'}
                         </span>
-                        <span className="material-symbols-outlined text-xl text-outline group-hover:text-primary transition-colors">
+                        <span className="material-symbols-outlined text-[21px] text-outline group-hover:text-primary transition-colors">
                           chevron_right
                         </span>
                       </div>
@@ -278,7 +278,7 @@ export function CertificationsClient({
 
                 {(hasMore || loading) && (
                   <div ref={sentinelRef} className="flex items-center justify-center py-6 text-xs text-on-surface-variant">
-                    Loading more…
+                    {items.length === 0 ? 'Searching the full catalogue…' : 'Loading more…'}
                   </div>
                 )}
               </>

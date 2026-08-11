@@ -9,10 +9,14 @@ import type { Certification } from '../components/certifications-client'
 const PAGE_SIZE = 48
 // Duration has no stored column (see lib/duration.ts), so an active duration
 // filter is applied client-side to whatever page comes back — which can
-// strip a page down to very few rows if the combination is narrow. This
-// bounds how many extra server round-trips one load-more will chase before
-// giving up on filling a full page, so a near-empty combination can't spin.
-const MAX_CONTINUATIONS = 8
+// strip a page down to very few (or zero) rows per server page if the
+// combination is narrow, since results aren't sorted by duration at all.
+// This bounds how many extra server round-trips one call will chase before
+// returning control to the UI, so a near-empty combination can't spin
+// forever inside a single call — but see the component's `hasMore` handling:
+// a call returning zero matches must NOT be treated as "no results" on its
+// own, only as "keep going," or a sparse-but-real bucket looks broken.
+const MAX_CONTINUATIONS = 20
 const DEBOUNCE_MS = 200
 
 export interface CertificationFiltersState {
