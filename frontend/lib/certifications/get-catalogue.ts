@@ -59,6 +59,7 @@ async function fetchFirstPage(): Promise<{ items: Certification[]; total: number
     .or(DEAD_LINK_FILTER)
     .order('is_free', { ascending: false })
     .order('title', { ascending: true })
+    .order('id', { ascending: true })
     .range(0, FIRST_PAGE_SIZE - 1)
 
   if (error) {
@@ -91,6 +92,7 @@ async function fetchTopProviders(): Promise<[string, number][]> {
         .from('certifications')
         .select('provider')
         .or(DEAD_LINK_FILTER)
+        .order('id', { ascending: true })
         .range(i * pageSize, i * pageSize + pageSize - 1)
     )
   )

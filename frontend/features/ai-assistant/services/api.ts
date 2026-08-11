@@ -56,8 +56,7 @@ function logSupabaseError(operation: string, table: string, error: SupabaseError
   if (error?.code === 'PGRST205' || error?.message?.includes('schema cache')) {
     console.error(`⚠️  TABLE '${table}' DOES NOT EXIST.`);
     console.error(`Run the migration SQL in your Supabase Dashboard → SQL Editor.`);
-    console.error(`File: supabase/migrations/20260807000000_ai_assistant_tables.sql`);
-    console.error(`Or: POST /api/assistant/setup to get the SQL.\n`);
+    console.error(`File: supabase/migrations/20260807000000_ai_assistant_tables.sql\n`);
   }
 }
 

@@ -43,23 +43,33 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
     return body
   }, [sessionId])
 
-  // Initial load.
+  // Initial load. fetchStatus only handles non-2xx responses itself (and
+  // already sets the error phase for those) — a network-level failure
+  // (offline, DNS hiccup, res.json() on a non-JSON body) throws instead of
+  // resolving, so it needs its own catch here or the phase gets stuck on
+  // 'loading' forever with nothing on screen and no way to retry.
   useEffect(() => {
     let cancelled = false
-    fetchStatus().then((body) => {
-      if (cancelled || !body) return
-      setMeta({ role: body.role_title ?? null, company: body.company ?? null })
-      if (body.status === 'completed' && body.report) {
-        setReport({ scorecard: body.report.scorecard, degraded: body.report.degraded })
-        setPhase('report')
-      } else if (body.status === 'abandoned') {
-        setPhase('abandoned')
-      } else if (body.status === 'failed') {
-        setPhase('failed')
-      } else {
-        setPhase('preflight')
-      }
-    })
+    fetchStatus()
+      .then((body) => {
+        if (cancelled || !body) return
+        setMeta({ role: body.role_title ?? null, company: body.company ?? null })
+        if (body.status === 'completed' && body.report) {
+          setReport({ scorecard: body.report.scorecard, degraded: body.report.degraded })
+          setPhase('report')
+        } else if (body.status === 'abandoned') {
+          setPhase('abandoned')
+        } else if (body.status === 'failed') {
+          setPhase('failed')
+        } else {
+          setPhase('preflight')
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        setErrorMessage('Something went wrong loading your interview.')
+        setPhase('error')
+      })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
@@ -97,7 +107,24 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
     let cancelled = false
 
     const poll = async () => {
-      const body = await fetchStatus()
+      let body: StatusResponse | null
+      try {
+        body = await fetchStatus()
+      } catch {
+        // Network-level failure (not a non-2xx response — fetchStatus
+        // already sets the error phase for those and returns null, which
+        // falls through to `return` below). Treat this as transient and
+        // just retry on the next tick instead of freezing the spinner.
+        if (cancelled) return
+        const elapsed = Date.now() - (scorePollStarted.current ?? Date.now())
+        if (elapsed > SCORE_POLL_TIMEOUT_MS) {
+          setErrorMessage('Scoring is taking longer than expected. Check back on this page shortly — your answers are saved.')
+          setPhase('error')
+          return
+        }
+        setTimeout(poll, SCORE_POLL_MS)
+        return
+      }
       if (cancelled || !body) return
 
       if (body.status === 'completed' && body.report) {

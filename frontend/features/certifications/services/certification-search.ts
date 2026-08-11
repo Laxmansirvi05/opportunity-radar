@@ -79,6 +79,7 @@ export async function fetchCertificationsPage(
   const { data, error, count } = await q
     .order('is_free', { ascending: false })
     .order('title', { ascending: true })
+    .order('id', { ascending: true })
     .range(offset, offset + limit - 1)
 
   if (error) {

@@ -100,7 +100,15 @@ GRANT SELECT, INSERT, UPDATE ON public.interview_sessions TO authenticated;
 
 CREATE TABLE IF NOT EXISTS public.interview_reports (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id      UUID NOT NULL REFERENCES public.interview_sessions(id) ON DELETE CASCADE,
+    -- UNIQUE, not just indexed: the GET route's `finalize()` can be entered
+    -- by two overlapping status polls for the same session (the fast path —
+    -- the browser's own disconnect handler — and the fallback poll can both
+    -- observe "complete but not yet terminal locally" before either write
+    -- commits). A plain INSERT would let both land, and the terminal-status
+    -- read path's `.maybeSingle()` errors out on more than one row for the
+    -- same session_id — silently hiding an already-completed interview's
+    -- report forever. One report per session is the actual invariant.
+    session_id      UUID NOT NULL UNIQUE REFERENCES public.interview_sessions(id) ON DELETE CASCADE,
 
     -- Verbatim ScoreCard from the agent's GET /api/session/{id} response.
     scorecard       JSONB NOT NULL,
@@ -118,8 +126,8 @@ CREATE TABLE IF NOT EXISTS public.interview_reports (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_interview_reports_session
-  ON public.interview_reports(session_id);
+-- No separate index needed — the UNIQUE constraint on session_id above
+-- already creates one.
 
 ALTER TABLE public.interview_reports ENABLE ROW LEVEL SECURITY;
 

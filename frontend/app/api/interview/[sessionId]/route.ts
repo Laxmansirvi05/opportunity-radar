@@ -168,14 +168,23 @@ async function finalize(
   const narrativeMissing =
     !scorecard.strengths?.length && !scorecard.weaknesses?.length && !scorecard.model_answers?.length
 
+  // Upsert, not insert: two overlapping status polls for the same session
+  // (the browser's disconnect handler and the fallback poll) can both reach
+  // this point before either write commits — see the UNIQUE constraint's
+  // comment in the migration for why a plain insert let that create two
+  // report rows for one session, which permanently broke the terminal-status
+  // read path's `.maybeSingle()`.
   const { data: report } = await supabase
     .from('interview_reports')
-    .insert({
-      session_id: sessionId,
-      scorecard,
-      overall_score: scorecard.overall_score ?? null,
-      degraded: !hasScores || narrativeMissing,
-    })
+    .upsert(
+      {
+        session_id: sessionId,
+        scorecard,
+        overall_score: scorecard.overall_score ?? null,
+        degraded: !hasScores || narrativeMissing,
+      },
+      { onConflict: 'session_id' }
+    )
     .select('scorecard, overall_score, degraded, created_at')
     .single()
 

@@ -23,11 +23,15 @@ export type DurationBucketKey = (typeof DURATION_BUCKETS)[number]['key']
 export function estimateHours(duration: string | null): number | null {
   if (!duration) return null
   const d = duration.toLowerCase()
-  // The `\+?` handles freeCodeCamp's own "1000+ hours" (its Full Stack
-  // Developer cert's real, literal duration string) — without it, the "+"
-  // between the number and "hours" broke the match entirely and the row
-  // never matched any bucket.
-  const hourMatch = /(\d+(?:\.\d+)?)\+?\s*hours?/.exec(d)
+  // The `[\s-]*\+?[\s-]*` gap handles freeCodeCamp's own "1000+ hours" (its
+  // Full Stack Developer cert's real, literal duration string) as well as
+  // hyphenated forms like "2-hour course" — without it, the "+" or "-"
+  // between the number and the unit broke the match entirely and the row
+  // never matched any bucket. The unit alternation also covers the
+  // abbreviations providers actually use in the wild ("3hrs", "4h 30m",
+  // "1,5 hs" with a European decimal comma) — restricting to "hours?" alone
+  // silently dropped every one of these into "unparseable."
+  const hourMatch = /(\d+(?:[.,]\d+)?)[\s-]*\+?[\s-]*(?:hours?|hrs?|hs|h)\b/.exec(d)
   const minMatch = /(\d+)\s*min/.exec(d)
   const weekMatch = /(\d+)\s*weeks?/.exec(d)
   const monthMatch = /(\d+)\s*months?/.exec(d)
@@ -45,7 +49,7 @@ export function estimateHours(duration: string | null): number | null {
   if (monthMatch) return parseInt(monthMatch[1], 10) * 4.3 * 5
   if (weekMatch) return parseInt(weekMatch[1], 10) * 5
   if (hourMatch) {
-    let hours = parseFloat(hourMatch[1])
+    let hours = parseFloat(hourMatch[1].replace(',', '.'))
     if (minMatch) hours += parseInt(minMatch[1], 10) / 60
     return hours
   }

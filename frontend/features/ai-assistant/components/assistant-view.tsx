@@ -16,7 +16,7 @@ interface AssistantViewProps {
 export function AssistantView({ userName = "there" }: AssistantViewProps) {
   const activeConversation = useActiveConversation();
   const { sendMessage, regenerateLastResponse, startNewChat, isLoading, isHydrated, hydrate } = useChatStore();
-  const messagesEndRef = useRef<HTMLElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
 
   useEffect(() => {
