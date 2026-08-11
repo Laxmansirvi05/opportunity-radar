@@ -11,10 +11,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function InterviewSessionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>
+  searchParams: Promise<{ persona?: string }>
 }) {
   const { sessionId } = await params
+  const { persona } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -33,8 +36,8 @@ export default async function InterviewSessionPage({
 
   return (
     <div className="flex-1 p-4 md:p-8 overflow-y-auto">
-      <div className="max-w-2xl mx-auto w-full">
-        <InterviewSession sessionId={sessionId} />
+      <div className="max-w-4xl mx-auto w-full">
+        <InterviewSession sessionId={sessionId} personaId={persona ?? null} />
       </div>
     </div>
   )

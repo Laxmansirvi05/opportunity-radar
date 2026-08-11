@@ -24,7 +24,7 @@ interface StatusResponse {
 const SCORE_POLL_MS = 4_000
 const SCORE_POLL_TIMEOUT_MS = 3 * 60_000
 
-export function InterviewSession({ sessionId }: { sessionId: string }) {
+export function InterviewSession({ sessionId, personaId }: { sessionId: string; personaId: string | null }) {
   const [phase, setPhase] = useState<Phase>('loading')
   const [meta, setMeta] = useState<{ role: string | null; company: string | null }>({ role: null, company: null })
   const [report, setReport] = useState<{ scorecard: ScoreCard; degraded: boolean } | null>(null)
@@ -140,7 +140,7 @@ export function InterviewSession({ sessionId }: { sessionId: string }) {
   }
 
   if (phase === 'live' && liveKit) {
-    return <LiveRoom token={liveKit.token} serverUrl={liveKit.url} onEnded={handleEnded} />
+    return <LiveRoom token={liveKit.token} serverUrl={liveKit.url} personaId={personaId} onEnded={handleEnded} />
   }
 
   if (phase === 'scoring') {
