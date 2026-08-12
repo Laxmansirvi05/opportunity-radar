@@ -23,36 +23,42 @@ const DEFAULT_BACKOFF_MS = {
 }
 
 /**
- * Get a cache key for provider + model
+ * Get a cache key for provider + model + (optionally) which specific key.
+ *
+ * The keyId component matters once a provider has more than one API key:
+ * a rate limit on key #1 must not block key #2 of the same provider/model
+ * from being tried — they are independent quotas. Omitting keyId keeps the
+ * old provider+model-only behaviour for single-key providers.
  */
-function getKey(provider: AIProvider, model: string): string {
-  return `${provider}:${model}`
+function getKey(provider: AIProvider, model: string, keyId?: string): string {
+  return keyId ? `${provider}:${model}:${keyId}` : `${provider}:${model}`
 }
 
 /**
- * Check if a specific provider + model is currently healthy and allowed to be called.
+ * Check if a specific provider + model (+ key) is currently healthy and allowed to be called.
  */
-export function isProviderHealthy(provider: AIProvider, model: string): boolean {
-  const key = getKey(provider, model)
+export function isProviderHealthy(provider: AIProvider, model: string, keyId?: string): boolean {
+  const key = getKey(provider, model, keyId)
   const state = healthStore.get(key)
-  
+
   if (!state) return true
-  
+
   const now = Date.now()
   return now >= state.retryAfterTime
 }
 
 /**
- * Record a failure for a specific provider + model.
+ * Record a failure for a specific provider + model (+ key).
  * Optional retryAfterMs to override the default backoff.
  */
 export function recordProviderFailure(
-  provider: AIProvider, 
-  model: string, 
+  provider: AIProvider,
+  model: string,
   reason: AIFailureReason,
-  retryAfterMs?: number
+  retryAfterMs?: number,
+  keyId?: string
 ): void {
-  const key = getKey(provider, model)
+  const key = getKey(provider, model, keyId)
   const now = Date.now()
   const existing = healthStore.get(key)
   
@@ -77,8 +83,8 @@ export function recordProviderFailure(
 /**
  * Record a success, resetting the failure count.
  */
-export function recordProviderSuccess(provider: AIProvider, model: string): void {
-  const key = getKey(provider, model)
+export function recordProviderSuccess(provider: AIProvider, model: string, keyId?: string): void {
+  const key = getKey(provider, model, keyId)
   healthStore.delete(key)
 }
 

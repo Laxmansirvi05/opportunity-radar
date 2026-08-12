@@ -1,31 +1,35 @@
 import type { AIRequest, AIResult } from '@/types/ai'
 
-export async function callOpenRouter(
+/**
+ * Mistral's La Plateforme — an OpenAI-compatible chat endpoint, same shape
+ * as the Groq/OpenRouter adapters. mistral-small-latest is the free-tier
+ * model; not used for resume/JD content unless the student has explicitly
+ * accepted Mistral's free-tier data-training terms, since that tier trains
+ * on submitted requests — a real tradeoff for a feature that processes
+ * resumes and job descriptions. Wiring it in is the student's own call
+ * to make with their own key, not something to default to silently.
+ */
+export async function callMistral(
   request: AIRequest,
   timeoutMs: number,
   overrideModel?: string,
   overrideApiKey?: string
 ): Promise<AIResult> {
   const start = Date.now()
-  const apiKey = overrideApiKey || process.env.OPENROUTER_API_KEY
+  const apiKey = overrideApiKey || process.env.MISTRAL_API_KEY
 
   if (!apiKey) {
-    console.error('[OpenRouter Provider] Missing OPENROUTER_API_KEY environment variable.')
-    return {
-      success: false,
-      provider: 'openrouter',
-      reason: 'provider_error',
-      latencyMs: Date.now() - start,
-    }
+    console.error('[Mistral Provider] No API key available.')
+    return { success: false, provider: 'mistral', reason: 'auth_failure', latencyMs: Date.now() - start }
   }
 
-  const modelName = overrideModel || 'google/gemini-2.5-flash' 
+  const modelName = overrideModel || 'mistral-small-latest'
 
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -37,7 +41,7 @@ export async function callOpenRouter(
           { role: 'system', content: request.systemPrompt },
           { role: 'user', content: request.userPrompt },
         ],
-        max_tokens: request.maxTokens ?? 1500, // Make sure we have enough tokens for extraction
+        max_tokens: request.maxTokens ?? 500,
         temperature: request.temperature ?? 0.3,
         ...(request.outputFormat === 'json'
           ? { response_format: { type: 'json_object' } }
@@ -52,6 +56,9 @@ export async function callOpenRouter(
       if (response.status === 429) {
         throw new Error('429 rate limit')
       }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`${response.status} auth failure`)
+      }
       const errorText = await response.text().catch(() => 'unknown error')
       throw new Error(`${response.status} ${errorText}`)
     }
@@ -64,7 +71,7 @@ export async function callOpenRouter(
     if (!content || content.trim().length === 0) {
       return {
         success: false,
-        provider: 'openrouter',
+        provider: 'mistral',
         reason: 'invalid_response',
         latencyMs: elapsed,
       }
@@ -73,7 +80,7 @@ export async function callOpenRouter(
     return {
       success: true,
       content,
-      provider: 'openrouter',
+      provider: 'mistral',
       model: modelName,
       tokensUsed: {
         input: usage?.prompt_tokens ?? 0,
@@ -85,23 +92,22 @@ export async function callOpenRouter(
   } catch (err: any) {
     const elapsed = Date.now() - start
     const isRateLimit = err?.message?.includes('429')
-    const isTimeout = err?.name === 'AbortError' || err?.message?.includes('timeout')
     const isAuth = /\b(401|403)\b/.test(err?.message ?? '')
+    const isTimeout = err?.name === 'AbortError' || err?.message?.includes('timeout')
 
     let errorMsg = err instanceof Error ? err.message : String(err)
-    // Strip API keys from logs just in case (sk-or-v1-...)
-    errorMsg = errorMsg.replace(/(sk-or-v1-[A-Za-z0-9]{40,})/g, '[REDACTED_API_KEY]')
+    errorMsg = errorMsg.replace(/([A-Za-z0-9]{32})/g, (m: string) => (m.length === 32 ? '[REDACTED_API_KEY]' : m))
 
     let reason: 'rate_limit' | 'timeout' | 'auth_failure' | 'provider_error' = 'provider_error'
     if (isRateLimit) reason = 'rate_limit'
-    if (isTimeout) reason = 'timeout'
-    if (isAuth) reason = 'auth_failure'
+    else if (isAuth) reason = 'auth_failure'
+    else if (isTimeout) reason = 'timeout'
 
-    console.error(`[AI Gateway Failure] provider -> openrouter -> model -> ${modelName} -> status -> ${err?.status || 'unknown'} -> reason -> ${errorMsg}`)
+    console.error(`[AI Gateway Failure] provider -> mistral -> model -> ${modelName} -> status -> ${err?.status || 'unknown'} -> reason -> ${errorMsg}`)
 
     return {
       success: false,
-      provider: 'openrouter',
+      provider: 'mistral',
       reason,
       latencyMs: elapsed,
     }

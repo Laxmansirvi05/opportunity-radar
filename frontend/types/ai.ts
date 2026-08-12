@@ -25,7 +25,7 @@ export type AIFeature =
   | 'resume_polish'
   | 'resume_target'
 
-export type AIProvider = 'gemini' | 'groq' | 'openrouter' | 'cloudflare' | 'ollama'
+export type AIProvider = 'gemini' | 'groq' | 'openrouter' | 'cloudflare' | 'ollama' | 'mistral'
 
 // ---------------------------------------------------------------------------
 // Request
@@ -126,6 +126,6 @@ export function estimateCostUsd(
     // OpenRouter models vary, estimate zero for free/low cost development or calculate if needed
     return 0;
   }
-  // Groq free tier
+  // Groq, Cloudflare, Ollama, Mistral free tiers
   return 0
 }

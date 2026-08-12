@@ -1,16 +1,37 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { AIRequest, AIResult } from '@/types/ai'
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY!)
+/**
+ * gemini-flash-latest is Google's stable alias for their current
+ * recommended Flash model, not a pinned version. Pinning to a specific
+ * version like "gemini-2.5-flash" broke silently for newly-created Google
+ * Cloud projects — Google stopped granting new projects access to that
+ * exact model id ("no longer available to new users", a 404, not a quota
+ * error) while still serving it to older/grandfathered projects. The
+ * alias sidesteps this: it always resolves to whatever Google currently
+ * recommends, for every project cohort, and stays correct as Google
+ * rotates model versions in the future.
+ */
+const DEFAULT_MODEL = 'gemini-flash-latest'
+const FALLBACK_MODEL = 'gemini-2.0-flash'
 
 export async function callGemini(
   request: AIRequest,
   timeoutMs: number,
-  overrideModel?: string
+  overrideModel?: string,
+  apiKey?: string
 ): Promise<AIResult> {
   const start = Date.now()
   const controller = new AbortController()
   const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs)
+
+  const key = apiKey || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
+  if (!key) {
+    clearTimeout(timeoutHandle)
+    console.error('[Gemini Provider] No API key available.')
+    return { success: false, provider: 'gemini', reason: 'auth_failure', latencyMs: Date.now() - start }
+  }
+  const genAI = new GoogleGenerativeAI(key)
 
   try {
     const tryModel = async (modelName: string) => {
@@ -35,14 +56,14 @@ export async function callGemini(
     };
 
     let result;
-    let finalModel = 'gemini-2.5-flash';
+    let finalModel = DEFAULT_MODEL;
     try {
-      result = await tryModel('gemini-2.5-flash');
+      result = await tryModel(DEFAULT_MODEL);
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes('429')) {
-        console.warn('[Gemini Provider]: gemini-2.5-flash rate limited. Falling back to gemini-2.0-flash...');
-        finalModel = 'gemini-2.0-flash';
-        result = await tryModel('gemini-2.0-flash');
+        console.warn(`[Gemini Provider]: ${DEFAULT_MODEL} rate limited. Falling back to ${FALLBACK_MODEL}...`);
+        finalModel = FALLBACK_MODEL;
+        result = await tryModel(FALLBACK_MODEL);
       } else {
         throw err;
       }
@@ -80,15 +101,17 @@ export async function callGemini(
     const elapsed = Date.now() - start
     const isTimeout = err?.name === 'AbortError' || (err instanceof Error && err.message.includes('timeout'))
     const isRateLimit = err?.status === 429 || (err instanceof Error && err.message.includes('429'))
-    
+    const isAuth = err?.status === 403 || err?.status === 401 || (err instanceof Error && /\b(403|401)\b/.test(err.message))
+
     let errorMsg = err instanceof Error ? err.message : String(err)
     // Strip API keys from logs just in case
     errorMsg = errorMsg.replace(/(AIza[0-9A-Za-z-_]{35})/g, '[REDACTED_API_KEY]')
-    
-    const reason = isTimeout ? 'timeout' : (isRateLimit ? 'rate_limit' : 'provider_error')
-    
-    console.error(`[AI Gateway Failure] provider -> gemini -> model -> gemini-2.5-flash / gemini-2.0-flash -> status -> ${err?.status || 'unknown'} -> reason -> ${errorMsg}`)
-    
+    errorMsg = errorMsg.replace(/(AQ\.[0-9A-Za-z-_.]{20,})/g, '[REDACTED_API_KEY]')
+
+    const reason = isTimeout ? 'timeout' : (isRateLimit ? 'rate_limit' : (isAuth ? 'auth_failure' : 'provider_error'))
+
+    console.error(`[AI Gateway Failure] provider -> gemini -> model -> ${DEFAULT_MODEL} / ${FALLBACK_MODEL} -> status -> ${err?.status || 'unknown'} -> reason -> ${errorMsg}`)
+
     return {
       success:   false,
       provider:  'gemini',

@@ -11,7 +11,9 @@ import { callGroq } from './providers/groq'
 import { callOpenRouter } from './providers/openrouter'
 import { callCloudflare } from './providers/cloudflare'
 import { callOllama } from './providers/ollama'
+import { callMistral } from './providers/mistral'
 import { createClient } from '@supabase/supabase-js'
+import { getProviderApiKeys, keyFingerprint } from './key-pool'
 import {
   isProviderHealthy,
   recordProviderFailure,
@@ -24,6 +26,7 @@ const TIMEOUTS: Record<AIProvider, number> = {
   groq: 15_000,
   cloudflare: 30_000,
   ollama: 40_000,
+  mistral: 25_000,
 }
 
 const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
@@ -51,16 +54,21 @@ interface ProviderConfig {
   model?: string
 }
 
+// gemini-flash-latest, not a pinned version — see providers/gemini.ts for
+// why a pinned version silently 404s for newer Google Cloud projects while
+// still working for older ones. The alias is what actually gets called;
+// this string only has to satisfy TIMEOUTS/logging, never sent as-is.
 const STRONG_MODELS: ProviderConfig[] = [
-  { provider: 'gemini', model: 'gemini-2.5-flash' },
+  { provider: 'gemini', model: 'gemini-flash-latest' },
   { provider: 'openrouter', model: 'google/gemini-2.5-flash' },
   { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+  { provider: 'mistral', model: 'mistral-small-latest' },
   { provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct' }
 ]
 
 const FAST_CHEAP_MODELS: ProviderConfig[] = [
   { provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct' },
-  { provider: 'gemini', model: 'gemini-2.5-flash' }
+  { provider: 'gemini', model: 'gemini-flash-latest' }
 ]
 
 export function getProviderSequence(feature: string): ProviderConfig[] {
@@ -193,6 +201,38 @@ async function checkRateLimit(
   return true
 }
 
+/** One attempt against one provider+model+key combination. */
+async function attemptCall(
+  provider: AIProvider,
+  model: string,
+  apiKey: string | undefined,
+  request: AIRequest,
+  timeout: number
+): Promise<AIResult> {
+  switch (provider) {
+    case 'gemini': {
+      const result = await callGemini(request, timeout, model, apiKey)
+      if (isAIResponse(result)) result.model = model
+      return result
+    }
+    case 'groq':
+      return callGroq(request, timeout, model, apiKey)
+    case 'openrouter': {
+      const result = await callOpenRouter(request, timeout, model, apiKey)
+      if (isAIResponse(result)) result.model = model
+      return result
+    }
+    case 'cloudflare':
+      return callCloudflare(request, timeout, model)
+    case 'ollama':
+      return callOllama(request, timeout, model, apiKey)
+    case 'mistral':
+      return callMistral(request, timeout, model, apiKey)
+    default:
+      throw new Error(`Unsupported provider: ${provider}`)
+  }
+}
+
 export async function callAI(
   request: AIRequest,
   context: GatewayContext
@@ -214,74 +254,66 @@ export async function callAI(
   let totalLatency = 0
 
   for (const config of sequence) {
-    if (!isProviderHealthy(config.provider, config.model!)) {
-      console.warn(`[AI Gateway] Skipping ${config.provider} (${config.model}) due to health backoff.`)
-      continue
-    }
+    const provider = config.provider
+    const model = config.model!
+    const timeout = TIMEOUTS[provider]
 
-    console.log(`[AI Gateway] Attempting ${config.provider} (${config.model}) for task: ${context.feature}`)
-    
-    let result: AIResult
-    const timeout = TIMEOUTS[config.provider]
+    // Every configured key for this provider, primary first — a rate limit
+    // on one demo-day key must not fall all the way through to a weaker
+    // provider while a sibling key of the SAME provider is still fresh.
+    // Cloudflare/anything with no numbered keys just returns its one value
+    // (or none, in which case the inner loop is a no-op and we move on).
+    const keys = getProviderApiKeys(provider)
+    const keyAttempts = keys.length > 0 ? keys : [undefined]
 
-    switch (config.provider) {
-      case 'gemini':
-        result = await callGemini(request, timeout, config.model!)
-        if (isAIResponse(result)) result.model = config.model!
-        break
-      case 'groq':
-        result = await callGroq(request, timeout, config.model!)
-        break
-      case 'openrouter':
-        result = await callOpenRouter(request, timeout, config.model!)
-        if (isAIResponse(result)) result.model = config.model!
-        break
-      case 'cloudflare':
-        result = await callCloudflare(request, timeout, config.model!)
-        break
-      case 'ollama':
-        result = await callOllama(request, timeout, config.model!)
-        break
-      default:
-        throw new Error(`Unsupported provider: ${config.provider}`)
-    }
+    for (const apiKey of keyAttempts) {
+      const keyId = apiKey ? keyFingerprint(apiKey) : undefined
 
-    totalLatency += result.latencyMs ?? 0
+      if (!isProviderHealthy(provider, model, keyId)) {
+        console.warn(`[AI Gateway] Skipping ${provider} (${model}) key ...${keyId ?? 'default'} due to health backoff.`)
+        continue
+      }
 
-    if (result.success) {
-      if (context.validator) {
-        try {
-          const validationResult = await Promise.resolve(context.validator(result.content, config.provider))
-          if (!validationResult.valid) {
-            console.warn(`[AI Gateway] SCHEMA_FAILURE: ${config.provider} (${config.model}) - Reason: ${validationResult.reason}`)
+      console.log(`[AI Gateway] Attempting ${provider} (${model}) key ...${keyId ?? 'default'} for task: ${context.feature}`)
+
+      let result = await attemptCall(provider, model, apiKey, request, timeout)
+      totalLatency += result.latencyMs ?? 0
+
+      if (result.success) {
+        if (context.validator) {
+          try {
+            const validationResult = await Promise.resolve(context.validator(result.content, provider))
+            if (!validationResult.valid) {
+              console.warn(`[AI Gateway] SCHEMA_FAILURE: ${provider} (${model}) - Reason: ${validationResult.reason}`)
+              result = {
+                success: false,
+                provider,
+                reason: 'schema_failure',
+                latencyMs: result.latencyMs
+              }
+            }
+          } catch (error: any) {
+            console.warn(`[AI Gateway] SCHEMA_FAILURE: ${provider} (${model}) - Exception: ${error.message}`)
             result = {
               success: false,
-              provider: config.provider,
+              provider,
               reason: 'schema_failure',
               latencyMs: result.latencyMs
             }
           }
-        } catch (error: any) {
-          console.warn(`[AI Gateway] SCHEMA_FAILURE: ${config.provider} (${config.model}) - Exception: ${error.message}`)
-          result = {
-            success: false,
-            provider: config.provider,
-            reason: 'schema_failure',
-            latencyMs: result.latencyMs
-          }
+        }
+
+        if (result.success) {
+          console.log(`[AI Gateway] SUCCESS: ${provider} (${model}) key ...${keyId ?? 'default'}`)
+          recordProviderSuccess(provider, model, keyId)
+          await logUsage(result, context)
+          return result
         }
       }
 
-      if (result.success) {
-        console.log(`[AI Gateway] SUCCESS: ${config.provider} (${config.model})`)
-        recordProviderSuccess(config.provider, config.model!)
-        await logUsage(result, context)
-        return result
-      }
+      console.warn(`[AI Gateway] Failed: ${provider} (${model}) key ...${keyId ?? 'default'} - Reason: ${!result.success ? result.reason : 'provider_error'}`)
+      recordProviderFailure(provider, model, !result.success ? result.reason : 'provider_error', undefined, keyId)
     }
-
-    console.warn(`[AI Gateway] Failed: ${config.provider} (${config.model}) - Reason: ${!result.success ? result.reason : 'provider_error'}`)
-    recordProviderFailure(config.provider, config.model!, !result.success ? result.reason : 'provider_error')
   }
 
   console.error(`[AI Gateway] FATAL: All qualified providers failed for task: ${context.feature}`)

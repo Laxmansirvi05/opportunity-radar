@@ -3,10 +3,11 @@ import type { AIRequest, AIResult } from '@/types/ai'
 export async function callOllama(
   request: AIRequest,
   timeoutMs: number,
-  modelName: string
+  modelName: string,
+  overrideApiKey?: string
 ): Promise<AIResult> {
   const start = Date.now()
-  const apiKey = process.env.OLLAMA_API_KEY
+  const apiKey = overrideApiKey || process.env.OLLAMA_API_KEY
 
   if (!apiKey) {
     console.error('[Ollama Provider] Missing OLLAMA_API_KEY')
