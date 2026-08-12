@@ -95,7 +95,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   let warning: string | null = null
 
-  if (generatesTarget && unlocked && !run.target_resume) {
+  // Trigger on target_score, not target_resume: a prior attempt may have
+  // left an unscored draft resume cached in target_resume (see
+  // TargetRunOutcome.partialResume) specifically so this retry can skip
+  // straight to scoring instead of paying for generation again.
+  if (generatesTarget && unlocked && run.target_score === null) {
     const outcome = await runTargetGeneration({
       resume: run.source_resume as ParsedResume,
       jobDescription: run.job_description as string,
@@ -103,6 +107,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       companyName: run.company_name as string,
       completedSuggestions: updatedSuggestions.filter((s) => s.completed),
       userId: user.id,
+      existingResume: (run.target_resume as ParsedResume | null) ?? undefined,
     })
 
     if (outcome.success) {
@@ -110,6 +115,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       update.target_score = outcome.score
     } else {
       warning = outcome.error
+      if (outcome.partialResume) {
+        update.target_resume = outcome.partialResume
+      }
     }
   }
 

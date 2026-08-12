@@ -88,4 +88,39 @@ describe('extractResumeFromText', () => {
     expect(result.success).toBe(true)
     expect(result.resume?.skills).toEqual(['React'])
   })
+
+  it('rejects (via the gateway validator) a schema-valid but fully empty extraction of a substantial resume', async () => {
+    // Reproduces a real production case: the model burned its token budget on
+    // `summary` before ever writing skills/experience/projects/education, so
+    // the response truncated with all four still empty — schema-valid (every
+    // one of those fields defaults to []) but not a real extraction.
+    callAI.mockResolvedValue({ success: true, content: JSON.stringify({ name: 'Aarav Sharma', summary: 'truncated mid-sent' }) })
+
+    await extractResumeFromText('x'.repeat(1000), 'user-1')
+
+    const validator = callAI.mock.calls[0][1].validator
+    const verdict = validator(JSON.stringify({ name: 'Aarav Sharma', summary: 'truncated mid-sent' }))
+    expect(verdict.valid).toBe(false)
+    expect(verdict.reason).toMatch(/empty/i)
+  })
+
+  it('accepts a schema-valid extraction with genuine content in at least one structured field', async () => {
+    callAI.mockResolvedValue({ success: true, content: JSON.stringify(validResume) })
+
+    await extractResumeFromText('x'.repeat(1000), 'user-1')
+
+    const validator = callAI.mock.calls[0][1].validator
+    const verdict = validator(JSON.stringify(validResume))
+    expect(verdict.valid).toBe(true)
+  })
+
+  it('does not reject an empty extraction for a genuinely short/trivial raw text', async () => {
+    callAI.mockResolvedValue({ success: true, content: JSON.stringify({ name: 'Aarav Sharma' }) })
+
+    await extractResumeFromText('short text', 'user-1')
+
+    const validator = callAI.mock.calls[0][1].validator
+    const verdict = validator(JSON.stringify({ name: 'Aarav Sharma' }))
+    expect(verdict.valid).toBe(true)
+  })
 })

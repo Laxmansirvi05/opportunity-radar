@@ -278,4 +278,39 @@ describe('runTargetGeneration', () => {
     if (outcome.success) return
     expect(outcome.error).toBe('fabrication detected twice')
   })
+
+  it('caches the generated resume when generation succeeds but scoring fails, so a retry can skip generation', async () => {
+    const generated = { ...resume, skills: ['JavaScript', 'React'] }
+    generateTargetResume.mockResolvedValue({ success: true, resume: generated })
+    evaluateResumeEvidence.mockResolvedValue({ success: false, error: 'timeout' })
+
+    const outcome = await runTargetGeneration({
+      ...baseInput,
+      structuredJd,
+      completedSuggestions: completed,
+    })
+
+    expect(outcome.success).toBe(false)
+    if (outcome.success) return
+    expect(outcome.partialResume).toEqual(generated)
+  })
+
+  it('skips generation entirely when an existingResume (a prior cached draft) is supplied', async () => {
+    const cached = { ...resume, skills: ['JavaScript', 'React'] }
+    evaluateResumeEvidence.mockResolvedValue({ success: true, data: matrix('complete') })
+    calculateAtsV2Score.mockReturnValueOnce({ overallScore: 91 })
+
+    const outcome = await runTargetGeneration({
+      ...baseInput,
+      structuredJd,
+      completedSuggestions: completed,
+      existingResume: cached,
+    })
+
+    expect(outcome.success).toBe(true)
+    if (!outcome.success) return
+    expect(outcome.resume).toEqual(cached)
+    expect(outcome.score).toBe(91)
+    expect(generateTargetResume).not.toHaveBeenCalled()
+  })
 })

@@ -32,8 +32,8 @@ Return ONLY a JSON object with this exact shape, no markdown fences, no commenta
   "phone": string (optional),
   "linkedin": string (optional, full URL if present),
   "github": string (optional, full URL if present),
-  "summary": string (optional — the professional summary / "about me" section, verbatim),
-  "skills": string[] (every explicit technical skill, tool, framework and programming language listed anywhere, including inside a "Technical Skills" section broken into subcategories — flatten them all into one list. Do NOT include spoken/human languages like "English" or "Hindi" here — those are not technical skills.),
+  "summary": string (optional — the professional summary / "about me" section, verbatim, copied AS-IS. Do not rewrite it, do not fold skills/experience/project details into it that belong in their own fields below, and do not pad it. If there is no dedicated summary section, omit this field rather than assembling one from other sections.),
+  "skills": string[] (every explicit technical skill, tool, framework and programming language listed anywhere, including inside a "Technical Skills" section broken into subcategories, AND any technology named in a summary/about-me paragraph or inside experience/project bullets — flatten them all into one list. Do NOT include spoken/human languages like "English" or "Hindi" here — those are not technical skills.),
   "experience": [{
     "company": string,
     "role": string,
@@ -93,15 +93,39 @@ function parseAndValidate(raw: string): ParsedResume | null {
   }
 }
 
+/**
+ * `skills`/`experience`/`projects`/`education` all default to `[]`, so a
+ * response that was cut off before the model ever wrote them (e.g. it burned
+ * its token budget on a long `summary` first, per the field order above)
+ * still parses as a perfectly valid, schema-passing ParsedResume — just an
+ * empty one. Confirmed live: a real extraction on a real resume came back
+ * with `summary` truncated mid-sentence and every field after it in JSON key
+ * order silently empty, and the schema check alone accepted it. A resume
+ * with substantial raw text and nothing extracted into any of these four
+ * arrays is a real under-extraction, not a genuinely empty resume — force a
+ * retry through the provider chain instead of accepting it.
+ */
+function isUnderExtracted(resume: ParsedResume, rawText: string): boolean {
+  const hasStructuredContent =
+    resume.skills.length > 0 ||
+    resume.experience.length > 0 ||
+    resume.projects.length > 0 ||
+    resume.education.length > 0
+  return !hasStructuredContent && rawText.trim().length > 400
+}
+
 export async function extractResumeFromText(rawText: string, userId: string): Promise<ExtractResult> {
   const validator = (content: string) => {
     const resume = parseAndValidate(content)
     if (!resume) return { valid: false as const, reason: 'Output did not match the resume schema.' }
+    if (isUnderExtracted(resume, rawText)) {
+      return { valid: false as const, reason: 'Schema passed but skills, experience, projects and education all came back empty for a substantial resume — likely truncated output.' }
+    }
     return { valid: true as const }
   }
 
   const ai = await callAI(
-    { systemPrompt: SYSTEM_PROMPT, userPrompt: buildUserPrompt(rawText), outputFormat: 'json', maxTokens: 4000, temperature: 0.1 },
+    { systemPrompt: SYSTEM_PROMPT, userPrompt: buildUserPrompt(rawText), outputFormat: 'json', maxTokens: 6000, temperature: 0.1 },
     { feature: 'resume_extraction', userId, validator }
   )
 

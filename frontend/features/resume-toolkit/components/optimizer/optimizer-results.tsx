@@ -72,10 +72,17 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
     // ~80s worst case) — everything else is a plain, fast DB write. Without
     // this the confirm button just looks frozen for up to a minute with zero
     // feedback, which is exactly what was reported as "can't check item 5".
+    //
+    // Gated on target_score, not target_resume: a retry after a scoring-only
+    // failure has a cached (unscored) draft already sitting in target_resume
+    // (see runTargetGeneration's partialResume) precisely so the server can
+    // skip regeneration — checking target_resume here would treat that retry
+    // as "already unlocked" and use the 20s plain-write timeout instead of
+    // the 290s generation timeout, aborting a legitimate in-flight retry.
     const willUnlock =
       !suggestion.completed &&
       plan.generatesTarget &&
-      !run.target_resume &&
+      run.target_score === null &&
       run.suggestions.every((s) => s.id === suggestion.id || s.completed)
     const toastId = willUnlock ? toast.loading("Confirmed — generating your aligned resume, this can take up to a minute...") : undefined
 
@@ -92,7 +99,11 @@ export function OptimizerResults({ run, onRunUpdated }: { run: OptimizationRun; 
 
       if (data.warning) {
         toast.warning(data.warning, { id: toastId })
-      } else if (data.run.target_resume && !run.target_resume) {
+      } else if (data.run.target_score !== null && run.target_score === null) {
+        // target_score, not target_resume: a retry after a scoring-only
+        // failure already has a non-null (cached, unscored) target_resume
+        // going in, so that alone can't tell "just became ready" from "was
+        // already sitting there from the last failed attempt".
         toast.success("Every item is confirmed — Resume B is ready to download.", { id: toastId })
       } else if (toastId) {
         toast.dismiss(toastId)
