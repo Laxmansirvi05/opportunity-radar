@@ -9,12 +9,12 @@ export default async function ResumeToolkitPrototype() {
   const resumes = result.success ? result.resumes : [];
 
   return (
-    <div className="flex w-full gap-8 font-sans items-start" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="flex flex-col lg:flex-row w-full gap-8 font-sans lg:items-start" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       
       {/* ═══════════════════════════════════════════════════════════
           LEFT COLUMN — Workspace Tools
           ═══════════════════════════════════════════════════════════ */}
-      <div className="w-[280px] shrink-0 flex flex-col gap-4">
+      <div className="w-full lg:w-[280px] shrink-0 flex flex-col gap-4">
         <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
           Workspace Tools
         </h2>
@@ -206,7 +206,7 @@ export default async function ResumeToolkitPrototype() {
           own rows, with an honest empty state when there isn't enough
           history yet — never a filled-in placeholder number).
           ═══════════════════════════════════════════════════════════ */}
-      <div className="shrink-0" style={{ width: '280px' }}>
+      <div className="w-full lg:w-[280px] shrink-0">
         <div style={{
           backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
           borderRadius: '12px', padding: '24px',

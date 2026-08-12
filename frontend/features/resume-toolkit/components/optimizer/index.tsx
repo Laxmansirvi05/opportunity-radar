@@ -222,7 +222,16 @@ export function ResumeOptimizerDashboard() {
                   ) : (
                     <Select value={resumeId} onValueChange={(val) => setResumeId(val || "")}>
                       <SelectTrigger className="w-full sm:w-[400px]">
-                        <SelectValue placeholder="Choose a resume to optimise..." />
+                        {/* Same fix as the ATS Checker's identical selector: Base UI's
+                            SelectValue has no automatic label lookup without a children
+                            render function, so it was printing the raw resume id (a UUID)
+                            in the trigger instead of the resume's title after selection. */}
+                        <SelectValue placeholder="Choose a resume to optimise...">
+                          {(value: string) => {
+                            if (!value) return "Choose a resume to optimise..."
+                            return resumes?.find((r) => r.id === value)?.title || "Untitled Resume"
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {resumes?.map((r) => (

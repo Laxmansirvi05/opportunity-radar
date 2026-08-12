@@ -196,7 +196,19 @@ export function AtsCheckerDashboard() {
                 ) : (
                   <Select value={resumeId} onValueChange={(val) => setResumeId(val || '')}>
                     <SelectTrigger className="w-full sm:w-[400px]">
-                      <SelectValue placeholder="Choose a resume to analyze..." />
+                      {/* Base UI's SelectValue has no Radix-style automatic label
+                          lookup — without a children render function (or an `items`
+                          map on Select.Root, per its own docs) it falls back to
+                          printing the raw selected `value` itself. Since SelectItem's
+                          value here is the resume's id, that meant a real resume UUID
+                          rendering in the trigger after selection instead of its title. */}
+                      <SelectValue placeholder="Choose a resume to analyze...">
+                        {(value: string) => {
+                          if (!value) return "Choose a resume to analyze..."
+                          if (value === "sample-frontend-dev") return "Sample Candidate (Frontend Developer)"
+                          return resumes?.find((r) => r.id === value)?.title || "Untitled Resume"
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sample-frontend-dev">
@@ -263,6 +275,12 @@ export function AtsCheckerDashboard() {
                 <p className="text-xs text-destructive">Please paste the full job description so we can calculate an accurate targeted match.</p>
               )}
             </div>
+
+            {!hasJd && (
+              <p className="text-xs text-muted-foreground -mt-2">
+                Target role and company are tied to a specific job — paste a job description above to fill them in. Without one, this runs as a general resume readiness check instead.
+              </p>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
