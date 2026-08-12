@@ -176,9 +176,16 @@ export async function POST(req: NextRequest) {
         aiFailed: false,
       })
 
-      if (resumeId && resumeId !== 'sample-frontend-dev') {
+      if (resumeId !== 'sample-frontend-dev') {
         const { error: insertError } = await supabase.from('resume_ats_reports').insert({
-          resume_id: resumeId,
+          user_id: userId,
+          // A saved resume's id when one was used, so the report can also be
+          // reached via that resume; the parsed resume snapshotted inline
+          // either way, so a check run via "Upload PDF" (no saved resume,
+          // no resumeId) still saves to history instead of being silently
+          // dropped for having nothing to attach to.
+          resume_id: resumeId || null,
+          source_resume: parsedResumeData as any,
           target_job_description: null,
           score: readiness.score,
           report_data: finalResponse as any,
@@ -231,10 +238,13 @@ export async function POST(req: NextRequest) {
     if (atsV2Data) {
       // Canonical gap checklist — the same deriver the Optimiser uses, so the
       // two features never show two different sets of gaps for one analysis.
-      // Count scales with score: a near-ready resume gets a short, high-signal
-      // list rather than the same fixed checklist shown to a struggling one.
+      // Count scales with score, applied per category (skills/courses and
+      // projects each get their own budget) so a struggling resume gets a
+      // real mix of both instead of one type crowding the other out.
+      const suggestionBudget = suggestionCountForScore(Math.round(atsV2Data.score.overallScore))
       suggestions = deriveSuggestions(atsV2Data.structuredJd, atsV2Data.evidenceMatrix, {
-        max: suggestionCountForScore(Math.round(atsV2Data.score.overallScore)),
+        maxProjects: suggestionBudget,
+        maxOther: suggestionBudget,
       })
 
       // Qualitative narration only, grounded in the already-final V2 result.
@@ -282,9 +292,15 @@ export async function POST(req: NextRequest) {
       aiFailed: Boolean(analysisError),
     })
 
-    if (resumeId && resumeId !== 'sample-frontend-dev') {
+    if (resumeId !== 'sample-frontend-dev') {
       const { error: insertError } = await supabase.from('resume_ats_reports').insert({
-        resume_id: resumeId,
+        user_id: userId,
+        // Snapshotted inline regardless of resumeId — a check run via
+        // "Upload PDF" (resumeData, no saved resume) has no resume row to
+        // attach to, and previously never saved to history at all because
+        // the insert was gated on resumeId being present.
+        resume_id: resumeId || null,
+        source_resume: parsedResumeData as any,
         target_job_description: jobDescription!.slice(0, 5000),
         // Always the same score the response actually carries — never a
         // second engine's number diverging from what's shown on screen.

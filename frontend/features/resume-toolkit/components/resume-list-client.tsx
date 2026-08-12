@@ -4,12 +4,15 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { deleteResume } from '@/features/resume-toolkit/services/resume-actions'
+import { ResumePreviewModal } from '@/features/resume-toolkit/components/optimizer/resume-preview'
+import type { ParsedResume } from '@/types/resume'
 
 interface ResumeRow {
   id: string
   title: string
   slug: string
   updated_at: string
+  parsedResume: ParsedResume | null
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -30,6 +33,7 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
   const [resumes, setResumes] = useState<ResumeRow[]>(initialResumes)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [previewResume, setPreviewResume] = useState<ResumeRow | null>(null)
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
@@ -61,6 +65,21 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
           </div>
 
           <div className="flex items-center gap-1 sm:shrink-0 mt-2 sm:mt-0">
+            {/* Preview — scroll through the actual extracted/saved content
+                without leaving this page or navigating into the full editor. */}
+            {resume.parsedResume && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                title="Preview Resume"
+                onClick={() => setPreviewResume(resume)}
+              >
+                <span className="material-symbols-outlined text-sm">visibility</span>
+                <span className="sr-only">Preview</span>
+              </Button>
+            )}
+
             {/* Edit */}
             <Link href={`/resume/builder/${resume.id}`}>
               <Button variant="ghost" size="sm" className="h-8 px-2" title="Edit Resume">
@@ -68,7 +87,7 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
                 <span className="sr-only">Edit</span>
               </Button>
             </Link>
-            
+
             {/* ATS Check */}
             <Link href={`/resume/ats?resume=${resume.id}`}>
               <Button variant="ghost" size="sm" className="h-8 px-2" title="ATS Check">
@@ -125,6 +144,15 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
           </div>
         </div>
       ))}
+
+      {previewResume?.parsedResume && (
+        <ResumePreviewModal
+          resume={previewResume.parsedResume}
+          label={previewResume.title}
+          downloadHref={null}
+          onClose={() => setPreviewResume(null)}
+        />
+      )}
     </div>
   )
 }

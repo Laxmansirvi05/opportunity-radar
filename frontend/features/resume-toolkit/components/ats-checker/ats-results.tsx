@@ -293,38 +293,45 @@ const importanceColor: Record<string, string> = {
 function SuggestionsCard({ suggestions, title }: { suggestions: AtsCheckResponse['suggestions']; title: string }) {
   const importanceScore: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 }
   const sorted = [...suggestions].sort((a, b) => (importanceScore[b.importance] ?? 0) - (importanceScore[a.importance] ?? 0))
+  // Two distinct groups, each shown once — a suggestion used to appear in
+  // both this card and "Suggested Projects" below because this card mapped
+  // over the unfiltered list.
+  const skillSuggestions = sorted.filter((s) => s.type !== 'project')
   const projectSuggestions = sorted.filter((s) => s.type === 'project')
 
   return (
     <div className="space-y-4">
-      <Card className="border shadow-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-semibold text-lg tracking-tight">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
-            {title}
-          </CardTitle>
-          <CardDescription>
-            Derived from the requirements above your resume doesn&apos;t yet evidence — not a generic checklist.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          {sorted.map((s) => (
-            <div key={s.id} className="space-y-1 rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="font-semibold text-sm">{s.title}</span>
-                <Badge className={cn("text-[0.65rem] uppercase", importanceColor[s.importance])} variant="outline">{s.importance}</Badge>
+      {skillSuggestions.length > 0 && (
+        <Card className="border shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-semibold text-lg tracking-tight">
+              <Lightbulb className="h-5 w-5 text-amber-500" />
+              {title}
+            </CardTitle>
+            <CardDescription>
+              Skills, courses and certifications to close — derived from the requirements above your resume
+              doesn&apos;t yet evidence, not a generic checklist.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {skillSuggestions.map((s) => (
+              <div key={s.id} className="space-y-1 rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="font-semibold text-sm">{s.title}</span>
+                  <Badge className={cn("text-[0.65rem] uppercase", importanceColor[s.importance])} variant="outline">{s.importance}</Badge>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed">{s.detail}</p>
+                {s.guidance && (
+                  <p className="text-foreground/80 text-sm leading-relaxed mt-2">
+                    <span className="font-medium text-primary">How to close this: </span>
+                    {s.guidance}
+                  </p>
+                )}
               </div>
-              <p className="text-muted-foreground text-sm leading-relaxed">{s.detail}</p>
-              {s.guidance && (
-                <p className="text-foreground/80 text-sm leading-relaxed mt-2">
-                  <span className="font-medium text-primary">How to close this: </span>
-                  {s.guidance}
-                </p>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {projectSuggestions.length > 0 && (
         <Card className="border shadow-md">

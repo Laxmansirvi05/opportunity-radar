@@ -3,6 +3,30 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { ResumeData } from '@reactive-resume/schema/resume/data'
+import { convertResumeDataToParsedResume, looksLikeParsedResume } from '@/lib/resume-optimizer/convert-resume-data'
+import type { ParsedResume } from '@/types/resume'
+
+/**
+ * Normalizes `resumes.parsed_data` (which may be in either the Resume
+ * Builder's nested shape or the flat ParsedResume shape) into one consistent
+ * ParsedResume — used both for the list's title (the candidate's own name is
+ * far more useful than the upload placeholder "Untitled Resume" every resume
+ * otherwise shares) and to feed the "preview" action without a second fetch.
+ */
+function toParsedResume(raw: unknown): ParsedResume | null {
+  if (!raw || typeof raw !== 'object') return null
+  const data = raw as Record<string, unknown>
+  try {
+    return looksLikeParsedResume(data) ? (data as unknown as ParsedResume) : convertResumeDataToParsedResume(data)
+  } catch {
+    return null
+  }
+}
+
+function titleFromParsedResume(resume: ParsedResume | null): string | null {
+  const name = resume?.name?.trim() ?? ''
+  return name && name !== 'Unknown Candidate' ? name : null
+}
 
 function generateSlug(title: string): string {
   return title
@@ -202,7 +226,7 @@ export async function listResumes() {
 
   const { data: resumes, error } = await supabase
     .from('resumes')
-    .select('id, file_name, created_at, updated_at')
+    .select('id, file_name, parsed_data, created_at, updated_at')
     .order('updated_at', { ascending: false })
 
   if (error) {
@@ -212,13 +236,20 @@ export async function listResumes() {
 
   return {
     success: true as const,
-    resumes: (resumes || []).map((resume) => ({
-      ...resume,
-      title: resume.file_name,
-      slug: resume.id,
-      tags: [] as string[],
-      is_public: false,
-      is_locked: false,
-    })),
+    resumes: (resumes || []).map(({ parsed_data, ...resume }) => {
+      const parsedResume = toParsedResume(parsed_data)
+      return {
+        ...resume,
+        title: titleFromParsedResume(parsedResume) || resume.file_name || 'Untitled Resume',
+        // Lets the client preview the actual extracted/saved content in a
+        // scrollable modal without a second round-trip — null when parsing
+        // hasn't produced anything usable yet (e.g. still mid-extraction).
+        parsedResume,
+        slug: resume.id,
+        tags: [] as string[],
+        is_public: false,
+        is_locked: false,
+      }
+    }),
   }
 }

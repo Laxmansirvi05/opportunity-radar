@@ -48,7 +48,7 @@ export function computeAcademicRecommendation(
     if (cgpa < MIN_RECOMMENDED_CGPA) {
       return {
         visible: true,
-        message: `Your current CGPA is ${cgpa}. Aim to improve it to at least ${MIN_RECOMMENDED_CGPA}, as some internship and graduate recruitment processes use academic cutoffs.`,
+        message: `Your current CGPA is ${cgpa}. Aim to improve it to at least ${MIN_RECOMMENDED_CGPA} in your upcoming exams, since some internship and graduate recruitment processes use academic cutoffs — you still have time to raise it before you apply. Best of luck with the rest of your degree.`,
         observed: String(cgpa),
         rule: `CGPA >= ${MIN_RECOMMENDED_CGPA} recommended while the degree is still in progress`,
       }

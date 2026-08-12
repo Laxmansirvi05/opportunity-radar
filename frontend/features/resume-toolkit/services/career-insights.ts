@@ -83,8 +83,8 @@ async function getScoreHistory(supabase: Awaited<ReturnType<typeof createClient>
   const [atsReports, optimizations] = await Promise.all([
     supabase
       .from('resume_ats_reports')
-      .select('score, created_at, resumes!inner(user_id)')
-      .eq('resumes.user_id', userId)
+      .select('score, created_at')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(6),
     supabase
@@ -156,8 +156,8 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
   const [atsReport, optimization] = await Promise.all([
     supabase
       .from('resume_ats_reports')
-      .select('id, score, created_at, target_job_description, report_data, resumes!inner(user_id)')
-      .eq('resumes.user_id', user.id)
+      .select('id, score, created_at, target_job_description, report_data')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -186,7 +186,7 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
       score: Math.round(atsRow.score as number),
       jobLabel: jd.trim().length > 0 ? jd.trim().slice(0, 60) : 'ATS check',
       createdAt: atsRow.created_at as string,
-      topSuggestions: (reportData?.suggestions ?? []).slice(0, 3).map((s) => ({ title: s.title, importance: s.importance })),
+      topSuggestions: (reportData?.suggestions ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
     }
   }
 
@@ -199,7 +199,7 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
       companyName: (optRow.company_name as string) || 'Company',
       tier: (optRow.tier as string) ?? null,
       createdAt: optRow.created_at as string,
-      topSuggestions: ((optRow.suggestions as LatestSuggestionSummary[] | null) ?? []).slice(0, 3).map((s) => ({ title: s.title, importance: s.importance })),
+      topSuggestions: ((optRow.suggestions as LatestSuggestionSummary[] | null) ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
     }
   }
 
@@ -236,8 +236,8 @@ export async function getFullHistory(): Promise<{ ats: AtsHistoryItem[]; optimiz
   const [atsReports, optimizations] = await Promise.all([
     supabase
       .from('resume_ats_reports')
-      .select('id, score, created_at, target_job_description, resumes!inner(user_id)')
-      .eq('resumes.user_id', user.id)
+      .select('id, score, created_at, target_job_description')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10),
     supabase

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '../app/api/resume/ats-check/route';
-import { buildATSv2EvidenceMatrixPrompt } from '../features/resume-toolkit/services/ai/ats-v2-prompts';
+import { buildATSv2EvidenceMatrixPrompt, buildJDExtractionPrompt } from '../features/resume-toolkit/services/ai/ats-v2-prompts';
 
 vi.mock('next/headers', () => ({
   cookies: vi.fn().mockReturnValue({ get: vi.fn(), set: vi.fn() })
@@ -135,6 +135,30 @@ describe('ATS V2 Regression Tests', () => {
     it('treats GitHub Actions as partial/related (not automatic strong) evidence for CI/CD', () => {
       expect(systemPrompt).toContain('GitHub Actions')
       expect(systemPrompt).toMatch(/Treat as "related"\/"partial" evidence by default/)
+    })
+  })
+
+  describe('Abbreviation normalization (JS/TS/etc. must not read as a gap)', () => {
+    it('the evidence-matrix prompt treats common abbreviations as the same capability on either side', () => {
+      const { systemPrompt } = buildATSv2EvidenceMatrixPrompt({ rawText: 'x' } as any, { requirements: [] } as any);
+
+      expect(systemPrompt).toMatch(/JS = JavaScript/)
+      expect(systemPrompt).toMatch(/TS = TypeScript/)
+      expect(systemPrompt).toContain('Postgres = PostgreSQL')
+      expect(systemPrompt).toContain('Mongo = MongoDB')
+      // The normalization must not widen into an unrelated inference — a
+      // spelling equivalence is not license to assume adjacent skills.
+      expect(systemPrompt).toMatch(/GitHub still does NOT imply GitHub Actions/)
+    })
+
+    it('the JD extraction prompt normalizes requirement names to canonical spelling without touching the verbatim quote', () => {
+      const { systemPrompt } = buildJDExtractionPrompt('x'.repeat(120))
+
+      expect(systemPrompt).toMatch(/JS -> JavaScript/)
+      expect(systemPrompt).toMatch(/TS -> TypeScript/)
+      // exactQuote must stay verbatim — the normalization instruction must
+      // say so explicitly rather than leaving the two rules to conflict.
+      expect(systemPrompt).toMatch(/exactQuote stays verbatim from the JD/)
     })
   })
 

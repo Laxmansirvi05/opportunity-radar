@@ -18,9 +18,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data, error } = await supabase
     .from('resume_ats_reports')
-    .select('id, score, created_at, target_job_description, report_data, resumes!inner(user_id)')
+    .select('id, score, created_at, target_job_description, report_data')
     .eq('id', id)
-    .eq('resumes.user_id', user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (error || !data) {

@@ -31,6 +31,13 @@ RULES:
    copied verbatim from the JD text — never paraphrase the quote, never invent a quote that isn't literally present.
 7. If the provided text genuinely contains no extractable requirements (e.g. it is not a job description at all),
    return an empty requirements array rather than inventing placeholder requirements.
+8. Normalize abbreviations in "name" to their canonical technical name — "name" is a clean label, not a verbatim
+   quote, so this does not conflict with rule 6's exactQuote requirement (exactQuote stays verbatim from the JD
+   exactly as written, abbreviation and all). Common examples: JS -> JavaScript, TS -> TypeScript,
+   ReactJS/React.js -> React, NextJS -> Next.js, Node -> Node.js, Express -> Express.js, Postgres -> PostgreSQL,
+   Mongo -> MongoDB, REST -> REST APIs, K8s -> Kubernetes, CI/CD stays CI/CD. This exists so a resume that spells a
+   skill out in full and a JD that abbreviates it (or vice versa) are recognized as the same requirement downstream,
+   instead of scoring as a false gap purely because of spelling.
 
 OUTPUT MUST STRICTLY MATCH THIS SCHEMA:
 {
@@ -80,6 +87,13 @@ EVALUATION RULES:
    - React present DOES NOT imply Angular.
    - JavaScript present DOES NOT imply TypeScript.
    - API usage DOES NOT automatically imply REST API unless supported.
+   - Abbreviation normalization: treat these as the SAME capability regardless of which spelling appears on which
+     side (resume vs requirement) — JS = JavaScript, TS = TypeScript, ReactJS/React.js = React, NextJS = Next.js,
+     Node = Node.js, Express = Express.js, Postgres = PostgreSQL, Mongo = MongoDB, REST = REST APIs = RESTful APIs,
+     K8s = Kubernetes. A resume that lists "JS" must satisfy a requirement named "JavaScript", and vice versa —
+     never mark this a gap purely because of abbreviation spelling. This is a spelling equivalence only: it does
+     NOT mean the two skills are the same as anything else — GitHub still does NOT imply GitHub Actions, React
+     still does NOT imply Redux, and JavaScript still does NOT imply TypeScript mastery.
 6. Semantic Matching:
    - Accept legitimate category matching (e.g. "Integrated Stripe, OpenWeather, GitHub APIs" supports "REST APIs" or "API Integration").
    - DO NOT substitute distinct specific technologies! (e.g. Vue is NOT React; Vercel is NOT AWS; Docker is NOT Kubernetes; Power BI is NOT Tableau; MySQL is NOT PostgreSQL).

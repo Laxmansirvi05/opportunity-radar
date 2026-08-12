@@ -60,7 +60,10 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
   const tier = decideTier(baselineScore)
   const plan = tierPlan(tier)
   const suggestions = plan.generatesSuggestions
-    ? deriveSuggestions(jdRes.data, evalRes.data, { max: suggestionCountForScore(baselineScore) })
+    ? deriveSuggestions(jdRes.data, evalRes.data, {
+        maxProjects: suggestionCountForScore(baselineScore),
+        maxOther: suggestionCountForScore(baselineScore),
+      })
     : []
 
   const result: StartRunResult = {

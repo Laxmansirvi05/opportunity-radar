@@ -98,6 +98,19 @@ function ResumeDocument({ resume }: { resume: ParsedResume }) {
   )
 }
 
+/** Exported directly so other surfaces (e.g. the saved-resumes list) can open
+ *  the same scrollable preview without going through ResumeMiniPreview's own
+ *  card+button trigger, which is styled for the Optimiser results layout
+ *  specifically. */
+export function ResumePreviewModal({ resume, label, downloadHref, onClose }: {
+  resume: ParsedResume
+  label: string
+  downloadHref: string | null
+  onClose: () => void
+}) {
+  return <PreviewModal resume={resume} label={label} downloadHref={downloadHref} onClose={onClose} />
+}
+
 function PreviewModal({ resume, label, downloadHref, onClose }: {
   resume: ParsedResume
   label: string

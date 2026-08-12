@@ -32,18 +32,21 @@ export interface Suggestion {
 }
 
 /**
- * How many suggestions a resume at a given score genuinely needs.
+ * Per-category suggestion budget for a given score.
  *
- * A near-ready resume shown the same 6-item checklist as a struggling one
- * reads as busywork and buries the one or two things that actually matter.
- * Bands loosely follow score-band guidance: fewer, higher-signal items as
- * score rises, more (but still bounded) developmental items as it falls.
+ * Applied independently to "skills/courses to close" and "projects to
+ * build" (see deriveSuggestions's maxOther/maxProjects) rather than as one
+ * combined total — a combined budget can easily fill entirely with one type
+ * and show zero of the other. A near-ready resume shown the same dense
+ * checklist as a struggling one reads as busywork and buries the one or two
+ * things that actually matter; a struggling one needs a genuine plan, not
+ * one token gesture per category.
  */
 export function suggestionCountForScore(score: number): number {
-  if (score >= 80) return 4
-  if (score >= 70) return 6
-  if (score >= 50) return 8
-  return 9
+  if (score >= 80) return 2
+  if (score >= 65) return 3
+  if (score >= 50) return 4
+  return 5
 }
 
 /** Satisfaction levels that count as a genuine gap worth acting on. */
@@ -81,13 +84,21 @@ function typeForCategory(category: string): SuggestionType {
  * come from measured gaps, so a resume that already demonstrates most of the
  * job description produces one or two items — or none — instead of a fixed
  * list of busywork.
+ *
+ * maxProjects and maxOther are applied to the "build something" (project)
+ * and "learn/certify" (skill/course/certification/education) groups
+ * independently, each already sorted by importance — a single combined cap
+ * can fill entirely with one type (typically project, since most technical
+ * gaps map to it) and surface zero of the other, which is exactly the
+ * "no project suggestions at a low score" gap this guards against.
  */
 export function deriveSuggestions(
   jd: StructuredJD,
   matrix: EvidenceMatrix,
-  options: { max?: number } = {}
+  options: { maxProjects?: number; maxOther?: number } = {}
 ): Suggestion[] {
-  const max = options.max ?? 6
+  const maxProjects = options.maxProjects ?? 4
+  const maxOther = options.maxOther ?? 4
   const byId = new Map(
     (matrix.evaluations ?? []).map((e) => [e.capabilityId, e])
   )
@@ -126,7 +137,17 @@ export function deriveSuggestions(
   }
 
   gaps.sort((a, b) => (importanceRank[a.importance] ?? 9) - (importanceRank[b.importance] ?? 9))
-  return gaps.slice(0, max)
+
+  const projectGaps = gaps.filter((g) => g.type === 'project').slice(0, maxProjects)
+  const otherGaps = gaps.filter((g) => g.type !== 'project').slice(0, maxOther)
+
+  // Re-sort the merged, capped result by importance rather than leaving it
+  // grouped by category — a flat consumer (the Optimiser's single checklist)
+  // still needs "most important first" to hold across the whole list, not
+  // just within each type.
+  return [...otherGaps, ...projectGaps].sort(
+    (a, b) => (importanceRank[a.importance] ?? 9) - (importanceRank[b.importance] ?? 9)
+  )
 }
 
 /**
