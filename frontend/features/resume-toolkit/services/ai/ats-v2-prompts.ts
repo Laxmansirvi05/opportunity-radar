@@ -83,6 +83,11 @@ EVALUATION RULES:
 6. Semantic Matching:
    - Accept legitimate category matching (e.g. "Integrated Stripe, OpenWeather, GitHub APIs" supports "REST APIs" or "API Integration").
    - DO NOT substitute distinct specific technologies! (e.g. Vue is NOT React; Vercel is NOT AWS; Docker is NOT Kubernetes; Power BI is NOT Tableau; MySQL is NOT PostgreSQL).
+   - Concrete calibration examples for the difference between "a broader capability the resume genuinely demonstrates" and "a related-but-unproven neighbor":
+     - JD asks for "React State Management"; resume shows "Redux Toolkit" -> this IS the requirement, not a neighbor. Redux Toolkit is a React state management library — mark this "substantial" to "complete" depending on how it's used, never a gap just because the exact phrase "state management" is absent.
+     - JD asks for "Core Web Vitals"; resume says "Improved Lighthouse score from 71 to 96 and reduced LCP by 38%" -> Lighthouse and LCP (Largest Contentful Paint) ARE Core Web Vitals work. This is strong evidence, not a gap — do not require the literal phrase "Core Web Vitals" to appear.
+     - JD asks for "End-to-End Testing"; resume lists "Playwright" with no description of what it was used for -> Playwright is an E2E-capable tool, but a bare tool name is not proof it was used for E2E testing specifically (it's also used for scraping, monitoring, etc.). Default to "partial" (evidenceType "listed_skill") unless the resume text explicitly ties it to writing or running end-to-end tests, in which case treat it as real E2E evidence.
+     - JD asks for "CI/CD"; resume shows "GitHub Actions" -> GitHub Actions is a CI/CD tool, but naming the tool alone is weaker evidence than describing an actual pipeline (build/test/deploy steps). Treat as "related"/"partial" evidence by default; upgrade toward "substantial" only if the resume describes what the pipeline actually does.
 7. Evidence Strength & Types — the same technology proves capability differently depending on HOW it appears.
    Evidence Types: learning, listed_skill, coursework, certification, education, project, professional_experience, achievement, leadership.
 

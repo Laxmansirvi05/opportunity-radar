@@ -129,6 +129,52 @@ describe('confirmed work is permitted', () => {
   })
 })
 
+describe('certifications and achievements', () => {
+  const SOURCE_WITH_CREDENTIALS: ParsedResume = {
+    ...SOURCE,
+    certifications: ['AWS Certified Cloud Practitioner'],
+    achievements: ['Top 5 finalist among 120+ teams at a national hackathon'],
+  }
+  const cloneWithCredentials = (): ParsedResume => JSON.parse(JSON.stringify(SOURCE_WITH_CREDENTIALS))
+
+  it('passes when certifications and achievements are carried over verbatim', () => {
+    const g = cloneWithCredentials()
+    expect(verifyNoFabrication(SOURCE_WITH_CREDENTIALS, g).clean).toBe(true)
+  })
+
+  it('flags a certification that is neither on the source resume nor confirmed', () => {
+    const g = cloneWithCredentials()
+    g.certifications!.push('Google Cloud Professional Architect')
+
+    const v = verifyNoFabrication(SOURCE_WITH_CREDENTIALS, g)
+    expect(v.clean).toBe(false)
+    expect(v.findings.some((f) => f.kind === 'certification' && f.value.includes('Google Cloud'))).toBe(true)
+  })
+
+  it('allows a certification the student confirmed earning', () => {
+    const g = cloneWithCredentials()
+    g.certifications!.push('Google Cloud Professional Architect')
+
+    const v = verifyNoFabrication(SOURCE_WITH_CREDENTIALS, g, { certifications: ['Google Cloud Professional Architect'] })
+    expect(v.clean).toBe(true)
+  })
+
+  it('flags an achievement that is not on the source resume — there is no way to confirm one after the fact', () => {
+    const g = cloneWithCredentials()
+    g.achievements!.push('Published a paper at a national conference')
+
+    const v = verifyNoFabrication(SOURCE_WITH_CREDENTIALS, g)
+    expect(v.clean).toBe(false)
+    expect(v.findings.some((f) => f.kind === 'achievement')).toBe(true)
+  })
+
+  it('does not flag a dropped certification as fabrication — this guard catches invented facts, not omissions', () => {
+    const g = cloneWithCredentials()
+    g.certifications = []
+    expect(verifyNoFabrication(SOURCE_WITH_CREDENTIALS, g).clean).toBe(true)
+  })
+})
+
 describe('extractMetrics', () => {
   it('finds the number shapes that read as claims', () => {
     const m = extractMetrics('Improved by 30% for 85,000 users, saving ₹50,000 and a 3x speedup.')

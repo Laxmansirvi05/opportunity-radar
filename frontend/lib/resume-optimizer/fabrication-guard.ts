@@ -17,7 +17,7 @@ import type { ParsedResume } from '@/types/resume'
  */
 
 export interface FabricationFinding {
-  kind: 'company' | 'institution' | 'degree' | 'date' | 'metric' | 'section_growth'
+  kind: 'company' | 'institution' | 'degree' | 'date' | 'metric' | 'section_growth' | 'certification' | 'achievement'
   detail: string
   value: string
 }
@@ -62,7 +62,7 @@ function allText(resume: ParsedResume): string {
 export function verifyNoFabrication(
   source: ParsedResume,
   generated: ParsedResume,
-  allowed: { projects?: string[]; skills?: string[] } = {}
+  allowed: { projects?: string[]; skills?: string[]; certifications?: string[] } = {}
 ): FabricationVerdict {
   const findings: FabricationFinding[] = []
 
@@ -154,6 +154,37 @@ export function verifyNoFabrication(
       kind: 'section_growth',
       detail: 'A skill appears that is neither on the original resume nor confirmed as learned',
       value: skill,
+    })
+  }
+
+  // ── New certifications ──────────────────────────────────────────────────
+  // Permitted only when the student confirmed earning it (target resume only,
+  // via `allowed.certifications`) — otherwise this is exactly the "fake
+  // certification to improve the score" the product is not allowed to do.
+  const sourceCertifications = new Set((source.certifications ?? []).map(norm))
+  const allowedCertifications = new Set((allowed.certifications ?? []).map(norm))
+  for (const cert of generated.certifications ?? []) {
+    const key = norm(cert)
+    if (sourceCertifications.has(key) || allowedCertifications.has(key)) continue
+    findings.push({
+      kind: 'certification',
+      detail: 'A certification appears that is neither on the original resume nor confirmed as earned',
+      value: cert,
+    })
+  }
+
+  // ── Achievements ─────────────────────────────────────────────────────────
+  // Unlike skills/projects/certifications, an achievement has no "confirm you
+  // did this" checklist path — a student cannot retroactively confirm an
+  // award or competition result the way they can confirm finishing a project.
+  // Every achievement in the output must already be on the source resume.
+  const sourceAchievements = new Set((source.achievements ?? []).map(norm))
+  for (const achievement of generated.achievements ?? []) {
+    if (sourceAchievements.has(norm(achievement))) continue
+    findings.push({
+      kind: 'achievement',
+      detail: 'An achievement appears that is not on the original resume',
+      value: achievement,
     })
   }
 

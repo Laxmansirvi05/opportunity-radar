@@ -1,6 +1,6 @@
 import type { Suggestion } from '@/lib/ats-checker/gap-suggestions'
 
-export { deriveSuggestions, type Suggestion, type SuggestionType } from '@/lib/ats-checker/gap-suggestions'
+export { deriveSuggestions, suggestionCountForScore, type Suggestion, type SuggestionType } from '@/lib/ats-checker/gap-suggestions'
 
 /**
  * What an optimisation run should produce, decided from the baseline score.

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -31,6 +32,10 @@ export function AtsCheckerDashboard() {
 
   const [resumes, setResumes] = useState<{ id: string; title: string | null }[]>([])
   const [isLoadingResumes, setIsLoadingResumes] = useState(false)
+  const [isLoadingReport, setIsLoadingReport] = useState(false)
+
+  const searchParams = useSearchParams()
+  const reopenReportId = searchParams.get("reportId")
 
   useEffect(() => {
     let mounted = true
@@ -50,6 +55,29 @@ export function AtsCheckerDashboard() {
     loadResumes()
     return () => { mounted = false }
   }, [])
+
+  // Reopening a past ATS check from history: the stored report_data is the
+  // exact same AtsCheckResponse shape a fresh analyse produces, so it feeds
+  // straight into the same result view — no separate "viewing history"
+  // render path to keep in sync with the live one.
+  useEffect(() => {
+    if (!reopenReportId) return
+    let mounted = true
+    setIsLoadingReport(true)
+    fetch(`/api/resume/ats-history/${reopenReportId}`)
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Could not load this report.")
+        if (mounted) setResult(data.report)
+      })
+      .catch((err: unknown) => {
+        if (mounted) toast.error(err instanceof Error ? err.message : "Could not load this report.")
+      })
+      .finally(() => {
+        if (mounted) setIsLoadingReport(false)
+      })
+    return () => { mounted = false }
+  }, [reopenReportId])
 
   const hasResumeInput = resumeSource === "saved" ? !!resumeId : !!uploadedFile
   // A job description is optional: leaving it blank runs a resume-only
@@ -157,7 +185,14 @@ export function AtsCheckerDashboard() {
         </p>
       </div>
 
-      {!result ? (
+      {isLoadingReport ? (
+        <Card className="bg-card">
+          <CardContent className="flex items-center justify-center gap-2 py-24 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading this report...
+          </CardContent>
+        </Card>
+      ) : !result ? (
         <Card className="bg-card">
           <CardHeader>
             <CardTitle>Analysis Setup</CardTitle>

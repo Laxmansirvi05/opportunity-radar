@@ -84,6 +84,14 @@ export function ResumeOptimizerDashboard() {
     }
   }
 
+  // Reopening a past run from the /resume history section (?runId=...) —
+  // the same path the in-page "Past runs" list below already uses.
+  const preselectedRunId = searchParams.get("runId") ?? ""
+  useEffect(() => {
+    if (preselectedRunId) openRun(preselectedRunId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedRunId])
+
   const hasResumeInput = resumeSource === "saved" ? !!resumeId : !!uploadedFile
   const isValidRole = targetRole.trim().length > 0
   const isValidCompany = companyName.trim().length > 0

@@ -24,7 +24,7 @@ export type Responder = (call: QueryCall) => { data: unknown; error: unknown }
 
 function makeChain(table: string, responder: Responder) {
   const trail: RecordedCall[] = []
-  const methods = ['select', 'insert', 'update', 'eq', 'in', 'order', 'limit', 'single'] as const
+  const methods = ['select', 'insert', 'update', 'eq', 'in', 'order', 'limit', 'single', 'maybeSingle'] as const
 
   const chain: Record<string, unknown> = {}
   for (const m of methods) {

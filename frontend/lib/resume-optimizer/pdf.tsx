@@ -115,6 +115,24 @@ export function ResumePdfDocument({ resume }: { resume: ParsedResume }) {
             <Text style={styles.skills}>{resume.skills.join('   •   ')}</Text>
           </View>
         )}
+
+        {resume.certifications && resume.certifications.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Certifications</Text>
+            {resume.certifications.map((c, i) => (
+              <Text key={i} style={styles.bullet}>- {c}</Text>
+            ))}
+          </View>
+        )}
+
+        {resume.achievements && resume.achievements.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Achievements</Text>
+            {resume.achievements.map((a, i) => (
+              <Text key={i} style={styles.bullet}>- {a}</Text>
+            ))}
+          </View>
+        )}
       </Page>
     </Document>
   )

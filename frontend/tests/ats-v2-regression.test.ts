@@ -104,6 +104,40 @@ describe('ATS V2 Regression Tests', () => {
     });
   });
 
+  describe('Semantic matching calibration examples', () => {
+    // These assert the prompt teaches the exact calibration patterns from the
+    // master spec's regression list — this is deliberately a prompt-content
+    // check, not a live AI call: the actual evidence judgment happens inside
+    // the model, which is not a pure function this suite can call
+    // deterministically. What IS deterministic and testable is that the
+    // instruction the model receives is present, unambiguous, and matches
+    // the specific failure patterns reported live (e.g. Redux Toolkit wrongly
+    // marked a "React State Management" gap, Lighthouse/LCP wrongly marked a
+    // "Core Web Vitals" gap).
+    const { systemPrompt } = buildATSv2EvidenceMatrixPrompt({ rawText: 'x' } as any, { requirements: [] } as any);
+
+    it('treats Redux Toolkit as direct evidence for React State Management, not a gap', () => {
+      expect(systemPrompt).toContain('Redux Toolkit')
+      expect(systemPrompt).toContain('React State Management')
+      expect(systemPrompt).toMatch(/Redux Toolkit is a React state management library/)
+    })
+
+    it('treats Lighthouse + LCP as direct evidence for Core Web Vitals, not a gap', () => {
+      expect(systemPrompt).toContain('Core Web Vitals')
+      expect(systemPrompt).toMatch(/Lighthouse and LCP.*ARE Core Web Vitals work/)
+    })
+
+    it('treats a bare Playwright listing as partial (not automatic strong) evidence for End-to-End Testing', () => {
+      expect(systemPrompt).toContain('Playwright')
+      expect(systemPrompt).toMatch(/Default to "partial".*unless the resume text explicitly ties it to writing or running end-to-end tests/)
+    })
+
+    it('treats GitHub Actions as partial/related (not automatic strong) evidence for CI/CD', () => {
+      expect(systemPrompt).toContain('GitHub Actions')
+      expect(systemPrompt).toMatch(/Treat as "related"\/"partial" evidence by default/)
+    })
+  })
+
   describe('CGPA Logic (Tests D, E, F)', () => {
     // jdRequirementSchema also requires `provenance`; without it the same
     // parse() call threw on ["atsV2","structuredJd","requirements",0,"provenance"].

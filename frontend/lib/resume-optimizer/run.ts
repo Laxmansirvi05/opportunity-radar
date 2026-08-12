@@ -3,7 +3,7 @@ import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
 import type { AtsV2Score } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 import type { StructuredJD } from '@/features/resume-toolkit/lib/schema/resume/ats-v2'
 import type { ParsedResume } from '@/types/resume'
-import { decideTier, tierPlan, deriveSuggestions, type OptimizationTier, type Suggestion } from './tiers'
+import { decideTier, tierPlan, deriveSuggestions, suggestionCountForScore, type OptimizationTier, type Suggestion } from './tiers'
 import { generatePolishedResume, generateTargetResume } from './generate'
 
 /**
@@ -59,7 +59,9 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
   const baselineScore = Math.round(baselineReport.overallScore)
   const tier = decideTier(baselineScore)
   const plan = tierPlan(tier)
-  const suggestions = plan.generatesSuggestions ? deriveSuggestions(jdRes.data, evalRes.data) : []
+  const suggestions = plan.generatesSuggestions
+    ? deriveSuggestions(jdRes.data, evalRes.data, { max: suggestionCountForScore(baselineScore) })
+    : []
 
   const result: StartRunResult = {
     structuredJd: jdRes.data,

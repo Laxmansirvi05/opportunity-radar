@@ -9,7 +9,7 @@ import type { EvidenceMatrix, StructuredJD } from '@/features/resume-toolkit/lib
 import { calculateAtsReadiness } from '@/lib/ats-checker/readiness'
 import { extractJDIntelligence, evaluateResumeEvidence } from '@/features/resume-toolkit/services/ai/ats-v2-intelligence'
 import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
-import { deriveSuggestions } from '@/lib/ats-checker/gap-suggestions'
+import { deriveSuggestions, suggestionCountForScore } from '@/lib/ats-checker/gap-suggestions'
 import { computeAcademicRecommendation } from '@/lib/ats-checker/academic-recommendation'
 import { convertResumeDataToParsedResume, looksLikeParsedResume } from '@/lib/resume-optimizer/convert-resume-data'
 import { jsonrepair } from 'jsonrepair'
@@ -231,7 +231,11 @@ export async function POST(req: NextRequest) {
     if (atsV2Data) {
       // Canonical gap checklist — the same deriver the Optimiser uses, so the
       // two features never show two different sets of gaps for one analysis.
-      suggestions = deriveSuggestions(atsV2Data.structuredJd, atsV2Data.evidenceMatrix)
+      // Count scales with score: a near-ready resume gets a short, high-signal
+      // list rather than the same fixed checklist shown to a struggling one.
+      suggestions = deriveSuggestions(atsV2Data.structuredJd, atsV2Data.evidenceMatrix, {
+        max: suggestionCountForScore(Math.round(atsV2Data.score.overallScore)),
+      })
 
       // Qualitative narration only, grounded in the already-final V2 result.
       const { systemPrompt, userPrompt } = buildAtsCoachingPrompt(

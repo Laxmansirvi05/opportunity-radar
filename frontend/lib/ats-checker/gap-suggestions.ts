@@ -31,6 +31,21 @@ export interface Suggestion {
   guidance?: string
 }
 
+/**
+ * How many suggestions a resume at a given score genuinely needs.
+ *
+ * A near-ready resume shown the same 6-item checklist as a struggling one
+ * reads as busywork and buries the one or two things that actually matter.
+ * Bands loosely follow score-band guidance: fewer, higher-signal items as
+ * score rises, more (but still bounded) developmental items as it falls.
+ */
+export function suggestionCountForScore(score: number): number {
+  if (score >= 80) return 4
+  if (score >= 70) return 6
+  if (score >= 50) return 8
+  return 9
+}
+
 /** Satisfaction levels that count as a genuine gap worth acting on. */
 const UNMET = new Set(['none', 'insufficient', 'partial'])
 

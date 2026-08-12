@@ -78,4 +78,23 @@ describe('renderResumePdf', () => {
 
     expect(text).toContain('A. Student')
   })
+
+  it('includes certifications and achievements in the downloaded PDF', async () => {
+    // Regression test: these two fields were silently dropped from the PDF
+    // even when present on the resume — real, verified information the
+    // student would never see reflected in the file they actually download.
+    const withCredentials: ParsedResume = {
+      ...resume,
+      certifications: ['AWS Certified Cloud Practitioner (Amazon Web Services)'],
+      achievements: ['Top 5 finalist among 120+ teams at a national hackathon'],
+    }
+    const buffer = await renderResumePdf(withCredentials)
+
+    const parser = new PDFParse({ data: buffer })
+    const { text } = await parser.getText()
+    await parser.destroy()
+
+    expect(text).toContain('AWS Certified Cloud Practitioner')
+    expect(text).toContain('Top 5 finalist among 120+ teams')
+  })
 })

@@ -116,6 +116,157 @@ async function getScoreHistory(supabase: Awaited<ReturnType<typeof createClient>
   return points.slice(-6)
 }
 
+export interface LatestSuggestionSummary {
+  title: string
+  importance: 'critical' | 'high' | 'medium' | 'low'
+}
+
+export type LatestAnalysis =
+  | null
+  | {
+      kind: 'ats'
+      id: string
+      score: number
+      jobLabel: string
+      createdAt: string
+      topSuggestions: LatestSuggestionSummary[]
+    }
+  | {
+      kind: 'optimizer'
+      id: string
+      score: number
+      targetRole: string
+      companyName: string
+      tier: string | null
+      createdAt: string
+      topSuggestions: LatestSuggestionSummary[]
+    }
+
+/**
+ * The single most recent ATS check or Optimiser run, whichever is newer —
+ * the "current result" a returning user should see as the main content
+ * instead of the first-time onboarding hero (that hero stays for a user with
+ * neither kind of history yet).
+ */
+export async function getLatestAnalysis(): Promise<LatestAnalysis> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const [atsReport, optimization] = await Promise.all([
+    supabase
+      .from('resume_ats_reports')
+      .select('id, score, created_at, target_job_description, report_data, resumes!inner(user_id)')
+      .eq('resumes.user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('resume_optimizations')
+      .select('id, baseline_score, target_role, company_name, tier, suggestions, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const atsRow = atsReport.data
+  const optRow = optimization.data
+  if (!atsRow && !optRow) return null
+
+  const atsTime = atsRow ? new Date(atsRow.created_at as string).getTime() : -Infinity
+  const optTime = optRow ? new Date(optRow.created_at as string).getTime() : -Infinity
+
+  if (atsTime >= optTime && atsRow) {
+    const reportData = atsRow.report_data as { suggestions?: LatestSuggestionSummary[] } | null
+    const jd = (atsRow.target_job_description as string | null) ?? ''
+    return {
+      kind: 'ats',
+      id: atsRow.id as string,
+      score: Math.round(atsRow.score as number),
+      jobLabel: jd.trim().length > 0 ? jd.trim().slice(0, 60) : 'ATS check',
+      createdAt: atsRow.created_at as string,
+      topSuggestions: (reportData?.suggestions ?? []).slice(0, 3).map((s) => ({ title: s.title, importance: s.importance })),
+    }
+  }
+
+  if (optRow) {
+    return {
+      kind: 'optimizer',
+      id: optRow.id as string,
+      score: Math.round(optRow.baseline_score as number),
+      targetRole: (optRow.target_role as string) || 'Role',
+      companyName: (optRow.company_name as string) || 'Company',
+      tier: (optRow.tier as string) ?? null,
+      createdAt: optRow.created_at as string,
+      topSuggestions: ((optRow.suggestions as LatestSuggestionSummary[] | null) ?? []).slice(0, 3).map((s) => ({ title: s.title, importance: s.importance })),
+    }
+  }
+
+  return null
+}
+
+export interface AtsHistoryItem {
+  id: string
+  score: number
+  jobLabel: string
+  createdAt: string
+}
+
+export interface OptimizerHistoryItem {
+  id: string
+  baselineScore: number
+  targetRole: string
+  companyName: string
+  tier: string | null
+  createdAt: string
+}
+
+/**
+ * Full, separate history lists for the /resume dashboard's bottom section —
+ * distinct from getScoreHistory's combined 6-point sparkline above. ATS
+ * checks and Optimiser runs must never be merged into one list: they are
+ * different kinds of record with different "reopen" destinations.
+ */
+export async function getFullHistory(): Promise<{ ats: AtsHistoryItem[]; optimizer: OptimizerHistoryItem[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ats: [], optimizer: [] }
+
+  const [atsReports, optimizations] = await Promise.all([
+    supabase
+      .from('resume_ats_reports')
+      .select('id, score, created_at, target_job_description, resumes!inner(user_id)')
+      .eq('resumes.user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('resume_optimizations')
+      .select('id, baseline_score, target_role, company_name, tier, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
+
+  const ats: AtsHistoryItem[] = (atsReports.data ?? []).map((r) => ({
+    id: r.id as string,
+    score: Math.round(r.score as number),
+    jobLabel: ((r.target_job_description as string | null) ?? '').trim().slice(0, 60) || 'Resume-only check',
+    createdAt: r.created_at as string,
+  }))
+
+  const optimizer: OptimizerHistoryItem[] = (optimizations.data ?? []).map((r) => ({
+    id: r.id as string,
+    baselineScore: Math.round(r.baseline_score as number),
+    targetRole: (r.target_role as string) || 'Role',
+    companyName: (r.company_name as string) || 'Company',
+    tier: (r.tier as string) ?? null,
+    createdAt: r.created_at as string,
+  }))
+
+  return { ats, optimizer }
+}
+
 async function countMatchingOpportunities(
   supabase: Awaited<ReturnType<typeof createClient>>,
   skills: string[]

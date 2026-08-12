@@ -79,7 +79,9 @@ Return ONLY a JSON object matching this shape, with no prose or code fences:
   "education": [{ "institution": string, "degree": string,
                   "degree_level": "doctorate"|"masters"|"bachelors"|"diploma"|"other",
                   "field": string (optional), "graduation_year": number (optional),
-                  "gpa": number (optional) }]
+                  "gpa": number (optional) }],
+  "certifications": string[] (optional — carry every certification from the source resume over verbatim; see CONFIRMED ADDITIONS for the only permitted new entries),
+  "achievements": string[] (optional — carry every achievement from the source resume over verbatim, unchanged)
 }
 `.trim()
 
@@ -96,7 +98,8 @@ You are rewriting ONE resume. Every fact must survive unchanged.
 ABSOLUTE CONSTRAINTS — output is automatically rejected if broken:
 - Do not add an employer, institution, qualification or date that is not in the source.
 - Do not add any number that is not in the source.
-- Do not add a project or skill that is not in the source.
+- Do not add a project, skill, certification or achievement that is not in the source.
+- Carry every certification and achievement from the source over unchanged — never drop them, even when you cannot improve their wording.
 - You may reorder, reword, merge and cut. You may not add facts.
 
 Your job is presentation only: sharper wording, clearer structure, terminology
@@ -141,7 +144,8 @@ ABSOLUTE CONSTRAINTS — output is automatically rejected if broken:
 - Do not add any number that is not in the source. This applies to the new work too:
   describe what was built, never how many users it served.
 - The ONLY additions permitted are the confirmed items listed below.
-- Everything already on the resume stays factually unchanged.
+- Everything already on the resume stays factually unchanged — this includes
+  certifications and achievements: carry every one of them over verbatim, never drop them.
 
 For each confirmed item, write it the way the candidate would: a short, concrete
 project entry or a skill listed among their skills. Do not inflate it into a
@@ -196,7 +200,7 @@ function parseResume(raw: string): ParsedResume | null {
 async function generateVerified(
   prompts: { systemPrompt: string; userPrompt: string },
   source: ParsedResume,
-  allowed: { projects?: string[]; skills?: string[] },
+  allowed: { projects?: string[]; skills?: string[]; certifications?: string[] },
   feature: AIFeature,
   userId: string
 ): Promise<GenerationResult> {
@@ -271,9 +275,8 @@ export async function generateTargetResume(
 ): Promise<GenerationResult> {
   const allowed = {
     projects: completed.filter((s) => s.type === 'project').map((s) => s.requirement),
-    skills: completed
-      .filter((s) => s.type === 'skill' || s.type === 'certification' || s.type === 'course')
-      .map((s) => s.requirement),
+    skills: completed.filter((s) => s.type === 'skill' || s.type === 'course').map((s) => s.requirement),
+    certifications: completed.filter((s) => s.type === 'certification').map((s) => s.requirement),
   }
 
   return generateVerified(

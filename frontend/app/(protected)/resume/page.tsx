@@ -1,16 +1,42 @@
 import React from 'react';
 import Link from 'next/link';
 import { listResumes } from '@/features/resume-toolkit/services/resume-actions';
-import { getCareerInsights } from '@/features/resume-toolkit/services/career-insights';
+import { getCareerInsights, getLatestAnalysis, getFullHistory } from '@/features/resume-toolkit/services/career-insights';
 import { ResumeListClient } from '@/features/resume-toolkit/components/resume-list-client';
 
+function matchLevelLabel(score: number): string {
+  if (score >= 90) return 'Exceptional match';
+  if (score >= 78) return 'Strong match';
+  if (score >= 65) return 'Moderate match';
+  if (score >= 50) return 'Partial match';
+  if (score >= 35) return 'Weak match';
+  return 'Poor match';
+}
+
+const importanceColor: Record<string, string> = {
+  critical: '#943700',
+  high: '#943700',
+  medium: '#434655',
+  low: '#737686',
+};
+
+function formatHistoryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export default async function ResumeToolkitPrototype() {
-  const [result, insights] = await Promise.all([listResumes(), getCareerInsights()]);
+  const [result, insights, latestAnalysis, history] = await Promise.all([
+    listResumes(),
+    getCareerInsights(),
+    getLatestAnalysis(),
+    getFullHistory(),
+  ]);
   const resumes = result.success ? result.resumes : [];
 
   return (
-    <div className="flex flex-col lg:flex-row w-full gap-8 font-sans lg:items-start" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-      
+    <div className="flex flex-col w-full gap-8 font-sans" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="flex flex-col lg:flex-row w-full gap-8 lg:items-start">
+
       {/* ═══════════════════════════════════════════════════════════
           LEFT COLUMN — Workspace Tools
           ═══════════════════════════════════════════════════════════ */}
@@ -159,45 +185,126 @@ export default async function ResumeToolkitPrototype() {
             buttons with no click handler at all. Never show a student a
             number or a result you made up — the real thing lives at
             /resume/copilot and needs their actual resume and a job
-            description to produce anything honest. */}
-        <div style={{
-          backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-          padding: '40px 32px',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px',
-        }}>
+            description to produce anything honest.
+
+            For a returning user (one who already has an ATS check or
+            Optimiser run), the onboarding pitch below is replaced by their
+            actual latest result — re-showing "score your resume" to someone
+            who already has a score buries the one thing they'd actually
+            want to see first. */}
+        {latestAnalysis ? (
           <div style={{
-            width: '56px', height: '56px', borderRadius: '16px',
-            backgroundColor: '#dbe1ff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            padding: '32px',
+            display: 'flex', flexDirection: 'column', gap: '20px',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#004ac6' }}>auto_fix_high</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '16px', flexShrink: 0,
+                backgroundColor: latestAnalysis.score >= 65 ? '#dbe1ff' : '#ffdbcd',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: '22px', fontWeight: 700, color: latestAnalysis.score >= 65 ? '#004ac6' : '#943700' }}>
+                  {latestAnalysis.score}
+                </span>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#737686', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px 0' }}>
+                  {matchLevelLabel(latestAnalysis.score)} · Current {latestAnalysis.kind === 'ats' ? 'ATS Score' : 'Optimiser Run'}
+                </p>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#191b23', margin: 0, lineHeight: 1.3 }}>
+                  {latestAnalysis.kind === 'optimizer'
+                    ? `${latestAnalysis.targetRole} · ${latestAnalysis.companyName}`
+                    : latestAnalysis.jobLabel}
+                </h3>
+              </div>
+            </div>
+
+            {latestAnalysis.topSuggestions.length > 0 && (
+              <div>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#434655', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px 0' }}>
+                  Current gaps
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {latestAnalysis.topSuggestions.map((s, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#191b23' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: importanceColor[s.importance] ?? '#737686', flexShrink: 0 }} />
+                      {s.title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <Link
+                href="/resume/copilot"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  height: '40px', padding: '0 20px',
+                  borderRadius: '8px', border: 'none',
+                  backgroundColor: '#004ac6', color: '#ffffff',
+                  fontSize: '14px', fontWeight: 600, textDecoration: 'none',
+                }}
+              >
+                Continue in Optimiser
+              </Link>
+              <Link
+                href="/resume/ats"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  height: '40px', padding: '0 20px',
+                  borderRadius: '8px', border: '1px solid #E2E8F0',
+                  backgroundColor: '#ffffff', color: '#191b23',
+                  fontSize: '14px', fontWeight: 600, textDecoration: 'none',
+                }}
+              >
+                Run a new ATS check
+              </Link>
+            </div>
           </div>
-          <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', margin: '0 0 8px 0' }}>
-              Score your resume against a real job
-            </h3>
-            <p style={{ fontSize: '14px', color: '#434655', lineHeight: 1.6, margin: 0, maxWidth: '420px' }}>
-              Upload or pick a resume, paste a job description, and get your real ATS score, gap-derived
-              suggestions, and two downloadable versions — never a number we made up.
-            </p>
+        ) : (
+          <div style={{
+            backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            padding: '40px 32px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px',
+          }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '16px',
+              backgroundColor: '#dbe1ff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#004ac6' }}>auto_fix_high</span>
+            </div>
+            <div>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', margin: '0 0 8px 0' }}>
+                Score your resume against a real job
+              </h3>
+              <p style={{ fontSize: '14px', color: '#434655', lineHeight: 1.6, margin: 0, maxWidth: '420px' }}>
+                Upload or pick a resume, paste a job description, and get your real ATS score, gap-derived
+                suggestions, and two downloadable versions — never a number we made up.
+              </p>
+            </div>
+            <Link
+              href="/resume/copilot"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                height: '44px', padding: '0 24px',
+                borderRadius: '8px', border: 'none',
+                backgroundColor: '#004ac6', color: '#ffffff',
+                fontSize: '15px', fontWeight: 600, textDecoration: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>arrow_forward</span>
+              Open the optimiser
+            </Link>
           </div>
-          <Link
-            href="/resume/copilot"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '8px',
-              height: '44px', padding: '0 24px',
-              borderRadius: '8px', border: 'none',
-              backgroundColor: '#004ac6', color: '#ffffff',
-              fontSize: '15px', fontWeight: 600, textDecoration: 'none',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>arrow_forward</span>
-            Open the optimiser
-          </Link>
-        </div>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
@@ -358,6 +465,80 @@ export default async function ResumeToolkitPrototype() {
           </div>
         </div>
       </div>
+    </div>
+
+    {/* ═══════════════════════════════════════════════════════════
+        BOTTOM — History (two separate lists, never merged: an ATS
+        check and an Optimiser run are different kinds of record with
+        different reopen destinations)
+        ═══════════════════════════════════════════════════════════ */}
+    {(history.ats.length > 0 || history.optimizer.length > 0) && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div style={{ backgroundColor: '#ffffff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#191b23', margin: '0 0 14px 0' }}>ATS Score History</h2>
+          {history.ats.length === 0 ? (
+            <p style={{ fontSize: '13px', color: '#737686', margin: 0 }}>No ATS checks yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {history.ats.map((h) => (
+                <Link
+                  key={h.id}
+                  href={`/resume/ats?reportId=${h.id}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                    padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0',
+                    textDecoration: 'none', color: 'inherit',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#191b23', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.jobLabel}</p>
+                    <p style={{ fontSize: '12px', color: '#737686', margin: '2px 0 0 0' }}>{formatHistoryDate(h.createdAt)}</p>
+                  </div>
+                  <span style={{
+                    flexShrink: 0, fontSize: '13px', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px',
+                    color: h.score >= 65 ? '#006f64' : '#943700',
+                    backgroundColor: h.score >= 65 ? '#6df5e1' : '#ffdbcd',
+                  }}>{h.score}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ backgroundColor: '#ffffff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#191b23', margin: '0 0 14px 0' }}>AI Optimizer History</h2>
+          {history.optimizer.length === 0 ? (
+            <p style={{ fontSize: '13px', color: '#737686', margin: 0 }}>No optimisation runs yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {history.optimizer.map((h) => (
+                <Link
+                  key={h.id}
+                  href={`/resume/copilot?runId=${h.id}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                    padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0',
+                    textDecoration: 'none', color: 'inherit',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#191b23', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {h.targetRole} · {h.companyName}
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#737686', margin: '2px 0 0 0' }}>{formatHistoryDate(h.createdAt)}</p>
+                  </div>
+                  <span style={{
+                    flexShrink: 0, fontSize: '13px', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px',
+                    color: h.baselineScore >= 65 ? '#006f64' : '#943700',
+                    backgroundColor: h.baselineScore >= 65 ? '#6df5e1' : '#ffdbcd',
+                  }}>{h.baselineScore}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
     </div>
   );
 }
