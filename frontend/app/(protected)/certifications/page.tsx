@@ -7,10 +7,24 @@ export const metadata = {
 }
 
 export default async function CertificationsPage() {
-  const [{ items, total }, topProviders] = await Promise.all([
-    getCertificationsFirstPage(),
-    getTopCertificationProviders(),
-  ])
+  // getCertificationsFirstPage() now throws on a real query failure instead
+  // of returning a fake empty result (see lib/certifications/get-catalogue.ts)
+  // — caught here so a transient DB error reads to the student as "couldn't
+  // load, try again" rather than as "the catalogue is empty."
+  let items: Awaited<ReturnType<typeof getCertificationsFirstPage>>['items'] = []
+  let total = 0
+  let loadError = false
+  let topProviders: Awaited<ReturnType<typeof getTopCertificationProviders>> = []
 
-  return <CertificationsClient seed={items} seedTotal={total} topProviders={topProviders} />
+  try {
+    ;[{ items, total }, topProviders] = await Promise.all([
+      getCertificationsFirstPage(),
+      getTopCertificationProviders(),
+    ])
+  } catch (err) {
+    console.error('[Certifications] page load failed:', err)
+    loadError = true
+  }
+
+  return <CertificationsClient seed={items} seedTotal={total} topProviders={topProviders} loadError={loadError} />
 }

@@ -39,6 +39,13 @@ const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
   // per-day cap here bounds provider spend without blocking normal iteration.
   resume_polish:    { max: 10,  windowMs: 86_400_000 },
   resume_target:    { max: 10,  windowMs: 86_400_000 },
+  // Voice interview sessions never route through callAI (the LLM calls
+  // happen entirely inside the separate DeepInterview service), so
+  // POST /api/interview/start had zero throttling of any kind — found
+  // 16 Aug 2026 audit. Each call triggers a real external session-prep
+  // request with its own provider cost on that side. Reusing checkRateLimit
+  // here rather than duplicating the mechanism.
+  voice_interview:  { max: 10,  windowMs: 86_400_000 },
 }
 
 // SEC-01: `checkRateLimit` previously did `if (!limit) return true`, so any
@@ -158,7 +165,7 @@ async function logUsage(result: AIResult, context: GatewayContext): Promise<void
 
 const inMemoryRateLimits = new Map<string, number[]>()
 
-async function checkRateLimit(
+export async function checkRateLimit(
   userId: string | undefined,
   feature: string
 ): Promise<boolean> {

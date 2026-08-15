@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { toast } from "sonner";
 import type { Conversation } from "../types";
 import { MAX_CONVERSATIONS } from "../types";
 import {
@@ -276,23 +277,22 @@ export const useChatStore = create<ChatState & ChatActions>()(
       const lastResponse = convo.messages[convo.messages.length - 1];
       if (lastResponse.role !== "ai") return;
 
-      const deleted = await deleteMessageById(lastResponse.id);
-      if (!deleted) return;
-
-      // Remove the last AI response
+      // Generate the replacement BEFORE touching the existing response.
+      // Previously this deleted the old (working) answer from the database
+      // first, then generated a replacement — so a failure anywhere in
+      // generation permanently lost the old answer, with the fallback
+      // "Failed to regenerate" text existing only in local state (never
+      // persisted), gone on the next reload too. Flagged 12 Aug, fixed
+      // 16 Aug: the old message now stays untouched, in the UI and the
+      // database, unless and until a replacement is confirmed saved.
       set((s) => {
-        const c = s.conversations.find((c) => c.id === activeId);
-        if (c) {
-          // Remove all messages after the last user message
-          c.messages = c.messages.slice(0, actualIdx + 1);
-        }
         s.isLoading = true;
       });
 
       try {
-        const apiMessages = get()
-          .conversations.find((c) => c.id === activeId)
-          ?.messages.map((m) => ({ role: m.role, content: m.content })) || [];
+        const apiMessages = convo.messages
+          .slice(0, actualIdx + 1)
+          .map((m) => ({ role: m.role, content: m.content }));
 
         const result = await sendChatMessage(apiMessages);
         const aiContent =
@@ -308,9 +308,18 @@ export const useChatStore = create<ChatState & ChatActions>()(
           throw new Error("Unable to save the regenerated response.");
         }
 
+        // Only now, with the replacement confirmed saved, remove the old one.
+        const deleted = await deleteMessageById(lastResponse.id);
+        if (!deleted) {
+          // The new answer is safely saved even if cleanup of the old row
+          // failed — worst case the conversation shows both, never neither.
+          console.error("[AI Assistant] regenerate: failed to delete the superseded response", lastResponse.id);
+        }
+
         set((s) => {
           const c = s.conversations.find((c) => c.id === activeId);
           if (c) {
+            c.messages = c.messages.slice(0, actualIdx + 1);
             c.messages.push({
               id: aiDbMsg.id,
               role: "ai",
@@ -321,17 +330,12 @@ export const useChatStore = create<ChatState & ChatActions>()(
           }
         });
       } catch {
-        set((s) => {
-          const c = s.conversations.find((c) => c.id === activeId);
-          if (c) {
-            c.messages.push({
-              id: `err-${Date.now()}`,
-              role: "ai",
-              content: "Failed to regenerate. Please try again.",
-              time: formatTime(),
-            });
-          }
-        });
+        // The old response was never touched — nothing to restore. Surface
+        // a transient toast instead of mutating the conversation: pushing a
+        // second "Failed to regenerate" AI message here would stack a fake
+        // error bubble underneath the still-present, still-correct original
+        // answer, which reads as if the assistant replied twice.
+        toast.error("Couldn't regenerate that response. Please try again.");
       } finally {
         set({ isLoading: false });
       }

@@ -7,6 +7,7 @@ import {
   InterviewAgentError,
   messageForCode,
 } from '@/lib/interview/agent-client'
+import { checkRateLimit } from '@/lib/ai-gateway'
 import type { ResumeData } from '@reactive-resume/schema/resume/data'
 
 /**
@@ -30,6 +31,19 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Please sign in.' } }, { status: 401 })
+  }
+
+  // Every other AI-backed route in this app is throttled via callAI's own
+  // rate limiting; this route never calls callAI (the LLM work happens
+  // inside the separate interview service), so it had no throttle at all
+  // until this check — see the voice_interview entry in ai-gateway's
+  // RATE_LIMITS.
+  const allowed = await checkRateLimit(user.id, 'voice_interview')
+  if (!allowed) {
+    return NextResponse.json(
+      { error: { code: 'RATE_LIMITED', message: 'Too many interview sessions started recently. Please try again later.' } },
+      { status: 429 }
+    )
   }
 
   let body: StartBody

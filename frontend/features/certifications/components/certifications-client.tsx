@@ -50,10 +50,12 @@ export function CertificationsClient({
   seed,
   seedTotal,
   topProviders,
+  loadError = false,
 }: {
   seed: Certification[]
   seedTotal: number
   topProviders: [string, number][]
+  loadError?: boolean
 }) {
   const [query, setQuery] = useState('')
   const [price, setPrice] = useState<PriceFilter>('all')
@@ -205,7 +207,15 @@ export function CertificationsClient({
               <span className="text-sm font-medium text-on-surface-variant">{countLabel}</span>
             </div>
 
-            {items.length === 0 && !loading && !hasMore ? (
+            {items.length === 0 && !loading && !hasMore && loadError ? (
+              <div className="bg-surface border border-dashed border-error/50 rounded-xl p-10 flex flex-col items-center text-center">
+                <span className="material-symbols-outlined text-error text-[40px] mb-2">cloud_off</span>
+                <h2 className="font-bold text-on-surface mb-1 text-sm">Couldn&apos;t load certifications</h2>
+                <p className="text-xs text-on-surface-variant max-w-md w-full">
+                  Something went wrong loading the catalogue — this isn&apos;t an empty result. Try refreshing the page.
+                </p>
+              </div>
+            ) : items.length === 0 && !loading && !hasMore ? (
               <div className="bg-surface border border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center text-center">
                 <span className="material-symbols-outlined text-outline text-[40px] mb-2">school</span>
                 <h2 className="font-bold text-on-surface mb-1 text-sm">No certifications found</h2>

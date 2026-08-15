@@ -47,7 +47,15 @@ export async function signupAction(formData: FormData) {
     password,
     options: {
       data: {
+        // Sent under both keys: the public.handle_new_user() trigger reads
+        // raw_user_meta_data->>'name' when creating the profiles row, but
+        // this form only ever sent 'full_name' — every signup's display
+        // name silently fell back to the email's local-part. Fixed at the
+        // trigger too (see migration 20260816090000), but that requires a
+        // deploy the owner hasn't run yet, so this keeps new signups
+        // correct in the meantime regardless of which key the trigger reads.
         full_name: name,
+        name: name,
       },
       emailRedirectTo: `${siteUrl}/auth/callback`,
     },

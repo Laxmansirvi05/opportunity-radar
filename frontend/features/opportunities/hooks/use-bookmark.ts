@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
 export function useBookmark(opportunityId: string) {
@@ -50,7 +51,12 @@ export function useBookmark(opportunityId: string) {
     }
 
     if (!userId) {
-      alert('Please sign in to save opportunities for later.')
+      // A native alert() blocks the whole page and looks out of place next
+      // to every other notification in the app now that a real Toaster is
+      // mounted globally (previously the only one lived on the Resume
+      // Builder page, so nothing outside it — including this — could use
+      // toast() at all).
+      toast.error('Please sign in to save opportunities for later.')
       return
     }
 
@@ -79,6 +85,7 @@ export function useBookmark(opportunityId: string) {
       if (error || trackerError) {
         setIsSaved(true) // Revert to saved
         console.error('Error removing bookmark', error || trackerError)
+        toast.error('Could not remove this bookmark. Please try again.')
       }
     } else {
       // User is saving
@@ -99,6 +106,7 @@ export function useBookmark(opportunityId: string) {
       if (error || trackerError) {
         setIsSaved(false) // Revert to not saved
         console.error('Error adding bookmark:', error || trackerError)
+        toast.error('Could not save this opportunity. Please try again.')
       }
     }
   }

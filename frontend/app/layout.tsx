@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "@reactive-resume/ui/components/sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -34,7 +35,18 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        {/* Mounted once, globally — every page calls `toast(...)` from
+            "sonner" directly, but the only <Toaster/> in the app used to
+            live inside the Resume Builder's own page-client.tsx, so every
+            toast call anywhere else (ATS Checker, Optimiser, AI Search,
+            Tracker, notifications, resume upload/import) silently rendered
+            nothing. Found live 16 Aug 2026: submitted a real ATS check and
+            watched the loading/success/error toasts never appear anywhere
+            on screen despite firing correctly in code. */}
+        <Toaster richColors position="bottom-right" />
+      </body>
     </html>
   );
 }

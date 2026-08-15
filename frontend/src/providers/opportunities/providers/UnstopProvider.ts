@@ -131,13 +131,24 @@ export class UnstopProvider extends OpportunityProvider {
     else if (jobType) mode = 'Onsite';
 
     // ── Location & India First Filtering ──────────────────────────────
-    let location = rawData.region === 'online' ? 'Remote' : rawData.region || 'Remote';
+    // `region` and `mode` come from independent fields in Unstop's API and
+    // can disagree — e.g. mode='Onsite' (from jobDetail.type) with
+    // region='online' (an unrelated "apply online" signal, not a work-mode
+    // one). Defaulting location to 'Remote' whenever region was blank/online
+    // regardless of mode produced ~106 published listings that showed
+    // "Onsite" and "Remote" on the same card. Only default to 'Remote' when
+    // mode agrees; otherwise say the location is unknown rather than
+    // fabricating a value that contradicts mode.
+    const regionIsRemote = rawData.region === 'online' || !rawData.region;
+    let location = regionIsRemote
+      ? (mode === 'Remote' || !mode ? 'Remote' : 'Location TBD')
+      : rawData.region;
     const locLower = location.toLowerCase();
     
     // If not remote and not matching priority Indian cities, we might still ingest it, 
     // but the engine prefers priority cities.
     const isPriorityCity = INDIA_CITIES.some(city => locLower.includes(city));
-    if (!isPriorityCity && location !== 'Remote') {
+    if (!isPriorityCity && location !== 'Remote' && location !== 'Location TBD') {
       // In a strict India-first mode, we could reject. We'll append India to clarify.
       if (!locLower.includes('india')) {
         location = `${location}, India`; // Assuming most Unstop are India-based

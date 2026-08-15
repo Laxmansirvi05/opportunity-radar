@@ -31,7 +31,6 @@ import { domAnimation, LazyMotion, MotionConfig } from "motion/react";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { DirectionProvider } from "@reactive-resume/ui/components/direction";
 import { TooltipProvider } from "@reactive-resume/ui/components/tooltip";
-import { Toaster } from "@reactive-resume/ui/components/sonner";
 import { CommandPalette } from "@/features/command-palette";
 
 const queryClient = new QueryClient();
@@ -87,7 +86,9 @@ export function BuilderPageClient({ initialResume }: { initialResume: Resume }) 
 													</BuilderLayoutShell>
 													<DialogManager />
 													<CommandPalette />
-													<Toaster richColors position="bottom-right" />
+													{/* Toaster now mounted once, globally, in app/layout.tsx —
+														having one here too would double-render every toast
+														while on this page. */}
 												</PromptDialogProvider>
 											</ConfirmDialogProvider>
 										</TooltipProvider>

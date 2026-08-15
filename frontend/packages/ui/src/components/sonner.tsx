@@ -1,3 +1,5 @@
+"use client";
+
 import type { ToasterProps } from "sonner";
 import { CheckCircleIcon, CircleNotchIcon, InfoIcon, WarningIcon, XCircleIcon } from "@phosphor-icons/react";
 import { useTheme } from "next-themes";

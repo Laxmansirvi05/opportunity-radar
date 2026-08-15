@@ -17,7 +17,13 @@ interface OpportunitySearchRow {
 
 export function isOpportunityQuery(message: string): boolean {
   const lower = message.toLowerCase();
-  const asksToSearch = /\b(find|search|show|list|look|recommend|available|open)\b/.test(lower);
+  // "match(es)/matching", "suit(s)/suited", "fit(s)" cover the natural
+  // "what internships match/suit a React developer?" phrasing — found live
+  // 16 Aug 2026: that exact question skipped the DB search entirely (none of
+  // the original trigger verbs matched), yet the model still said "Here are
+  // some opportunities that match your criteria:" with nothing attached —
+  // a real fabrication instance, not just a missed search.
+  const asksToSearch = /\b(find|search|show|list|look|recommend|available|open|match|matches|matching|suit|suits|suited|fit|fits)\b/.test(lower);
   const namesAnOpportunity = /\b(internship|internships|job|jobs|hackathon|hackathons|scholarship|scholarships|competition|competitions|workshop|workshops|opportunity|opportunities|opening|openings|position|positions|role|roles)\b/.test(lower);
 
   // "Internships for frontend" is a natural short-form search, while a
@@ -123,6 +129,23 @@ async function searchOpportunitiesFromDB(
 // ── Main handler ────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    // Auth checked first, before any request-body validation — matches
+    // every other route in this app (SEC-05, found in the 16 Aug audit:
+    // this was the one route validating shape before session, so an
+    // unauthenticated malformed request got 400 instead of 401).
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { messages } = body;
 
@@ -155,26 +178,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Authenticate user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const lastUserMessage = [...safeMessages].reverse().find((m) => m.role === "user");
     const userText = lastUserMessage?.content || "";
 
     // ── Check if this is an opportunity search ──────────────────
     let opportunities: Awaited<ReturnType<typeof searchOpportunitiesFromDB>> = [];
-    if (isOpportunityQuery(userText)) {
+    const wasSearchAttempted = isOpportunityQuery(userText);
+    if (wasSearchAttempted) {
       const { query, category } = extractSearchTerms(userText);
       opportunities = await searchOpportunitiesFromDB(query, category, 5);
     }
@@ -186,12 +196,19 @@ Your personality: Professional, friendly, concise. You speak like a helpful care
 
 IMPORTANT RULES:
 - When the user asks to find opportunities (internships, jobs, hackathons, etc.), acknowledge their request naturally. The system will automatically attach matching opportunities from the database. DO NOT make up fake companies or listings.
+- Only say something like "Here are some opportunities that match your criteria" if this prompt explicitly tells you below that opportunities were found and attached. If none were attached, do NOT claim to be showing, listing, or having found any — say plainly that nothing matched, or suggest the Search page instead.
 - If opportunities are attached to your response, briefly introduce them (e.g., "Here are some opportunities that match your criteria:"). Do NOT list them in markdown — they will be rendered as interactive cards.
 - For resume, interview, and career questions, provide helpful, actionable advice.
 - Use markdown formatting for structured responses (bold, lists, headings).
 - Keep responses concise but thorough.
 - Never search the internet. Only reference opportunities from Opportunity Radar's database.
-${opportunities.length > 0 ? `\nThe system found ${opportunities.length} matching opportunities from the database. They will be displayed as interactive cards after your message. Briefly introduce them.` : ""}`;
+${
+  opportunities.length > 0
+    ? `\nThe system found ${opportunities.length} matching opportunities from the database. They will be displayed as interactive cards after your message. Briefly introduce them.`
+    : wasSearchAttempted
+      ? `\nThe system searched the database for this request and found NO matching opportunities. Do not say you found or are showing any — tell the user plainly that nothing matched right now and suggest trying the Search page or broadening their criteria.`
+      : ""
+}`;
 
     const formattedMessages = safeMessages
       .map(

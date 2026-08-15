@@ -1,8 +1,21 @@
 import type { NextConfig } from "next";
 
+// SEC-02: 'unsafe-eval' was set unconditionally, in both dev and production.
+// Per Next.js's own CSP guide (node_modules/next/dist/docs/01-app/02-guides/
+// content-security-policy.md): "unsafe-eval is not required for production.
+// Neither React nor Next.js use eval in production by default" — it's only
+// needed in dev, for React's server-error-stack reconstruction. Dropped for
+// production; kept for dev so local debugging is unaffected. 'wasm-unsafe-
+// eval' is added instead, since the Resume Builder's layout engine
+// (yoga-layout) instantiates WebAssembly, which needs its own, narrower
+// grant — not the general eval() one being removed. A full nonce-based
+// rewrite (removing 'unsafe-inline' too) would force every route into
+// dynamic rendering — a real architectural change with its own caching
+// tradeoffs — and is deliberately not attempted in this pass.
+const isDev = process.env.NODE_ENV === "development";
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline';
+  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;

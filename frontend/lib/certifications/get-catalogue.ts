@@ -64,7 +64,14 @@ async function fetchFirstPage(): Promise<{ items: Certification[]; total: number
 
   if (error) {
     console.error('[Certifications] first-page query failed:', error.message)
-    return { items: [], total: 0 }
+    // Throw rather than return an empty-looking result: unstable_cache only
+    // memoizes a resolved value, never a rejection, so a real (observed
+    // live) transient DB timeout used to get cached as "0 certifications"
+    // for the full 900s revalidate window — indistinguishable from a
+    // genuinely empty catalogue to every student who loaded the page during
+    // that time. Throwing means a failed fetch is retried on the next
+    // request instead of being remembered as fact.
+    throw new Error(`certifications first-page query failed: ${error.message}`)
   }
   const rows = (data ?? []) as (Certification & { link_status: number | null })[]
   return { items: rows.map(stripLinkStatus), total: count ?? 0 }

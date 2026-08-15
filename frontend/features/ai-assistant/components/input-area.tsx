@@ -12,12 +12,22 @@ export function InputArea({
   onSendMessage: (msg: string) => void;
   disabled?: boolean;
 }) {
-  const [message, setMessage] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(DRAFT_KEY) ?? "";
-    }
-    return "";
-  });
+  // Always starts empty (matching the server-rendered markup) and loads any
+  // saved draft in an effect after mount instead — reading localStorage
+  // directly in useState's initializer ran during the client's first render
+  // too, before hydration reconciles against the server's forced-empty
+  // string, producing a real hydration mismatch (React logs "won't be
+  // patched up") whenever a draft existed from an earlier visit.
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    // One-time restore of a draft from a previous visit, intentionally run
+    // once on mount rather than computed during render — that's exactly what
+    // caused the hydration mismatch this replaced (see comment above).
+    const draft = localStorage.getItem(DRAFT_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (draft) setMessage(draft);
+  }, []);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
