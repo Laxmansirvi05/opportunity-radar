@@ -83,9 +83,8 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
       style={{ perspective: '1000px', transform: isOpening ? 'scale(1.06)' : undefined }}
     >
       <div
-        className="relative w-full transition-transform duration-500 ease-note"
+        className="relative w-full aspect-square transition-transform duration-500 ease-note"
         style={{
-          height: 132,
           transformStyle: 'preserve-3d',
           transform: lifted ? 'translateY(-10px) rotateX(-8deg)' : 'rotateX(0deg)',
           filter: lifted ? `drop-shadow(0 18px 28px ${palette.glow})` : 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))',
@@ -94,11 +93,11 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
         {/* Back panel, with the tab reading as part of the same sheet. */}
         <div
           className="absolute inset-x-0 bottom-0 rounded-xl"
-          style={{ height: 108, backgroundColor: palette.back }}
+          style={{ height: '82%', backgroundColor: palette.back }}
         />
         <div
-          className="absolute left-3 rounded-t-lg"
-          style={{ bottom: 104, width: '42%', height: 14, backgroundColor: palette.tab }}
+          className="absolute left-[8%] rounded-t-lg"
+          style={{ bottom: '80%', width: '42%', height: '9%', backgroundColor: palette.tab }}
         />
 
         {/* The notes inside. Hidden behind the front panel at rest, fanned
@@ -109,9 +108,9 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
             <div
               key={preview.id}
               aria-hidden="true"
-              className="absolute left-1/2 bottom-4 w-[62%] rounded-lg overflow-hidden bg-surface border border-outline-variant shadow-lg transition-all duration-500 ease-note"
+              className="absolute left-1/2 bottom-[12%] w-[62%] rounded-lg overflow-hidden bg-surface border border-outline-variant shadow-lg transition-all duration-500 ease-note"
               style={{
-                height: 76,
+                height: '52%',
                 transform: lifted
                   ? `translateX(calc(-50% + ${fan.x}px)) translateY(${fan.y}px) rotate(${fan.rotate}deg) scale(1)`
                   : 'translateX(-50%) translateY(6px) rotate(0deg) scale(0.9)',
@@ -146,7 +145,7 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
         <div
           className="absolute inset-x-0 bottom-0 rounded-xl transition-transform duration-500 ease-note"
           style={{
-            height: 94,
+            height: '71%',
             transformOrigin: 'bottom center',
             transform: lifted ? 'rotateX(-32deg)' : 'rotateX(0deg)',
             background: `linear-gradient(160deg, ${palette.frontFrom} 0%, ${palette.frontTo} 100%)`,
@@ -154,13 +153,13 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
           }}
         >
           <span
-            className="material-symbols-outlined absolute left-3 bottom-2.5 text-[20px] opacity-70"
+            className="material-symbols-outlined absolute left-[8%] bottom-[8%] text-[20px] opacity-70"
             style={{ color: palette.ink }}
           >
             {folder.icon || 'folder'}
           </span>
           <span
-            className="absolute right-3 bottom-2.5 font-label-sm text-label-sm tabular-nums opacity-80"
+            className="absolute right-[8%] bottom-[8%] font-label-sm text-label-sm tabular-nums opacity-80"
             style={{ color: palette.ink }}
           >
             {folder.note_count}

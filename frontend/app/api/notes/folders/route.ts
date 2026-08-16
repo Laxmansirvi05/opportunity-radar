@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isFolderColor, type FolderColor, type NoteFolder, type NotePreview } from '@/features/notes/types'
 import { toSnippet } from '@/features/notes/lib/note-preview'
+import { QUICK_NOTES_FOLDER } from '@/features/notes/lib/quick-notes-folder'
 
 export const runtime = 'nodejs'
 
@@ -17,6 +18,7 @@ const PREVIEWS_PER_FOLDER = 5
 const PREVIEW_SCAN_LIMIT = 300
 
 const DEFAULT_FOLDERS: { name: string; color: FolderColor }[] = [
+  { name: QUICK_NOTES_FOLDER, color: 'cyan' },
   { name: 'Skills', color: 'purple' },
   { name: 'Opportunities', color: 'green' },
   { name: 'General', color: 'neutral' },

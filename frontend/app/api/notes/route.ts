@@ -4,6 +4,7 @@ import type { NoteSource, NoteSort, NoteView, SharePermission } from '@/features
 import { NOTE_SELECT_COLUMNS, toNote, type NoteRow } from '@/features/notes/lib/to-note'
 import { sanitizeNoteContent } from '@/features/notes/lib/sanitize-note-content'
 import { hasAttachmentMarkup } from '@/features/notes/lib/note-preview'
+import { resolveQuickNotesFolder } from '@/features/notes/lib/quick-notes-folder'
 
 export const runtime = 'nodejs'
 
@@ -249,6 +250,14 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
     if (!owned) application_id = null
+  }
+
+  // A note captured from the robot with no folder of its own is filed into
+  // the student's Quick Notes folder, created on demand. Done here rather
+  // than in the composer so every robot entry point files consistently and
+  // the client never has to know the folder's id.
+  if (!folder_id && source === 'robot') {
+    folder_id = await resolveQuickNotesFolder(supabase, user.id)
   }
 
   // Same belt-and-suspenders ownership check for folder_id.
