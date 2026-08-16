@@ -83,13 +83,13 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
       style={{ perspective: '1000px', transform: isOpening ? 'scale(1.06)' : undefined }}
     >
       <div
-        // A fixed 71px stage, capped at the cell so it can never overflow on a
+        // A fixed 73px stage, capped at the cell so it can never overflow on a
         // narrow column. Sized inside the cell rather than by changing the
         // grid, so columns, gaps and label alignment stay exactly where they
         // were.
         className="relative aspect-square transition-transform duration-500 ease-note"
         style={{
-          width: 'min(71px, 100%)',
+          width: 'min(73px, 100%)',
           transformStyle: 'preserve-3d',
           transform: lifted ? 'translateY(-10px) rotateX(-8deg)' : 'rotateX(0deg)',
           filter: lifted ? `drop-shadow(0 18px 28px ${palette.glow})` : 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))',
