@@ -56,7 +56,7 @@ const COLUMNS: { stage: TrackerStage; label: string; accent: string; dot: string
 
 // ── date helpers ────────────────────────────────────────────────────────────
 
-function daysBetween(from: string | null, to = new Date()): number | null {
+function daysBetween(from: string | null, to: Date): number | null {
   if (!from) return null
   const d = new Date(from)
   if (Number.isNaN(d.getTime())) return null
@@ -71,15 +71,32 @@ function formatDate(iso: string | null): string {
 }
 
 /** Deadline urgency, or null when there is nothing useful to say. */
-function deadlineInfo(deadline: string | null, closed: boolean) {
+function deadlineInfo(deadline: string | null, closed: boolean, now: Date) {
   if (closed) return { text: 'Listing closed', tone: 'bg-error-container text-on-error-container' }
   if (!deadline) return null
-  const days = -(daysBetween(deadline) ?? 0)
+  const days = -(daysBetween(deadline, now) ?? 0)
   if (days < 0) return { text: 'Deadline passed', tone: 'bg-error-container text-on-error-container' }
   if (days === 0) return { text: 'Closes today', tone: 'bg-error-container text-on-error-container' }
   if (days <= 3) return { text: `${days}d left`, tone: 'bg-error-container text-on-error-container' }
   if (days <= 14) return { text: `${days}d left`, tone: 'bg-tertiary-container text-on-tertiary-container' }
   return { text: `${days}d left`, tone: 'bg-surface-container text-on-surface-variant' }
+}
+
+// `to`/`now` above must always come from here, never a bare `new Date()`
+// evaluated inline at render time: the server renders once, the client
+// hydrates a moment later, and if those two reads landed in different
+// days the badge text (server: "3d left", client: "2d left") wouldn't
+// match — a real, live-reproduced React #418 hydration error. Returning
+// null until after mount makes the server's render and the client's first
+// render identical (no badge yet); the real value fills in a frame later.
+function useClientNow(): Date | null {
+  const [now, setNow] = useState<Date | null>(null)
+  // Same pattern, same reason as hub-message.tsx's timeString fix: this IS
+  // the fix for the hydration mismatch above, not the bug this rule
+  // normally guards against — there's no server-safe value to compute here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setNow(new Date()), [])
+  return now
 }
 
 // ── card ────────────────────────────────────────────────────────────────────
@@ -100,8 +117,9 @@ function Card({
     disabled: !onRemove, // the overlay copy is not itself draggable
   })
 
-  const dl = deadlineInfo(item.deadline, item.listing_closed)
-  const waiting = item.status === 'Applied' ? daysBetween(item.applied_at) : null
+  const now = useClientNow()
+  const dl = now ? deadlineInfo(item.deadline, item.listing_closed, now) : null
+  const waiting = now && item.status === 'Applied' ? daysBetween(item.applied_at, now) : null
 
   return (
     <div

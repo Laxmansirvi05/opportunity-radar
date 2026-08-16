@@ -54,8 +54,16 @@ export function HubClient({ currentUserId, currentUserSender, initialMessages, i
     setShowMenu(false)
   }
 
-  // Filter messages by clearedAt
-  const visibleMessages = messages.filter(m => new Date(m.created_at.replace(' ', 'T')).getTime() > clearedAt)
+  // Filter messages by clearedAt. A message with no usable created_at (seen
+  // live from a malformed realtime payload — see the sender_id guard in
+  // use-hub-messages.ts) must not crash this filter; defaulting to "visible"
+  // is the safe direction, since a message we can't date should not be the
+  // thing that silently disappears.
+  const visibleMessages = messages.filter(m => {
+    if (!m.created_at) return true
+    const t = new Date(m.created_at.replace(' ', 'T')).getTime()
+    return Number.isNaN(t) || t > clearedAt
+  })
 
   // Auto-scroll to bottom on new messages if already near bottom
   const prevMessagesLength = useRef(visibleMessages.length)

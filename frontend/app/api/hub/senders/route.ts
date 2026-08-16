@@ -22,8 +22,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const idsParam = req.nextUrl.searchParams.get('ids') ?? ''
-  const ids = [...new Set(idsParam.split(',').map((s) => s.trim()).filter(Boolean))].slice(0, 100)
+  // Filters to actual UUIDs, not just non-empty strings: a caller passing
+  // through a stray JS `undefined` (encodeURIComponent(undefined) silently
+  // becomes the string "undefined") used to reach the `.in('id', ids)` query
+  // below, which Postgres then 500'd on as an invalid uuid literal — turning
+  // one bad client-side value into a hard failure instead of an empty result.
+  const ids = [...new Set(idsParam.split(',').map((s) => s.trim()).filter((s) => UUID_RE.test(s)))].slice(0, 100)
   if (ids.length === 0) {
     return NextResponse.json({ senders: {} })
   }

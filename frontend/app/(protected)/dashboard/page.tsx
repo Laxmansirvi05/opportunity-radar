@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   // 1. Fetch Profile & Metrics concurrently
   const [
     { data: profile },
-    { count: savedCount },
+    { data: bookmarksRaw },
     { data: trackerItems },
     { data: freshOpportunities },
     { data: recentViews }
@@ -29,9 +29,14 @@ export default async function DashboardPage() {
       .eq('id', user.id)
       .single(),
 
+    // A head-count of every bookmark row, not just live ones, would tell a
+    // student "10 saved opportunities waiting for action" and link them to
+    // /profile/saved — which filters out anything past its deadline or
+    // closed, the same way this count now does. Without this, a fully
+    // expired bookmark list showed a real number linking to an empty page.
     supabase
       .from('bookmarks')
-      .select('id', { count: 'exact', head: true })
+      .select('id, opportunities(deadline, status)')
       .eq('user_id', user.id),
 
     supabase
@@ -68,6 +73,16 @@ export default async function DashboardPage() {
   }
 
   const now = new Date()
+
+  // Same filter /profile/saved applies before rendering — a bookmark whose
+  // opportunity has passed its deadline or closed doesn't count as "waiting
+  // for action" here either.
+  const savedCount = (bookmarksRaw || []).filter((b: any) => {
+    const opp = b.opportunities
+    if (!opp) return false
+    return (!opp.deadline || new Date(opp.deadline) >= now) && !['Closed', 'Expired'].includes(opp.status)
+  }).length
+
   const recentlyViewed = (recentViews?.map((v: any) => v.opportunities).filter(Boolean) || [])
     .filter((opp: any) => {
       if ((opp.deadline && new Date(opp.deadline) < now) || ['Closed', 'Expired'].includes(opp.status)) return false

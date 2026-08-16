@@ -32,7 +32,7 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
   const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
 
   return (
-    <aside className="hidden lg:flex flex-col h-screen p-4 overflow-y-auto bg-surface border-r border-outline-variant w-64 sticky top-0 z-40 shrink-0">
+    <aside className="hidden md:flex flex-col h-screen p-4 overflow-y-auto bg-surface border-r border-outline-variant w-64 sticky top-0 z-40 shrink-0">
       {/* Logo */}
       <div className="mb-10 flex items-center gap-2 px-2 pt-2">
         <div className="w-10 h-10 bg-primary-container text-on-primary-container rounded-xl flex items-center justify-center">

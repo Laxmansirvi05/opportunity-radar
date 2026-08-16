@@ -52,6 +52,16 @@ export function useHubMessages({
   // own client can only ever read the viewer's own row and silently returns
   // null for anyone else — every other sender's name/avatar included.
   const resolveSender = useCallback(async (senderId: string): Promise<HubSender> => {
+    // A live realtime payload was seen missing sender_id entirely (root
+    // cause not fully isolated — plausibly a race with the row not yet
+    // visible when Postgres broadcasts the change). Without this guard,
+    // encodeURIComponent(undefined) silently becomes the string "undefined",
+    // which the senders route then tried to use as a UUID and 500'd on —
+    // turning one malformed realtime event into a page-crashing request.
+    if (!senderId) {
+      return { name: null, avatar_url: null, email: null, linkedin_url: null }
+    }
+
     const cached = senderCache.current.get(senderId)
     if (cached) return cached
 
@@ -103,6 +113,15 @@ export function useHubMessages({
                 m.id === raw.id ? { ...m, optimistic: false, failed: false } : m
               )
             )
+            return
+          }
+
+          // A malformed/incomplete payload (seen live: sender_id missing)
+          // must not become a message in state — every downstream render
+          // (timestamp formatting, sender name/avatar) assumes these are
+          // present. Drop it rather than add a message that crashes the page.
+          if (!raw.id || !raw.sender_id || !raw.created_at) {
+            console.error('[Hub] Dropped malformed realtime INSERT payload:', raw)
             return
           }
 

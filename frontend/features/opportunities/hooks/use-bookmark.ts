@@ -24,12 +24,15 @@ export function useBookmark(opportunityId: string) {
       
       setUserId(user.id)
 
+      // maybeSingle, not single: "not yet bookmarked" is the common case
+      // (zero rows), and single() treats zero rows as a 406 error — which
+      // was firing on every unbookmarked card, every page load.
       const { data } = await supabase
         .from('bookmarks')
         .select('id')
         .eq('user_id', user.id)
         .eq('opportunity_id', opportunityId)
-        .single()
+        .maybeSingle()
 
       if (isMounted) {
         if (data) setIsSaved(true)
