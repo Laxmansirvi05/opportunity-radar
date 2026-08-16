@@ -46,3 +46,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Debug screenshots written to the app root by browser-driven verification.
+# Real app assets live in public/ and are unaffected by this rule — 23 of these
+# had been committed (2.5MB) and none was referenced by any code (CLEAN-01).
+/*.png
