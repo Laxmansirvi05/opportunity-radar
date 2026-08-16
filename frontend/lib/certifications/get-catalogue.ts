@@ -77,7 +77,7 @@ async function fetchFirstPage(): Promise<{ items: Certification[]; total: number
   return { items: rows.map(stripLinkStatus), total: count ?? 0 }
 }
 
-export const getCertificationsFirstPage = unstable_cache(fetchFirstPage, ['certifications-first-page-v2'], {
+export const getCertificationsFirstPage = unstable_cache(fetchFirstPage, ['certifications-first-page-v3'], {
   revalidate: 900,
 })
 
@@ -116,6 +116,6 @@ async function fetchTopProviders(): Promise<[string, number][]> {
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 24)
 }
 
-export const getTopCertificationProviders = unstable_cache(fetchTopProviders, ['certifications-top-providers-v1'], {
+export const getTopCertificationProviders = unstable_cache(fetchTopProviders, ['certifications-top-providers-v2'], {
   revalidate: 3600,
 })
