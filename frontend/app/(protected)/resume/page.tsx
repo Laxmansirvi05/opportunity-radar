@@ -45,13 +45,13 @@ export default async function ResumeToolkitPrototype() {
 
         {/* Card 1: Build from Scratch */}
         <Link href="/resume/builder" style={{ textDecoration: 'none' }}>
-          <div style={{
+          <div className="toolkit-card" style={{
             display: 'flex', flexDirection: 'column', gap: '8px',
             padding: '16px', borderRadius: '12px',
             backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
           }}>
-            <div style={{
+            <div className="toolkit-tile" style={{
               width: '40px', height: '40px', borderRadius: '8px',
               backgroundColor: '#dbe1ff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -67,13 +67,13 @@ export default async function ResumeToolkitPrototype() {
 
         {/* Card 2: Extract & Edit */}
         <Link href="/resume/upload" style={{ textDecoration: 'none' }}>
-          <div style={{
+          <div className="toolkit-card" style={{
             display: 'flex', flexDirection: 'column', gap: '8px',
             padding: '16px', borderRadius: '12px',
             backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
           }}>
-            <div style={{
+            <div className="toolkit-tile" style={{
               width: '40px', height: '40px', borderRadius: '8px',
               backgroundColor: '#71f8e4',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -89,13 +89,13 @@ export default async function ResumeToolkitPrototype() {
 
         {/* Card 3: ATS Score Checker */}
         <Link href="/resume/ats" style={{ textDecoration: 'none' }}>
-          <div style={{
+          <div className="toolkit-card" style={{
             display: 'flex', flexDirection: 'column', gap: '8px',
             padding: '16px', borderRadius: '12px',
             backgroundColor: '#ffffff', border: '1px solid #E2E8F0',
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer',
           }}>
-            <div style={{
+            <div className="toolkit-tile" style={{
               width: '40px', height: '40px', borderRadius: '8px',
               backgroundColor: '#ffdbcd',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -111,7 +111,7 @@ export default async function ResumeToolkitPrototype() {
 
         {/* Card 4: AI Optimizer */}
         <Link href="/resume/copilot" style={{ textDecoration: 'none' }}>
-          <div style={{
+          <div className="toolkit-card toolkit-card-accent" style={{
             padding: '2px',
             borderRadius: '14px',
             border: '2px solid #004ac6',
@@ -121,7 +121,7 @@ export default async function ResumeToolkitPrototype() {
               padding: '16px', borderRadius: '12px',
               backgroundColor: '#004ac6', cursor: 'pointer',
             }}>
-              <div style={{
+              <div className="toolkit-tile" style={{
                 width: '40px', height: '40px', borderRadius: '8px',
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',

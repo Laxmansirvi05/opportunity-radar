@@ -890,3 +890,56 @@
     transform: none !important;
   }
 }
+
+/* ── Resume Toolkit ─────────────────────────────────────────────────────────
+   Polish over the existing structure, not a new layout: the toolkit's cards
+   keep their content and order and gain the same lift-and-turn depth already
+   used by the sidebar's nav tiles, the note folders and the Assistant's
+   prompts, so the whole app reads as one system. Only transform, opacity and
+   box-shadow animate. */
+
+.toolkit-card {
+  perspective: 800px;
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease;
+}
+
+.toolkit-card:hover,
+.toolkit-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 30px -18px rgb(0 0 0 / 0.45);
+  border-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+}
+
+.toolkit-card:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+.toolkit-tile {
+  transform-style: preserve-3d;
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toolkit-card:hover .toolkit-tile,
+.toolkit-card:focus-visible .toolkit-tile {
+  transform: translateZ(16px) rotateY(-13deg) rotateX(7deg);
+  box-shadow: 6px 8px 16px -9px rgb(0 0 0 / 0.4);
+}
+
+/* The primary action reads a step louder than the rest. */
+.toolkit-card-accent:hover,
+.toolkit-card-accent:focus-visible {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 36px -18px var(--color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .toolkit-card,
+  .toolkit-tile {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
