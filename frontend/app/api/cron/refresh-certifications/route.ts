@@ -8,18 +8,20 @@ import { upsertCertifications } from '@/lib/certifications/upsert'
  * GET /api/cron/refresh-certifications
  *
  * Weekly refresh of the certifications catalogue (Coursera, Microsoft Learn,
- * freeCodeCamp, Simplilearn, edX, Udacity, W3Schools). Unlike the
- * opportunities crons there is no reconciliation/deletion step afterwards —
- * see lib/certifications/ingest.ts for why courses are never expired on a
- * schedule.
+ * freeCodeCamp, Simplilearn, edX, Udacity, W3Schools, Cisco Networking
+ * Academy, Udemy, DataCamp). Unlike the opportunities crons there is no
+ * reconciliation/deletion step afterwards — see lib/certifications/ingest.ts
+ * for why courses are never expired on a schedule.
  *
- * collectCertifications()'s defaults (16,000 Coursera courses, 250 each of
- * Simplilearn/edX) are kept below each catalogue's true size to stay inside
- * Vercel's cron duration ceiling — a live run at 12,000 Coursera took ~132s;
- * the Coursera leg is bulk paginated JSON (no per-course fetch), so raising
- * the cap mainly adds more 100-row pages rather than materially more time.
+ * collectCertifications()'s defaults (22,000 Coursera courses — just under
+ * its real ~23,409-course catalogue — 800 each of Simplilearn/edX) are kept
+ * below each catalogue's true size to stay inside Vercel's cron duration
+ * ceiling — a live run at 12,000 Coursera took ~132s; the Coursera leg is
+ * bulk paginated JSON (no per-course fetch), so raising the cap mainly adds
+ * more 100-row pages rather than materially more time. 22,000 courses
+ * extrapolates to ~240s, hence the bumped maxDuration below.
  */
-export const maxDuration = 280
+export const maxDuration = 300
 
 export async function GET(request: Request) {
   const denied = denyIfNotCron(request)

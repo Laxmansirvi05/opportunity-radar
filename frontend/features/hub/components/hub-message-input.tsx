@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { HubReplyPreview } from './hub-reply-preview'
+import { EmojiPicker } from './emoji-picker'
 import type { HubMessage } from '../types'
 
 interface PendingImage {
@@ -96,6 +97,26 @@ export function HubMessageInput({ onSendMessage, isSending, replyingTo, onCancel
     if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl)
     setPendingImage(null)
     setImageError(null)
+  }
+
+  const handleEmojiSelect = (emoji: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) {
+      setContent((prev) => prev + emoji)
+      return
+    }
+    const start = textarea.selectionStart ?? content.length
+    const end = textarea.selectionEnd ?? content.length
+    const next = content.slice(0, start) + emoji + content.slice(end)
+    setContent(next)
+    // Restore focus and place the cursor right after the inserted emoji —
+    // without this the next keystroke lands wherever the browser happens
+    // to leave focus, not where the student just clicked.
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const cursor = start + emoji.length
+      textarea.setSelectionRange(cursor, cursor)
+    })
   }
 
   const handleSend = async () => {
@@ -210,6 +231,8 @@ export function HubMessageInput({ onSendMessage, isSending, replyingTo, onCancel
           >
             <span className="material-symbols-outlined text-[22px]">add_photo_alternate</span>
           </button>
+
+          <EmojiPicker onSelect={handleEmojiSelect} />
 
           <textarea
             ref={textareaRef}

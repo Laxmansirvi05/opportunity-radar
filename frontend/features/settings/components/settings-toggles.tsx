@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
 interface SettingsTogglesProps {
@@ -37,12 +38,17 @@ export function SettingsToggles({ initialEmailAlerts, initialPublicProfile }: Se
 
       if (type === 'email') setEmailAlerts(newValue)
       if (type === 'public') setPublicProfile(newValue)
-      
+
+      toast.success(
+        type === 'email'
+          ? `Email alerts turned ${newValue ? 'on' : 'off'}.`
+          : `Profile is now ${newValue ? 'public' : 'private'}.`
+      )
       router.refresh()
-      
+
     } catch (err) {
       console.error('Failed to update settings:', err)
-      // Optionally show a toast error here
+      toast.error('Could not save that change. Please try again.')
     } finally {
       setIsLoading(false)
     }

@@ -135,18 +135,35 @@ export async function fetchCoursera(maxCourses: number, runAt: string): Promise<
       const partner = partners.get(String(c.partnerIds?.[0] ?? ''))
       const url = `https://www.coursera.org/learn/${c.slug}`
 
+      // Coursera is who actually issues this certificate, regardless of
+      // whose brand the partner account is named after — a course from a
+      // "Google" or "Microsoft" partner account is still a Coursera
+      // credential, built in collaboration with that partner, not a direct
+      // Google/Microsoft certification. The partner's real name is folded
+      // into the description as "In collaboration with X." — a new column
+      // would be the cleaner home for this, but is not achievable without
+      // Postgres DDL access this ingestion job doesn't have; the
+      // description already renders in the UI, so this keeps the
+      // information genuinely visible rather than silently dropped.
+      const partnerName = partner?.name && partner.name !== 'Coursera' ? partner.name : null
+      const baseDescription = (c.description ?? '').slice(0, 2000) || null
+      const description = partnerName
+        ? `In collaboration with ${partnerName}.${baseDescription ? ' ' + baseDescription : ''}`
+        : baseDescription
+
       out.push({
         certificate_image: null,
         title: c.name,
-        provider: partner?.name ?? 'Coursera',
+        provider: 'Coursera',
         provider_logo: toHttps(partner?.logo ?? c.photoUrl ?? null),
-        description: (c.description ?? '').slice(0, 2000) || null,
+        description,
         url,
         canonical_url: canonicalizeUrl(url),
-        // Coursera courses are auditable free of charge; the paid tier buys the
-        // verified certificate. Marked free-to-learn, with the distinction
-        // spelled out in price_label rather than hidden.
-        is_free: true,
+        // Auditing the course is free; the certificate itself is a paid add-on
+        // for essentially every Coursera course. Marking these "free" was
+        // conflating "free to enrol/audit" with "free certificate" — the two
+        // are not the same, and the certificate is what has actual value.
+        is_free: false,
         price_label: 'Free to audit · paid certificate',
         level: null,
         duration: c.workload || null,
@@ -713,22 +730,177 @@ export async function fetchW3Schools(runAt: string): Promise<CertificationRecord
   return results.filter((r): r is CertificationRecord => r !== null)
 }
 
+// ── Cisco Networking Academy ────────────────────────────────────────────────
+// netacad.com serves course pages as a client-rendered SPA shell with no
+// per-course data in the raw HTML (confirmed live — every path, including
+// deliberately fake ones, returns the same generic 200 shell), so there is
+// no server-rendered markup to scrape, unlike edX/Simplilearn. This is
+// Cisco's actual, stable, long-standing self-paced course catalogue —
+// hardcoded for the same reason freeCodeCamp's is: it IS the catalogue, not
+// a fetch-failure fallback. Course completion (this list) is genuinely free;
+// the separate proctored industry exam (e.g. the CCNA exam itself) is not,
+// and is not represented here — has_certificate refers only to NetAcad's own
+// free course-completion certificate.
+
+const NETACAD_BASE = 'https://www.netacad.com/courses'
+
+const NETACAD_CERTS: { slug: string; title: string; level: string; hours: string; topics: string[]; description: string }[] = [
+  { slug: 'introduction-to-cybersecurity', title: 'Introduction to Cybersecurity', level: 'Beginner', hours: '6 hours', topics: ['Cybersecurity'], description: 'An entry-level look at the cybersecurity landscape, common threats, and career paths in the field.' },
+  { slug: 'cybersecurity-essentials', title: 'Cybersecurity Essentials', level: 'Beginner', hours: '30 hours', topics: ['Cybersecurity', 'Networking'], description: 'Core cybersecurity principles, technologies, and techniques used to protect networks and devices.' },
+  { slug: 'networking-essentials', title: 'Networking Essentials', level: 'Beginner', hours: '30 hours', topics: ['Networking'], description: 'Foundational networking concepts — devices, protocols, and how the internet actually connects.' },
+  { slug: 'ccna-introduction-networks', title: 'CCNA: Introduction to Networks', level: 'Intermediate', hours: '70 hours', topics: ['Networking', 'CCNA'], description: 'The first course in the CCNA self-paced series, covering network architecture, addressing, and protocols.' },
+  { slug: 'ccna-switching-routing-and-wireless-essentials', title: 'CCNA: Switching, Routing, and Wireless Essentials', level: 'Intermediate', hours: '70 hours', topics: ['Networking', 'CCNA'], description: 'Configuring and troubleshooting switched networks, routing, and wireless LANs — the second CCNA course.' },
+  { slug: 'ccna-enterprise-networking-security-and-automation', title: 'CCNA: Enterprise Networking, Security, and Automation', level: 'Advanced', hours: '70 hours', topics: ['Networking', 'CCNA', 'Security'], description: 'WAN technologies, network security, and automation basics — the third CCNA self-paced course.' },
+  { slug: 'python-essentials-1', title: 'Python Essentials 1', level: 'Beginner', hours: '30 hours', topics: ['Python', 'Programming'], description: 'Programming fundamentals in Python — variables, control flow, and functions for complete beginners.' },
+  { slug: 'python-essentials-2', title: 'Python Essentials 2', level: 'Intermediate', hours: '30 hours', topics: ['Python', 'Programming'], description: 'Intermediate Python — modules, exceptions, object-oriented programming, and file processing.' },
+  { slug: 'javascript-essentials-1', title: 'JavaScript Essentials 1', level: 'Beginner', hours: '30 hours', topics: ['JavaScript', 'Programming'], description: 'Core JavaScript programming concepts for building interactive, browser-based applications.' },
+  { slug: 'javascript-essentials-2', title: 'JavaScript Essentials 2', level: 'Intermediate', hours: '30 hours', topics: ['JavaScript', 'Programming'], description: 'Intermediate JavaScript — closures, prototypes, asynchronous patterns, and more advanced constructs.' },
+  { slug: 'linux-unhatched', title: 'Linux Unhatched', level: 'Beginner', hours: '8 hours', topics: ['Linux'], description: 'A short introduction to the Linux operating system and why it matters in IT careers.' },
+  { slug: 'ndg-linux-essentials', title: 'NDG Linux Essentials', level: 'Beginner', hours: '30 hours', topics: ['Linux'], description: 'Command-line fundamentals, filesystem navigation, and basic Linux administration.' },
+  { slug: 'network-defense', title: 'Network Defense', level: 'Advanced', hours: '70 hours', topics: ['Cybersecurity', 'Networking'], description: 'Defensive network security practices — firewalls, VPNs, and access control, part of the CyberOps track.' },
+  { slug: 'ethical-hacker', title: 'Ethical Hacker', level: 'Advanced', hours: '70 hours', topics: ['Cybersecurity', 'Ethical Hacking'], description: 'Penetration-testing methodology and tools, preparing learners for offensive-security roles.' },
+  { slug: 'endpoint-security', title: 'Endpoint Security', level: 'Advanced', hours: '70 hours', topics: ['Cybersecurity'], description: 'Securing endpoint devices against modern threats as part of the CyberOps Associate track.' },
+  { slug: 'iot-fundamentals-connecting-things', title: 'IoT Fundamentals: Connecting Things', level: 'Beginner', hours: '20 hours', topics: ['IoT'], description: 'Hands-on introduction to Internet of Things devices, sensors, and connectivity.' },
+  { slug: 'data-analytics-essentials', title: 'Data Analytics Essentials', level: 'Beginner', hours: '20 hours', topics: ['Data Analytics'], description: 'Foundations of data analytics — collecting, processing, and interpreting real-world data.' },
+  { slug: 'devnet-associate', title: 'DevNet Associate', level: 'Advanced', hours: '70 hours', topics: ['Networking', 'DevOps', 'Automation'], description: 'Software development and network automation skills for the DevNet Associate certification track.' },
+]
+
+export function fetchCiscoNetworkingAcademy(runAt: string): CertificationRecord[] {
+  return NETACAD_CERTS.map((c) => {
+    const url = `${NETACAD_BASE}/${c.slug}`
+    return {
+      title: c.title,
+      provider: 'Cisco Networking Academy',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=netacad.com&sz=128',
+      certificate_image: null,
+      description: c.description,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      is_free: true,
+      price_label: 'Free',
+      level: c.level,
+      duration: c.hours,
+      topics: c.topics,
+      has_certificate: true,
+      source: 'cisco_netacad',
+      source_id: c.slug,
+      last_seen_at: runAt,
+    }
+  })
+}
+
+// ── Udemy ────────────────────────────────────────────────────────────────
+// Udemy's course pages sit behind a Cloudflare bot challenge — even the
+// robots.txt-permitted /course/ path returns a "Just a moment…" JS challenge
+// to a plain HTTP request, so there is nothing to scrape without solving a
+// CAPTCHA, which this app does not do. A curated set of well-known, stable,
+// widely-recognized courses instead — no pricing is claimed per-course since
+// Udemy's list prices change constantly and vary by region/promotion; every
+// entry is honestly labeled "Paid" rather than guessing a number likely to
+// be wrong the moment it's read.
+
+const UDEMY_CERTS: { slug: string; title: string; instructor: string; level: string; topics: string[]; description: string }[] = [
+  { slug: '100-days-of-code', title: '100 Days of Code: The Complete Python Pro Bootcamp', instructor: "Angela Yu", level: 'Beginner', topics: ['Python', 'Programming'], description: 'A 100-day, project-based Python bootcamp covering web development, automation, games, and data science.' },
+  { slug: 'the-complete-web-development-bootcamp', title: 'The Complete 2024 Web Development Bootcamp', instructor: "Angela Yu", level: 'Beginner', topics: ['Web Development', 'JavaScript'], description: 'A full-stack web development bootcamp covering HTML, CSS, JavaScript, Node.js, React, and databases.' },
+  { slug: 'automate', title: 'Automate the Boring Stuff with Python Programming', instructor: 'Al Sweigart', level: 'Beginner', topics: ['Python', 'Automation'], description: 'Practical Python scripting for automating everyday tasks — files, spreadsheets, and the web.' },
+  { slug: 'complete-python-bootcamp', title: 'Complete Python Bootcamp From Zero to Hero in Python', instructor: 'Jose Portilla', level: 'Beginner', topics: ['Python', 'Programming'], description: 'A comprehensive Python course from fundamentals through object-oriented programming and beyond.' },
+  { slug: 'the-complete-javascript-course', title: 'The Complete JavaScript Course', instructor: 'Jonas Schmedtmann', level: 'Beginner', topics: ['JavaScript', 'Web Development'], description: 'Modern JavaScript from the ground up — fundamentals, DOM manipulation, async JS, and real projects.' },
+  { slug: 'react-the-complete-guide-incl-redux', title: 'React - The Complete Guide', instructor: 'Maximilian Schwarzmüller', level: 'Intermediate', topics: ['React', 'Web Development'], description: 'A complete guide to building modern React applications, including hooks, Redux, and Next.js.' },
+  { slug: 'aws-certified-solutions-architect-associate-saa-c03-2025', title: 'AWS Certified Solutions Architect – Associate (SAA-C03)', instructor: 'a top-rated AWS instructor', level: 'Intermediate', topics: ['AWS', 'Cloud'], description: 'Exam-prep course for the AWS Certified Solutions Architect – Associate certification.' },
+  { slug: 'machine-learning-a-z-hands-on-python-r-in-data-science', title: 'Machine Learning A-Z: AI, Python & R', instructor: 'Kirill Eremenko', level: 'Intermediate', topics: ['Machine Learning', 'Python'], description: 'A hands-on tour of machine learning algorithms implemented in both Python and R.' },
+  { slug: '2022-complete-sql-bootcamp-from-zero-to-hero-in-sql', title: 'The Complete SQL Bootcamp', instructor: 'Jose Portilla', level: 'Beginner', topics: ['SQL', 'Databases'], description: 'Learn SQL for data analysis using real datasets and PostgreSQL.' },
+  { slug: 'docker-mastery', title: 'Docker Mastery', instructor: 'Bret Fisher', level: 'Intermediate', topics: ['Docker', 'DevOps'], description: 'Building, deploying, and orchestrating containers with Docker and Docker Compose.' },
+]
+
+export function fetchUdemy(runAt: string): CertificationRecord[] {
+  return UDEMY_CERTS.map((c) => {
+    const url = `https://www.udemy.com/course/${c.slug}/`
+    return {
+      title: c.title,
+      provider: 'Udemy',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=udemy.com&sz=128',
+      certificate_image: null,
+      description: `${c.description} Taught by ${c.instructor}.`,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      is_free: false,
+      price_label: 'Paid',
+      level: c.level,
+      duration: null,
+      topics: c.topics,
+      has_certificate: true,
+      source: 'udemy',
+      source_id: c.slug,
+      last_seen_at: runAt,
+    }
+  })
+}
+
+// ── DataCamp ─────────────────────────────────────────────────────────────
+// Same story as Udemy — datacamp.com is fully behind a Cloudflare
+// interactive challenge, including robots.txt itself, so nothing on the
+// site can be fetched programmatically without solving a CAPTCHA. A curated
+// set of DataCamp's best-known, long-running courses and skill tracks;
+// access requires a paid DataCamp subscription, so every entry is marked
+// accordingly rather than "Free".
+
+const DATACAMP_CERTS: { slug: string; title: string; kind: 'course' | 'track'; level: string; topics: string[]; description: string }[] = [
+  { slug: 'introduction-to-python', title: 'Introduction to Python', kind: 'course', level: 'Beginner', topics: ['Python', 'Data Science'], description: 'The fundamentals of Python for data science — variables, lists, functions, and NumPy basics.' },
+  { slug: 'introduction-to-r', title: 'Introduction to R', kind: 'course', level: 'Beginner', topics: ['R', 'Data Science'], description: 'Core R programming concepts for data analysis, from vectors to data frames.' },
+  { slug: 'intermediate-sql', title: 'Intermediate SQL', kind: 'course', level: 'Intermediate', topics: ['SQL', 'Databases'], description: 'Aggregate functions, subqueries, and more advanced SQL querying techniques.' },
+  { slug: 'introduction-to-data-visualization-with-matplotlib', title: 'Introduction to Data Visualization with Matplotlib', kind: 'course', level: 'Beginner', topics: ['Python', 'Data Visualization'], description: 'Building clear, informative visualizations of real datasets with Matplotlib.' },
+  { slug: 'introduction-to-machine-learning-with-python', title: 'Introduction to Machine Learning with Python', kind: 'course', level: 'Intermediate', topics: ['Python', 'Machine Learning'], description: 'Core machine learning concepts and scikit-learn workflows for classification and regression.' },
+  { slug: 'data-analyst-with-python', title: 'Data Analyst with Python', kind: 'track', level: 'Beginner', topics: ['Python', 'Data Analysis'], description: 'A multi-course skill track covering the full data analyst workflow in Python, ending in a certification exam.' },
+  { slug: 'data-scientist-with-python', title: 'Data Scientist with Python', kind: 'track', level: 'Intermediate', topics: ['Python', 'Data Science', 'Machine Learning'], description: 'A comprehensive skill track spanning statistics, machine learning, and data science tooling in Python.' },
+  { slug: 'sql-fundamentals', title: 'SQL Fundamentals', kind: 'track', level: 'Beginner', topics: ['SQL', 'Databases'], description: 'A skill track covering SQL from first principles through joins and database design basics.' },
+]
+
+export function fetchDataCamp(runAt: string): CertificationRecord[] {
+  return DATACAMP_CERTS.map((c) => {
+    const url = `https://www.datacamp.com/${c.kind === 'track' ? 'tracks' : 'courses'}/${c.slug}`
+    return {
+      title: c.title,
+      provider: 'DataCamp',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=datacamp.com&sz=128',
+      certificate_image: null,
+      description: c.description,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      is_free: false,
+      price_label: 'Subscription required',
+      level: c.level,
+      duration: null,
+      topics: c.topics,
+      has_certificate: c.kind === 'track',
+      source: 'datacamp',
+      source_id: c.slug,
+      last_seen_at: runAt,
+    }
+  })
+}
+
 /** Everything, deduplicated on canonical URL. */
 export async function collectCertifications(
-  maxCoursera = 20000,
-  maxSimplilearn = 250,
-  maxEdx = 250
+  maxCoursera = 22000,
+  maxSimplilearn = 800,
+  maxEdx = 800
 ): Promise<CertificationRecord[]> {
   const runAt = new Date().toISOString()
-  const [coursera, msLearn, simplilearn, edx, udacity, w3schools] = await Promise.all([
+  const [coursera, msLearn, simplilearn, edx, udacity, w3schools, cisco, udemy, datacamp] = await Promise.all([
     fetchCoursera(maxCoursera, runAt),
     fetchMicrosoftLearn(runAt),
     fetchSimplilearn(runAt, maxSimplilearn),
     fetchEdx(runAt, maxEdx),
     fetchUdacity(runAt),
     fetchW3Schools(runAt),
+    fetchCiscoNetworkingAcademy(runAt),
+    fetchUdemy(runAt),
+    fetchDataCamp(runAt),
   ])
-  const all = [...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn, ...edx, ...udacity, ...w3schools]
+  const all = [
+    ...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn, ...edx, ...udacity, ...w3schools,
+    ...cisco, ...udemy, ...datacamp,
+  ]
 
   const seen = new Set<string>()
   const deduped: CertificationRecord[] = []
