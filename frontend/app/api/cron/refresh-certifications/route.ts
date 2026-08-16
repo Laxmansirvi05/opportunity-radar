@@ -7,19 +7,24 @@ import { upsertCertifications } from '@/lib/certifications/upsert'
 /**
  * GET /api/cron/refresh-certifications
  *
- * Weekly refresh of the certifications catalogue (Coursera, Microsoft Learn,
- * freeCodeCamp, Simplilearn, edX, Alison, Udacity, W3Schools, Cisco
- * Networking Academy, Udemy, DataCamp). Unlike the opportunities crons there is no
- * reconciliation/deletion step afterwards — see lib/certifications/ingest.ts
- * for why courses are never expired on a schedule.
+ * Weekly refresh of the certifications catalogue: Coursera (technical
+ * topics only — see TECHNICAL_TOPICS in ingest.ts), Microsoft Learn
+ * (certifications, learning paths, and individual modules — three separate
+ * catalog types), freeCodeCamp, Simplilearn, edX, Alison, Udacity,
+ * W3Schools, Cisco Networking Academy, Udemy, DataCamp, IBM SkillsBuild,
+ * Oracle University, Forage, and Google Skills. Unlike the opportunities
+ * crons there is no reconciliation/deletion step afterwards — see
+ * lib/certifications/ingest.ts for why courses are never expired on a
+ * schedule.
  *
- * collectCertifications()'s defaults (22,000 Coursera courses — just under
- * its real ~23,409-course catalogue — 800 each of Simplilearn/edX) are kept
- * below each catalogue's true size to stay inside Vercel's cron duration
- * ceiling — a live run at 12,000 Coursera took ~132s; the Coursera leg is
- * bulk paginated JSON (no per-course fetch), so raising the cap mainly adds
- * more 100-row pages rather than materially more time. 22,000 courses
- * extrapolates to ~240s, hence the bumped maxDuration below.
+ * Every leg in collectCertifications() runs inside one Promise.all, so
+ * total wall-clock time is bounded by the single slowest leg, not their
+ * sum — currently Coursera (~115s at its 22,000 cap, which sits just under
+ * its real ~19,300-course English-filtered ceiling) and Google Skills
+ * (~120s at gentle concurrency, deliberately slow to avoid the rate-limit
+ * that a faster burst briefly triggered during development) are the two
+ * closest to each other and to this ceiling; every other leg finishes
+ * well inside that window.
  */
 export const maxDuration = 300
 

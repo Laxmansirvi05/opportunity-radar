@@ -375,6 +375,35 @@ export async function fetchMicrosoftLearn(runAt: string): Promise<CertificationR
     })
   }
 
+  // Individual modules — the building blocks learning paths are assembled
+  // from. Same catalog API, same schema as learningPaths (confirmed live),
+  // just a third `type` value this ingestion previously never requested —
+  // 3,470 real English modules exist that learningPaths alone never
+  // surfaced. Genuinely free, same as learning paths; same
+  // not-a-credential caveat applies for the same reason.
+  const modulesRes = await getJson<{ modules?: MsLearningPath[] }>(`${MS_CATALOG}?type=modules&locale=en-us`, 20000)
+  for (const m of modulesRes?.modules ?? []) {
+    if (!m.uid || !m.title || !m.url) continue
+    out.push({
+      title: m.title,
+      provider: 'Microsoft Learn',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=microsoft.com&sz=128',
+      certificate_image: toHttps(m.icon_url),
+      description: stripHtml(m.summary),
+      url: m.url,
+      canonical_url: canonicalizeUrl(m.url),
+      is_free: true,
+      price_label: 'Free',
+      level: m.levels?.[0] ? titleCase(m.levels[0]) : null,
+      duration: minutesToDuration(m.duration_in_minutes),
+      topics: (m.products ?? []).map(titleCase),
+      has_certificate: false,
+      source: 'microsoft_learn_module',
+      source_id: m.uid,
+      last_seen_at: runAt,
+    })
+  }
+
   return out
 }
 
@@ -1192,6 +1221,106 @@ export function fetchForage(runAt: string): CertificationRecord[] {
   })
 }
 
+// ── Google Skills (formerly Cloud Skills Boost) ─────────────────────────
+// skills.google's catalog page is server-rendered — confirmed live: a
+// plain HTTP GET (no browser, no JS execution) returns real course titles
+// directly in the HTML, inside a custom element's
+// `pagedSearchResults='<html-entity-escaped JSON>'` attribute, complete
+// with title, description, duration, level, credential type, and a `paid`
+// flag — no per-course page fetch needed, everything comes off the listing
+// page itself. Pagination is `?page=N`, 8 results/page, 1,475 total
+// confirmed live. Deliberately gentle concurrency (3, not the usual 8) —
+// a burst of ~6 simultaneous requests during discovery briefly drew a 403
+// from Google's edge, which cleared within seconds; this stays well under
+// whatever threshold that was.
+
+const GOOGLE_SKILLS_BASE = 'https://www.skills.google'
+const GOOGLE_SKILLS_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36'
+const GOOGLE_SKILLS_PER_PAGE = 8
+
+interface GoogleSkillsResult {
+  type?: string
+  title?: string
+  description?: string
+  path?: string
+  duration?: string
+  level?: string
+  credentialType?: string
+  paid?: boolean | null
+}
+
+async function fetchGoogleSkillsPage(page: number): Promise<GoogleSkillsResult[]> {
+  const res = await fetchWithRetry(
+    `${GOOGLE_SKILLS_BASE}/catalog?page=${page}`,
+    { headers: { 'User-Agent': GOOGLE_SKILLS_UA } },
+    { maxRetries: 1, timeoutMs: 15000 }
+  )
+  if (!res.ok) return []
+  const html = await res.text()
+  const m = html.match(/pagedSearchResults='(.*?)'/s)
+  if (!m) return []
+  try {
+    const decoded = m[1]
+      .replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+      .replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    const parsed = JSON.parse(decoded)
+    return parsed?.searchResults ?? []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchGoogleSkills(runAt: string, maxCourses = 1475): Promise<CertificationRecord[]> {
+  // Discover the real total from page 1 rather than trusting a stale
+  // hardcoded count.
+  const first = await fetchGoogleSkillsPage(1)
+  if (first.length === 0) return []
+
+  const totalPages = Math.min(
+    Math.ceil(maxCourses / GOOGLE_SKILLS_PER_PAGE),
+    200 // hard ceiling regardless of maxCourses — a sanity cap, not a tuning knob
+  )
+
+  const pageNumbers = Array.from({ length: totalPages - 1 }, (_, i) => i + 2) // page 1 already fetched
+  const restPages = await mapLimit(pageNumbers, 3, (page) => fetchGoogleSkillsPage(page).catch(() => []))
+
+  const allResults = [first, ...restPages].flat()
+
+  const out: CertificationRecord[] = []
+  const seenPaths = new Set<string>()
+  for (const r of allResults) {
+    if (!r.title || !r.path) continue
+    const cleanPath = r.path.split('?')[0]
+    if (seenPaths.has(cleanPath)) continue
+    seenPaths.add(cleanPath)
+
+    const url = `${GOOGLE_SKILLS_BASE}${cleanPath}`
+    out.push({
+      title: r.title,
+      provider: 'Google',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=google.com&sz=128',
+      certificate_image: null,
+      description: r.description ?? null,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      // `paid` was null on every sample observed live (Google Skills' core
+      // catalog is free to access), but a genuine true value is honored,
+      // never overridden to look better than it is.
+      is_free: r.paid !== true,
+      price_label: r.paid === true ? 'Paid' : 'Free',
+      level: r.level ? titleCase(r.level) : null,
+      duration: r.duration ?? null,
+      topics: [],
+      has_certificate: Boolean(r.credentialType),
+      source: 'google_skills',
+      source_id: cleanPath.split('/').filter(Boolean).join('-'),
+      last_seen_at: runAt,
+    })
+  }
+
+  return out
+}
+
 /** Everything, deduplicated on canonical URL. */
 export async function collectCertifications(
   maxCoursera = 22000,
@@ -1200,7 +1329,12 @@ export async function collectCertifications(
   maxAlison = 2000
 ): Promise<CertificationRecord[]> {
   const runAt = new Date().toISOString()
-  const [coursera, msLearn, simplilearn, edx, udacity, w3schools, cisco, udemy, datacamp, alison, ibmSkillsBuild] = await Promise.all([
+  // Google Skills alone takes ~120s standalone (185 pages at a deliberately
+  // gentle concurrency of 3) — comparable to Coursera's own ~115s. It must
+  // run inside this Promise.all, not after it as a separate awaited call,
+  // or total wall-clock time roughly doubles instead of being bounded by
+  // whichever leg is slowest.
+  const [coursera, msLearn, simplilearn, edx, udacity, w3schools, cisco, udemy, datacamp, alison, ibmSkillsBuild, googleSkills] = await Promise.all([
     fetchCoursera(maxCoursera, runAt),
     fetchMicrosoftLearn(runAt),
     fetchSimplilearn(runAt, maxSimplilearn),
@@ -1212,12 +1346,13 @@ export async function collectCertifications(
     fetchDataCamp(runAt),
     fetchAlison(runAt, maxAlison),
     fetchIBMSkillsBuild(runAt),
+    fetchGoogleSkills(runAt),
   ])
   const oracle = fetchOracleUniversity(runAt)
   const forage = fetchForage(runAt)
   const all = [
     ...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn, ...edx, ...udacity, ...w3schools,
-    ...cisco, ...udemy, ...datacamp, ...alison, ...ibmSkillsBuild, ...oracle, ...forage,
+    ...cisco, ...udemy, ...datacamp, ...alison, ...ibmSkillsBuild, ...oracle, ...forage, ...googleSkills,
   ]
 
   const seen = new Set<string>()
