@@ -24,14 +24,14 @@ top-level tracked item instead — a more honest number than a stale Sev split.
 | | Count |
 |---|---|
 | **Fixed** | **37** — DB-01–05, OPS-02, APP-01–09, SEC-01–05, DATA-01–03, DATA-08, UI-01–03, AUTH-01–02, CODE-03, CLEAN-05, plus the Toaster + regenerate + bookmark + auth-affordance fixes in AUDIT-16AUG-POLISH (untracked IDs — see that section) |
-| Open | 11 — see tables below (CODE-02 partially fixed, remainder still open) |
+| Open | 9 — DATA-04 closed and DATA-05's data corrected 17 Aug (its cause still open) |
 | Deferred | 2 — LEGAL-01, OPS-01 |
 | **Total tracked** | **48+** |
 
 **No critical or high-severity issue remains open.** Everything still open is
 Moderate or Low.
 
-Last updated: **16 Aug 2026**
+Last updated: **17 Aug 2026**
 
 ---
 
@@ -611,13 +611,38 @@ Dashboard's Progress Summary counted every row in `bookmarks` (`SELECT count(*)`
 
 | ID | Issue | Where |
 |---|---|---|
-| DATA-04 | 416 duplicate rows across 12 URL groups, plus 6 genuine title+company duplicates (all Amazon) — not re-verified 12 Aug, quick sample of 1,000 published rows found 0 title+company dupes but that sample is too small to clear the finding | `opportunities` |
-| DATA-05 | **Re-checked 12 Aug: down from 144 to 6** past-deadline-but-still-`Published` rows — the reconciliation job is clearly running now. 6 remaining, not zero | `opportunities` |
 | DATA-06 | 105 listings (2.5%) have no description — SmartRecruiters 95, Lever 10. Re-checked 12 Aug: **106**, essentially unchanged | `opportunities` |
 | DATA-07 | `trust_tier` is `3` on all 3,989 live rows — re-checked 12 Aug via per-value count query (a prior row-fetch sample undercounted due to PostgREST's 1000-row cap, same class of bug as APP-08's certifications finding) — **still flat, the trust engine still does not discriminate.** `verified=true` did improve: 5 → **214** | `opportunities` |
 | CODE-01 | TypeScript errors shipped unchecked behind `typescript.ignoreBuildErrors: true` — **19**, re-checked 16 Aug (was 36; dropped as a side effect of the CODE-02 test-infra fix surfacing type errors in files `vitest` had silently never been running) | `next.config.ts` |
 | CODE-02 | 6 test files call Lingui's `t`/`msg` macro tags, which need a Babel/`babel-plugin-macros` compile step Vite has no equivalent of — fixing needs adding `@vitejs/plugin-react`, which hit a real peer-dependency conflict (React 19 vs. this project's Vite/Vitest version) on 16 Aug. 1 of the original 7 affected files (`base.test.tsx`) was fixed outright — 4 real tests recovered | `libs/resume/section*.test.tsx`, `features/command-palette/pages/preferences/*.test.tsx`, `features/resume/dialogs/resume/template/gallery.test.tsx` |
 | APP-12 | Resume Optimiser scoring inconsistency: same content scored 70 → 68 → 57 across baseline/Resume A/Resume B, evaluated independently even at `temperature: 0.0` — found and documented 16 Aug, not fixed (needs a per-requirement diff of the three evaluations, not a speculative patch) | `features/resume-toolkit/services/ai/ats-v2-intelligence.ts` |
+
+---
+
+### DATA-04 · Duplicate rows — **closed, 17 Aug 2026: no duplicates remain**
+Re-verified against the full catalogue rather than a sample (the 12 Aug check
+looked at 1,000 rows and was correctly judged too small to clear the finding):
+**0** groups share an `apply_url`, and exactly **1** group shares title+company
+— two Amazon postings both titled "Data Center Security Specialist, APJC Asset
+Team". Those are not duplicates: their `apply_url`s carry different Amazon job
+ids (`10432673` and `10432672`), so they are two genuinely separate openings
+that happen to share a title. Nothing to dedupe.
+
+---
+
+### DATA-05 · Past-deadline rows still `Published` — **data corrected 17 Aug 2026, cause still open**
+The count has moved 144 → 6 (12 Aug) → 25 → **177** (17 Aug). It is growing,
+so the reconciliation is not keeping up — this is not a one-off backlog.
+All 177 were expired directly (`status='Published' and deadline < now()` →
+`Expired`), verified at **0** immediately afterwards against 3,649 published
+rows.
+
+**The cause is not fixed.** Correcting the rows is the same treatment applied
+on 10 and 16 Aug, and it has now recurred three times, which is itself the
+evidence that the scheduled reconciliation either is not running in production
+or does not cover every provider. That needs a look at the cron's actual run
+history, not another data patch — logged below as the remaining half of this
+issue.
 
 ---
 
