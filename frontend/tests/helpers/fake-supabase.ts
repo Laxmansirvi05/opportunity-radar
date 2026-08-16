@@ -16,15 +16,24 @@ export interface RecordedCall {
 
 export interface QueryCall {
   table: string
-  op: 'select' | 'insert' | 'update'
+  op: 'select' | 'insert' | 'upsert' | 'update' | 'delete'
   trail: RecordedCall[]
 }
 
 export type Responder = (call: QueryCall) => { data: unknown; error: unknown }
 
+const PRIMARY_OPS = ['select', 'insert', 'upsert', 'update', 'delete'] as const
+
 function makeChain(table: string, responder: Responder) {
   const trail: RecordedCall[] = []
-  const methods = ['select', 'insert', 'update', 'eq', 'in', 'order', 'limit', 'single', 'maybeSingle'] as const
+  // Every filter the routes actually chain. A method missing here fails as
+  // "x.is is not a function" at the call site rather than as a clear test
+  // failure, so the list is kept in step with the routes deliberately.
+  const methods = [
+    'select', 'insert', 'update', 'delete', 'upsert',
+    'eq', 'neq', 'in', 'or', 'is', 'not', 'ilike', 'contains',
+    'order', 'limit', 'range', 'single', 'maybeSingle',
+  ] as const
 
   const chain: Record<string, unknown> = {}
   for (const m of methods) {
@@ -34,7 +43,7 @@ function makeChain(table: string, responder: Responder) {
     }
   }
   chain.then = (resolve: (v: { data: unknown; error: unknown }) => void) => {
-    const primary = trail.find((c) => c.op === 'select' || c.op === 'insert' || c.op === 'update')
+    const primary = trail.find((c) => (PRIMARY_OPS as readonly string[]).includes(c.op))
     const op = (primary?.op ?? 'select') as QueryCall['op']
     resolve(responder({ table, op, trail }))
   }
@@ -61,8 +70,8 @@ export function eqValue(trail: RecordedCall[], column: string): unknown {
   return call?.args[1]
 }
 
-/** Convenience: the payload object passed to .insert()/.update(). */
+/** Convenience: the payload object passed to .insert()/.upsert()/.update(). */
 export function payloadOf(trail: RecordedCall[]): Record<string, unknown> {
-  const call = trail.find((c) => c.op === 'insert' || c.op === 'update')
+  const call = trail.find((c) => c.op === 'insert' || c.op === 'upsert' || c.op === 'update')
   return (call?.args[0] as Record<string, unknown>) ?? {}
 }

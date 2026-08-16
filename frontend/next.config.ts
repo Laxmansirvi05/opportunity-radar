@@ -12,6 +12,18 @@ import type { NextConfig } from "next";
 // rewrite (removing 'unsafe-inline' too) would force every route into
 // dynamic rendering — a real architectural change with its own caching
 // tradeoffs — and is deliberately not attempted in this pass.
+// https://www.gstatic.com on connect-src, and worker-src below: the Spline
+// runtime (floating robot) fetches Google's DRACO mesh-decoder (.js +
+// .wasm) from there at scene-load time regardless of where the
+// .splinecode file itself is served from, then runs it inside a Web
+// Worker created from a blob: URL. Confirmed live, in order: first
+// connect-src blocked the decoder fetch outright ("Failed to fetch");
+// fixing that surfaced a second, independent block — with no worker-src
+// directive, CSP falls back to script-src for worker creation, which has
+// no blob: source, so "Creating a worker from 'blob:...' violates...
+// script-src" fired next. Both layers caught by RobotErrorBoundary, so
+// the page degraded to the plain fallback icon rather than breaking —
+// but the real 3D asset never rendered until both were fixed.
 const isDev = process.env.NODE_ENV === "development";
 const cspHeader = `
   default-src 'self';
@@ -19,7 +31,8 @@ const cspHeader = `
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;
-  connect-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com wss://*.supabase.co wss://*.livekit.cloud https://*.livekit.cloud;
+  connect-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com https://www.gstatic.com wss://*.supabase.co wss://*.livekit.cloud https://*.livekit.cloud;
+  worker-src 'self' blob:;
   media-src 'self' blob: data:;
   frame-ancestors 'none';
   object-src 'none';

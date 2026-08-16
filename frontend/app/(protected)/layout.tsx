@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardHeader } from '@/components/layouts/dashboard-header'
 import { DashboardSidebar } from '@/components/layouts/dashboard-sidebar'
 import { MobileBottomNav } from '@/components/layouts/mobile-bottom-nav'
+import { FloatingRobot } from '@/components/floating-robot/floating-robot'
 
 export default async function ProtectedLayout({
   children,
@@ -48,6 +49,7 @@ export default async function ProtectedLayout({
         </main>
       </div>
       <MobileBottomNav />
+      <FloatingRobot />
     </div>
   )
 }

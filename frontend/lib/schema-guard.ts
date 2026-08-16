@@ -71,6 +71,10 @@ const REQUIRED_TABLES: { name: string; breaks: string }[] = [
   { name: 'ingestion_logs',       breaks: 'Ingestion runs become unobservable and /api/cron/health degrades' },
   { name: 'source_registry',      breaks: 'The employer-board provider has no sources to crawl' },
   { name: 'hub_messages',         breaks: 'The Hub community chat fails to load or accept messages' },
+  { name: 'notes',                breaks: 'The Notes page and the floating robot’s quick-note composer both fail to save anything' },
+  { name: 'note_folders',         breaks: 'The Notes sidebar 500s on load, so no note can be filed or filtered' },
+  { name: 'interview_sessions',   breaks: 'Starting a mock interview 500s before a room is ever created' },
+  { name: 'interview_reports',    breaks: 'A completed interview’s scorecard cannot be saved, so the report is lost' },
 ]
 
 const REQUIRED_BUCKETS: { name: string; breaks: string }[] = [
@@ -79,6 +83,7 @@ const REQUIRED_BUCKETS: { name: string; breaks: string }[] = [
   { name: 'resume-toolkit',  breaks: 'Resume-builder photo upload returns 500 on every attempt' },
   { name: 'company-logos',   breaks: 'Company logos fall back to a placeholder' },
   { name: 'hub-attachments', breaks: 'Sending an image in the Hub fails' },
+  { name: 'note-attachments', breaks: 'Pasting a screenshot or inserting an image into a note fails' },
 ]
 
 const REQUIRED_RPCS: { name: string; args: Record<string, unknown>; breaks: string }[] = [

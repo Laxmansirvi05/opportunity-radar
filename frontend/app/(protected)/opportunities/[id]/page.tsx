@@ -10,6 +10,7 @@ import { ShareOpportunityButton } from '@/features/opportunities/components/oppo
 import { getDeadlineInfo } from '@/features/opportunities/utils/deadline'
 import { extractSkillsFromDescription, sanitizeAndFormatDescription } from '@/utils/skills-parser'
 import { CompanyLogo } from '@/features/opportunities/components/company-logo'
+import { OpportunityNotes } from '@/features/notes/components/opportunity-notes'
 
 export default async function OpportunityDetailsPage({
   params,
@@ -35,6 +36,21 @@ export default async function OpportunityDetailsPage({
       .eq('id', id)
       .single()
   ])
+
+  // The caller's tracker row for this listing, if they have one — a note
+  // written on this page is associated with it as well as the opportunity.
+  // Never fabricated: absent tracker row means the note carries no
+  // application_id at all.
+  let applicationId: string | null = null
+  if (user) {
+    const { data: tracked } = await supabase
+      .from('application_tracker')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('opportunity_id', id)
+      .maybeSingle()
+    applicationId = tracked?.id ?? null
+  }
 
   // Upsert Recently Viewed (Fire and forget to avoid blocking render)
   if (user) {
@@ -301,6 +317,8 @@ export default async function OpportunityDetailsPage({
               </div>
             </section>
           )}
+
+          <OpportunityNotes opportunityId={opp.id} applicationId={applicationId} />
 
         </div>
 

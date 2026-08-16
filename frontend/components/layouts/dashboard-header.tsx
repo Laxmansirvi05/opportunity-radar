@@ -21,6 +21,7 @@ import Image from 'next/image'
 const MORE_NAV_ITEMS = [
   { href: '/interview', icon: 'record_voice_over', label: 'Mock Interview' },
   { href: '/certifications', icon: 'school', label: 'Certifications' },
+  { href: '/notes', icon: 'note_stack', label: 'Notes' },
   { href: '/ai-search', icon: 'auto_awesome', label: 'AI Search' },
   { href: '/settings', icon: 'settings', label: 'Settings' },
   { href: '/support', icon: 'help', label: 'Support' },

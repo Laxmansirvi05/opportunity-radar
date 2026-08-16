@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/resume', icon: 'description', label: 'Resume' },
   { href: '/interview', icon: 'record_voice_over', label: 'Mock Interview' },
   { href: '/certifications', icon: 'school', label: 'Certifications' },
+  { href: '/notes', icon: 'note_stack', label: 'Notes' },
   { href: '/dashboard', icon: 'dashboard', label: 'Command Center' },
   { href: '/assistant', icon: 'smart_toy', label: 'AI Assistant' },
   { href: '/profile', icon: 'person', label: 'Profile' },

@@ -433,4 +433,353 @@
   .chat-scrollbar::-webkit-scrollbar-thumb:hover {
     background: oklch(0.6 0 0 / 0.5);
   }
+
+  /* Notes rich-text editor (features/notes/components/note-rich-editor.tsx)
+     and its read-only card preview — shared rules first, editor-only
+     concerns (placeholder, checkbox interactivity) layered on after. */
+  .note-rich-editor-content :is(h1, h2, p, ul, ol) {
+    margin: 0.35em 0;
+  }
+  .note-rich-editor-content :is(h1, h2, p, ul, ol):first-child {
+    margin-top: 0;
+  }
+  .note-rich-editor-content h1 {
+    font-size: 1.25em;
+    font-weight: 700;
+  }
+  .note-rich-editor-content h2 {
+    font-size: 1.1em;
+    font-weight: 700;
+  }
+  .note-rich-editor-content ul:not([data-type="taskList"]) {
+    list-style: disc;
+    padding-left: 1.4em;
+  }
+  .note-rich-editor-content ol {
+    list-style: decimal;
+    padding-left: 1.4em;
+  }
+  .note-rich-editor-content img {
+    max-width: 100%;
+    border-radius: 0.75rem;
+    margin: 0.5em 0;
+  }
+  .note-rich-editor-content ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+  }
+  .note-rich-editor-content ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+  }
+  .note-rich-editor-content ul[data-type="taskList"] li > label {
+    margin-top: 0.2em;
+    user-select: none;
+  }
+  .note-rich-editor-content ul[data-type="taskList"] li > div > p {
+    margin: 0;
+  }
+  .note-rich-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+  .note-rich-editor-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--color-on-surface-variant);
+    opacity: 0.6;
+  }
+
+  /* Compact read-only variant for note cards (features/notes/components/
+     note-view-card.tsx) — same tag rules, tighter and non-interactive. */
+  .note-content-preview :is(h1, h2, p, ul, ol) {
+    margin: 0;
+  }
+  .note-content-preview h1,
+  .note-content-preview h2 {
+    font-size: 1em;
+    font-weight: 700;
+    display: inline;
+  }
+  .note-content-preview ul,
+  .note-content-preview ol {
+    list-style: none;
+    padding-left: 0;
+    display: inline;
+  }
+  .note-content-preview li {
+    display: inline;
+  }
+  .note-content-preview li:not(:last-child)::after {
+    content: " · ";
+  }
+  .note-content-preview img {
+    display: none;
+  }
+  .note-content-preview ul[data-type="taskList"] input {
+    display: none;
+  }
+}
+
+/* ── Notes workspace ────────────────────────────────────────────────────────
+   The folder cards and the rendered note document. Kept here rather than in
+   component files because the same document styling has to apply in three
+   places that do not share a React tree: the editor, a note preview, and the
+   read-only shared-note page (which loads no editor at all). */
+
+@layer utilities {
+  /* The easing the folder interactions use throughout — a fast start that
+     settles rather than springs, so a grid of folders reads as calm. */
+  .ease-note {
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  /* The fan-out and tilt are decorative; the folder must still open. */
+  .note-folder-grid *,
+  .note-folder-grid *::before,
+  .note-folder-grid *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+.note-rich-editor-content:focus {
+  outline: none;
+}
+
+/* The placeholder tiptap renders on an empty document. */
+.note-rich-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-on-surface-variant);
+  opacity: 0.7;
+}
+
+/* One block of document styling, shared by the editor and every read-only
+   render of stored note HTML. */
+.note-document,
+.note-rich-editor-content {
+  line-height: 1.65;
+}
+
+.note-document h1,
+.note-rich-editor-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.2em 0 0.5em;
+}
+
+.note-document h2,
+.note-rich-editor-content h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 1.1em 0 0.45em;
+}
+
+.note-document h3,
+.note-rich-editor-content h3 {
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin: 1em 0 0.4em;
+}
+
+.note-document p,
+.note-rich-editor-content p {
+  margin: 0.5em 0;
+}
+
+.note-document ul,
+.note-rich-editor-content ul,
+.note-document ol,
+.note-rich-editor-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+
+.note-document ul,
+.note-rich-editor-content ul {
+  list-style: disc;
+}
+
+.note-document ol,
+.note-rich-editor-content ol {
+  list-style: decimal;
+}
+
+.note-document blockquote,
+.note-rich-editor-content blockquote {
+  border-left: 3px solid var(--color-outline-variant);
+  padding-left: 0.9em;
+  margin: 0.7em 0;
+  color: var(--color-on-surface-variant);
+}
+
+.note-document a,
+.note-rich-editor-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.note-document code,
+.note-rich-editor-content code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  background: var(--color-surface-container-high);
+  padding: 0.12em 0.36em;
+  border-radius: 0.35rem;
+}
+
+.note-document pre,
+.note-rich-editor-content pre,
+.note-code-block {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  background: var(--color-surface-container-highest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin: 0.7em 0;
+  overflow-x: auto;
+}
+
+.note-document pre code,
+.note-rich-editor-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.note-document hr,
+.note-rich-editor-content hr {
+  border: none;
+  border-top: 1px solid var(--color-outline-variant);
+  margin: 1.2em 0;
+}
+
+/* Checklists. The list marker is removed because the checkbox is the marker. */
+.note-document ul[data-type="taskList"],
+.note-rich-editor-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+.note-document ul[data-type="taskList"] li,
+.note-rich-editor-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55em;
+}
+
+.note-document ul[data-type="taskList"] li>label,
+.note-rich-editor-content ul[data-type="taskList"] li>label {
+  margin-top: 0.28em;
+  user-select: none;
+}
+
+.note-document ul[data-type="taskList"] li>div,
+.note-rich-editor-content ul[data-type="taskList"] li>div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.note-document ul[data-type="taskList"] li[data-checked="true"]>div,
+.note-rich-editor-content ul[data-type="taskList"] li[data-checked="true"]>div {
+  color: var(--color-on-surface-variant);
+  text-decoration: line-through;
+}
+
+/* Tables scroll inside their own box rather than widening the note. */
+.note-document table,
+.note-rich-editor-content table,
+.note-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.note-document th,
+.note-rich-editor-content th,
+.note-document td,
+.note-rich-editor-content td {
+  border: 1px solid var(--color-outline-variant);
+  padding: 0.45em 0.6em;
+  vertical-align: top;
+  position: relative;
+}
+
+.note-document th,
+.note-rich-editor-content th {
+  background: var(--color-surface-container-high);
+  font-weight: 600;
+  text-align: left;
+}
+
+.note-rich-editor-content .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.note-rich-editor-content .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-primary);
+  cursor: col-resize;
+}
+
+/* File attachment chips. */
+.note-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.35em 0;
+  padding: 0.5em 0.8em;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-outline-variant);
+  background: var(--color-surface-container-low);
+  color: var(--color-on-surface);
+  text-decoration: none;
+  font-size: 0.9em;
+  max-width: 100%;
+}
+
+.note-file-chip::before {
+  content: 'attach_file';
+  font-family: 'Material Symbols Outlined';
+  font-size: 1.1em;
+  color: var(--color-on-surface-variant);
+}
+
+.note-file-chip:hover {
+  border-color: var(--color-primary);
+}
+
+.note-document img,
+.note-rich-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
+
+/* The Quick Note composer's tighter writing area. */
+.note-editor-compact .note-rich-editor-content {
+  min-height: 90px;
+  font-size: 0.95rem;
 }
