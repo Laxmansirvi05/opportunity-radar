@@ -52,6 +52,13 @@ export class MaintenanceService {
     let freshnessChecked = 0;
     let deadlineFailed = 0;
     let freshnessFailed = 0;
+    // The reason each step failed, not just that one did. Without this the
+    // log only ever said "1 maintenance step(s) encountered errors. Check
+    // server logs." — which is why DATA-05 recurred three times undiagnosed:
+    // every run since this service shipped has been PARTIAL, and the row that
+    // recorded it never said which half broke or why. Vercel's function logs
+    // roll off long before anyone reads them; the ingestion_log row does not.
+    const stepErrors: string[] = [];
 
     // Step 1 — Deadline expiration
     try {
@@ -59,6 +66,7 @@ export class MaintenanceService {
       console.log(`[Maintenance] Deadline expiration complete. Expired: ${deadlineExpired}`);
     } catch (err: any) {
       deadlineFailed = 1;
+      stepErrors.push(`deadline_expiration: ${err?.message ?? String(err)}`);
       console.error('[Maintenance] Deadline expiration step failed:', err.message);
     }
 
@@ -72,6 +80,7 @@ export class MaintenanceService {
       );
     } catch (err: any) {
       freshnessFailed = 1;
+      stepErrors.push(`freshness_verification: ${err?.message ?? String(err)}`);
       console.error('[Maintenance] Freshness verification step failed:', err.message);
     }
 
@@ -87,6 +96,7 @@ export class MaintenanceService {
       freshnessExpired,
       totalExpired,
       failed: totalFailed,
+      stepErrors,
     };
 
     // Step 3 — Log to ingestion_logs
@@ -194,7 +204,10 @@ export class MaintenanceService {
         execution_time_ms: result.durationMs,
         status: result.failed > 0 ? 'PARTIAL' : 'SUCCESS',
         error_message: result.failed > 0
-          ? `${result.failed} maintenance step(s) encountered errors. Check server logs.`
+          // The actual reasons, capped so one enormous driver error cannot
+          // fail the insert that is meant to record it.
+          ? result.stepErrors.join(' | ').slice(0, 1000)
+            || `${result.failed} maintenance step(s) encountered errors.`
           : null,
       });
 
@@ -219,4 +232,6 @@ export interface MaintenanceRunResult {
   freshnessExpired: number;
   totalExpired: number;
   failed: number;
+  /** Per-step failure reasons, empty when every step succeeded. */
+  stepErrors: string[];
 }

@@ -612,10 +612,48 @@ Dashboard's Progress Summary counted every row in `bookmarks` (`SELECT count(*)`
 | ID | Issue | Where |
 |---|---|---|
 | DATA-06 | 105 listings (2.5%) have no description — SmartRecruiters 95, Lever 10. Re-checked 12 Aug: **106**, essentially unchanged | `opportunities` |
-| DATA-07 | `trust_tier` is `3` on all 3,989 live rows — re-checked 12 Aug via per-value count query (a prior row-fetch sample undercounted due to PostgREST's 1000-row cap, same class of bug as APP-08's certifications finding) — **still flat, the trust engine still does not discriminate.** `verified=true` did improve: 5 → **214** | `opportunities` |
+| DATA-07 | **Reclassified 17 Aug — there is no trust engine.** `trust_tier` is not written by any code anywhere: a repo-wide search finds only a type field, one `select`, and a read with `?? 3` in `geo.ts`. Every row therefore keeps the column default of 3. The issue as written ("does not discriminate") described a scoring bug; the truth is the feature was never built, so this is a build task, not a fix | `opportunities` |
 | CODE-01 | TypeScript errors shipped unchecked behind `typescript.ignoreBuildErrors: true` — **19**, re-checked 16 Aug (was 36; dropped as a side effect of the CODE-02 test-infra fix surfacing type errors in files `vitest` had silently never been running) | `next.config.ts` |
 | CODE-02 | 6 test files call Lingui's `t`/`msg` macro tags, which need a Babel/`babel-plugin-macros` compile step Vite has no equivalent of — fixing needs adding `@vitejs/plugin-react`, which hit a real peer-dependency conflict (React 19 vs. this project's Vite/Vitest version) on 16 Aug. 1 of the original 7 affected files (`base.test.tsx`) was fixed outright — 4 real tests recovered | `libs/resume/section*.test.tsx`, `features/command-palette/pages/preferences/*.test.tsx`, `features/resume/dialogs/resume/template/gallery.test.tsx` |
 | APP-12 | Resume Optimiser scoring inconsistency: same content scored 70 → 68 → 57 across baseline/Resume A/Resume B, evaluated independently even at `temperature: 0.0` — found and documented 16 Aug, not fixed (needs a per-requirement diff of the three evaluations, not a speculative patch) | `features/resume-toolkit/services/ai/ats-v2-intelligence.ts` |
+
+---
+
+### DATA-05 · Maintenance cron's freshness step — **root-caused and fixed, 17 Aug 2026**
+
+**Every logged run of `MaintenanceService` since it shipped was `PARTIAL`** — 9
+of 9 — and the log row only ever said *"1 maintenance step(s) encountered
+errors. Check server logs."* Vercel's function logs roll off long before anyone
+reads them, so the cause stayed invisible while DATA-05 was patched by hand
+three separate times.
+
+**Fixed the diagnostics first**, then the bug. `MaintenanceService.run()` now
+records each step's actual failure reason into `ingestion_logs.error_message`
+instead of a count. The very next run named it:
+
+```
+freshness_verification: Supabase select failed (freshness sample):
+column opportunities.last_verified_at does not exist
+```
+
+Plain schema drift. The freshness step orders by `last_verified_at` so each run
+probes the least recently checked listings and rotates through the catalogue;
+the column was never created, so the step threw on its first query every single
+time. Added in `20260817000000_opportunities_last_verified_at.sql` (nullable, so
+every existing row sorts first) with a partial index on the statuses the step
+samples. Applied to production.
+
+**Verified by running the real service against production**, not by reasoning:
+the run went `failed: 0`, checked 50 URLs, found 0 dead links, and wrote the
+first `SUCCESS` row this table has ever held — directly after the `PARTIAL` row
+naming the missing column.
+
+**Deliberately still open:** step 1 (deadline expiration) was always working, so
+a daily run should have kept the stale count near zero — yet 177 accumulated.
+That points at runs being *missed*, not failing: `vercel.json` registers **9**
+cron jobs, and the last logged run before today was 15 Aug despite a daily
+`0 23 * * *` schedule. Worth checking the Vercel plan's cron limits before
+assuming the schedule is honoured.
 
 ---
 
