@@ -18,35 +18,39 @@ interface RobotSceneProps {
  * internal camera/hover interactions (if any are authored into it) could
  * intercept a pointerdown before the drag/triple-tap logic ever sees it.
  *
- * SCENE_SCALE exists because the .splinecode composes the robot with a large
- * transparent margin: measured against the wrapper, the robot itself drew only
- * about half the box's width. That left a wide dead ring that still accepted
- * a grab (so the robot felt like it only responded on one side) and meant
- * raising ROBOT_SIZE grew the hit box far more than the visible robot.
- * Scaling the canvas up makes the drawn robot roughly fill its own hit box,
- * so what you see is what you can grab.
+ * SCENE_OVERDRAW exists because the .splinecode composes the robot with a
+ * large transparent margin: measured against the wrapper, the robot itself
+ * drew only about half the box's width. That left a wide dead ring that still
+ * accepted a grab (so the robot felt like it only responded on one side) and
+ * meant raising ROBOT_SIZE grew the hit box far more than the visible robot.
  *
- * overflow:visible is required with it — Spline's own wrapper sets
- * overflow:hidden, which crops the scaled scene back to the unscaled box
- * (live-reproduced: the robot rendered larger but sliced off at the edges
- * instead of simply appearing bigger). The overflow is harmless: the spill is
+ * It is applied by making the canvas physically larger and pulling it back to
+ * centre — NOT by transform: scale(). Scaling a canvas magnifies pixels that
+ * have already been rasterised, which is exactly what made the robot look
+ * soft; giving Spline a larger canvas instead makes it render more pixels, so
+ * the robot fills its hit box and stays sharp at any device pixel ratio.
+ *
+ * The canvas overflows the wrapper, which is harmless: the spill is
  * transparent and the whole scene is pointer-events:none, so it never steals
  * a click from anything underneath.
  */
-const SCENE_SCALE = 1.95
+const SCENE_OVERDRAW = 1.95
 
 export default function RobotSceneInner({ onLoad }: RobotSceneProps) {
+  const size = `${SCENE_OVERDRAW * 100}%`
+  const offset = `${((SCENE_OVERDRAW - 1) / 2) * -100}%`
+
   return (
     <Spline
       scene="/robot-scene.splinecode"
       onLoad={onLoad}
       style={{
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
+        width: size,
+        height: size,
+        marginLeft: offset,
+        marginTop: offset,
         overflow: 'visible',
-        transform: `scale(${SCENE_SCALE})`,
-        transformOrigin: 'center center',
+        pointerEvents: 'none',
       }}
     />
   )
