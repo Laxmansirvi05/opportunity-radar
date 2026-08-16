@@ -8,8 +8,8 @@ import { upsertCertifications } from '@/lib/certifications/upsert'
  * GET /api/cron/refresh-certifications
  *
  * Weekly refresh of the certifications catalogue (Coursera, Microsoft Learn,
- * freeCodeCamp, Simplilearn, edX, Udacity, W3Schools, Cisco Networking
- * Academy, Udemy, DataCamp). Unlike the opportunities crons there is no
+ * freeCodeCamp, Simplilearn, edX, Alison, Udacity, W3Schools, Cisco
+ * Networking Academy, Udemy, DataCamp). Unlike the opportunities crons there is no
  * reconciliation/deletion step afterwards — see lib/certifications/ingest.ts
  * for why courses are never expired on a schedule.
  *

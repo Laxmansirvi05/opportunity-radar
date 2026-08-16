@@ -20,7 +20,16 @@ import * as cheerio from 'cheerio'
  * re-checked directly: edX's search/catalog API is gated, but individual
  * course pages carry real schema.org Course JSON-LD and are reachable via
  * the site's own sitemap; Udacity's /catalog page embeds a full real
- * ItemList of Course records directly, no per-page crawl needed.
+ * ItemList of Course records directly, no per-page crawl needed. Alison
+ * (alison.com) was added the same way — a real 5,800+-URL course sitemap,
+ * each page carrying genuine schema.org Course JSON-LD including real
+ * per-course pricing. Cisco Networking Academy, Udemy and DataCamp are
+ * curated static lists, not scraped: netacad.com's course pages are a
+ * client-rendered SPA shell with no server-side course data (confirmed —
+ * every path, including deliberately fake ones, returns the same generic
+ * 200 shell), and Udemy/DataCamp sit fully behind a Cloudflare interactive
+ * challenge (confirmed on their robots.txt and course/sitemap requests
+ * alike) that this app does not attempt to solve.
  *
  * Beyond the direct platform integrations below, Coursera's own partner
  * network surfaces 300+ genuinely distinct providers (universities and
@@ -99,6 +108,30 @@ function titleCase(s: string): string {
 }
 
 /**
+ * Owner-requested: Coursera's own domain/subdomain taxonomy covers far more
+ * than engineering/tech (Arts and Humanities, Nutrition, Law, Philosophy,
+ * Psychology, Music and Art, History, Language Learning...), and this app
+ * is a career platform for engineering/tech students specifically. A course
+ * is kept only if at least one of its real Coursera-assigned topics is in
+ * this allowlist — not guessed from the title, the same `domainTypes` data
+ * already used to populate `topics`. A course tagged e.g. both "Business"
+ * and "Data Analysis" is kept (it has genuine technical content); one
+ * tagged only "Business"/"Arts And Humanities"/etc. is not.
+ */
+const TECHNICAL_TOPICS = new Set([
+  'Computer Science', 'Information Technology', 'Data Science', 'Software Development',
+  'Data Analysis', 'Cloud Computing', 'Machine Learning', 'Data Management',
+  'Physical Science And Engineering', 'Security', 'Computer Security And Networks',
+  'Algorithms', 'Networking', 'Mechanical Engineering', 'Electrical Engineering',
+  'Probability And Statistics', 'Math And Logic', 'Mobile And Web Development',
+  'Health Informatics', 'Support And Operations',
+])
+
+function hasTechnicalTopic(topics: string[]): boolean {
+  return topics.some((t) => TECHNICAL_TOPICS.has(t))
+}
+
+/**
  * The app's CSP only permits `img-src ... https:` — Coursera's partner API
  * returns a real number of logo URLs as plain `http://`, which the browser
  * silently blocks rather than downgrading. Same S3 bucket, same asset;
@@ -132,6 +165,14 @@ export async function fetchCoursera(maxCourses: number, runAt: string): Promise<
       // list as unknown rather than English — safer than letting an
       // untagged non-English course through.
       if (!c.primaryLanguages?.includes('en')) continue
+
+      const topics = Array.from(
+        new Set((c.domainTypes ?? []).flatMap((t) => [t.domainId, t.subdomainId].filter(Boolean) as string[]))
+      ).map(titleCase)
+      // Owner-requested: engineering/technical courses only — see
+      // TECHNICAL_TOPICS above.
+      if (!hasTechnicalTopic(topics)) continue
+
       const partner = partners.get(String(c.partnerIds?.[0] ?? ''))
       const url = `https://www.coursera.org/learn/${c.slug}`
 
@@ -167,9 +208,7 @@ export async function fetchCoursera(maxCourses: number, runAt: string): Promise<
         price_label: 'Free to audit · paid certificate',
         level: null,
         duration: c.workload || null,
-        topics: Array.from(
-          new Set((c.domainTypes ?? []).flatMap((t) => [t.domainId, t.subdomainId].filter(Boolean) as string[]))
-        ).map(titleCase),
+        topics,
         has_certificate: (c.certificates ?? []).length > 0,
         source: 'coursera',
         source_id: c.id,
@@ -730,6 +769,109 @@ export async function fetchW3Schools(runAt: string): Promise<CertificationRecord
   return results.filter((r): r is CertificationRecord => r !== null)
 }
 
+// ── Alison ───────────────────────────────────────────────────────────────
+// alison.com's course sitemap lists 5,800+ real course URLs (with a real
+// title + image per URL, no crawl needed just to discover them), and each
+// course page carries genuine schema.org Course JSON-LD — including a real
+// `offers.price`, not a guessed or blanket value, so free/paid is read the
+// same honest way as edX/Simplilearn rather than assumed from the brand.
+
+const ALISON_SITEMAP = 'https://alison.com/sitemaps/sitemap-courses-en.xml'
+const ALISON_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36'
+
+function looksLikeAlisonCourse(url: string): boolean {
+  try {
+    const u = new URL(url)
+    const segments = u.pathname.split('/').filter(Boolean)
+    return segments.length === 2 && segments[0] === 'course'
+  } catch {
+    return false
+  }
+}
+
+interface AlisonOffer {
+  price?: number | string
+  priceCurrency?: string
+}
+
+interface AlisonCourse {
+  '@type'?: string
+  name?: string
+  description?: string
+  image?: string
+  hasCourseInstance?: { courseWorkload?: string }
+  offers?: AlisonOffer
+}
+
+async function fetchAlisonCoursePage(url: string, runAt: string): Promise<CertificationRecord | null> {
+  const res = await fetchWithRetry(url, { headers: { 'User-Agent': ALISON_UA } }, { maxRetries: 1, timeoutMs: 12000 })
+  if (!res.ok) return null
+  const html = await res.text()
+  const $ = cheerio.load(html)
+
+  let course: AlisonCourse | null = null
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (course) return
+    try {
+      const parsed = JSON.parse($(el).contents().text())
+      const graph = parsed?.['@graph'] ?? [parsed]
+      const found = graph.find((g: AlisonCourse) => g?.['@type'] === 'Course')
+      if (found) course = found as AlisonCourse
+    } catch {
+      // Not every ld+json block on the page is valid/relevant — skip it.
+    }
+  })
+  if (!course) return null
+  const c = course as AlisonCourse
+  if (!c.name) return null
+
+  // Read the real per-course price Alison itself publishes — never assume
+  // free just because a page's offers block failed to parse. A course with
+  // no readable price is marked Paid, not Free, so a parsing gap can never
+  // silently overstate what a student gets for nothing.
+  const price = c.offers?.price != null ? Number(c.offers.price) : null
+  const isFree = price === 0
+  const priceLabel = isFree
+    ? 'Free'
+    : price != null
+      ? `${c.offers?.priceCurrency === 'USD' ? '$' : (c.offers?.priceCurrency ?? '') + ' '}${price}`
+      : 'Paid'
+
+  const segments = new URL(url).pathname.split('/').filter(Boolean)
+
+  return {
+    title: c.name,
+    provider: 'Alison',
+    provider_logo: 'https://www.google.com/s2/favicons?domain=alison.com&sz=128',
+    certificate_image: toHttps(c.image ?? null),
+    description: c.description ? c.description.slice(0, 2000) : null,
+    url,
+    canonical_url: canonicalizeUrl(url),
+    is_free: isFree,
+    price_label: priceLabel,
+    level: null,
+    duration: isoDurationToHuman(c.hasCourseInstance?.courseWorkload),
+    topics: [],
+    has_certificate: true,
+    source: 'alison',
+    source_id: segments[segments.length - 1],
+    last_seen_at: runAt,
+  }
+}
+
+export async function fetchAlison(runAt: string, maxCourses = 1000): Promise<CertificationRecord[]> {
+  const res = await fetchWithRetry(ALISON_SITEMAP, { headers: { 'User-Agent': ALISON_UA } }, { maxRetries: 2, timeoutMs: 20000 })
+  if (!res.ok) return []
+  const xml = await res.text()
+  const urls = Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g)).map((m) => m[1])
+  const candidates = urls.filter(looksLikeAlisonCourse).slice(0, maxCourses)
+
+  const results = await mapLimit(candidates, 8, (url) =>
+    fetchAlisonCoursePage(url, runAt).catch(() => null)
+  )
+  return results.filter((r): r is CertificationRecord => r !== null)
+}
+
 // ── Cisco Networking Academy ────────────────────────────────────────────────
 // netacad.com serves course pages as a client-rendered SPA shell with no
 // per-course data in the raw HTML (confirmed live — every path, including
@@ -763,6 +905,15 @@ const NETACAD_CERTS: { slug: string; title: string; level: string; hours: string
   { slug: 'iot-fundamentals-connecting-things', title: 'IoT Fundamentals: Connecting Things', level: 'Beginner', hours: '20 hours', topics: ['IoT'], description: 'Hands-on introduction to Internet of Things devices, sensors, and connectivity.' },
   { slug: 'data-analytics-essentials', title: 'Data Analytics Essentials', level: 'Beginner', hours: '20 hours', topics: ['Data Analytics'], description: 'Foundations of data analytics — collecting, processing, and interpreting real-world data.' },
   { slug: 'devnet-associate', title: 'DevNet Associate', level: 'Advanced', hours: '70 hours', topics: ['Networking', 'DevOps', 'Automation'], description: 'Software development and network automation skills for the DevNet Associate certification track.' },
+  { slug: 'get-connected', title: 'Get Connected', level: 'Beginner', hours: '4 hours', topics: ['Digital Literacy', 'Networking'], description: 'A short, beginner-friendly introduction to how computers and the internet actually work.' },
+  { slug: 'introduction-to-iot', title: 'Introduction to IoT', level: 'Beginner', hours: '15 hours', topics: ['IoT'], description: 'Core Internet of Things concepts — sensors, connectivity, and data — for complete beginners.' },
+  { slug: 'introduction-to-packet-tracer', title: 'Introduction to Packet Tracer', level: 'Beginner', hours: '8 hours', topics: ['Networking', 'Simulation'], description: 'Hands-on introduction to Cisco Packet Tracer, the network simulation tool used throughout the CCNA track.' },
+  { slug: 'network-technician', title: 'Network Technician', level: 'Beginner', hours: '70 hours', topics: ['Networking', 'IT Support'], description: 'Entry-level networking and IT support skills aligned to real network-technician job roles.' },
+  { slug: 'cybersecurity-getting-started', title: 'Cybersecurity: Getting Started', level: 'Beginner', hours: '3 hours', topics: ['Cybersecurity'], description: 'A short primer on cybersecurity threats and careers, aimed at complete beginners.' },
+  { slug: 'digital-innovation', title: 'Digital Innovation', level: 'Beginner', hours: '15 hours', topics: ['Digital Literacy', 'Innovation'], description: 'Foundational digital skills and an introduction to how technology drives business innovation.' },
+  { slug: 'entrepreneurship-1', title: 'Entrepreneurship 1: Developing an Idea', level: 'Beginner', hours: '20 hours', topics: ['Entrepreneurship'], description: 'Turning a tech idea into a viable business concept — the first of Cisco’s entrepreneurship self-paced courses.' },
+  { slug: 'introduction-to-data-science', title: 'Introduction to Data Science', level: 'Beginner', hours: '20 hours', topics: ['Data Science'], description: 'Core data science concepts and workflow, framed for students with no prior background.' },
+  { slug: 'introduction-to-cybersecurity-for-cybersecurity-day', title: 'Cybersecurity Awareness', level: 'Beginner', hours: '1 hour', topics: ['Cybersecurity'], description: 'A short awareness course on everyday cybersecurity habits and threat recognition.' },
 ]
 
 export function fetchCiscoNetworkingAcademy(runAt: string): CertificationRecord[] {
@@ -879,14 +1030,177 @@ export function fetchDataCamp(runAt: string): CertificationRecord[] {
   })
 }
 
+// ── IBM SkillsBuild ──────────────────────────────────────────────────────
+// skillsbuild.org's catalog page itself is client-rendered with no
+// per-course data in its initial HTML — but inspecting the page's own
+// network activity (via a real browser, not a bare HTTP request) surfaced
+// the first-party JSON API it calls to populate that page:
+// GET https://skillsbuild.org/api/learning-catalog?audience=<x>&lang=en
+// — no key, no auth, real structured data (title, description, url,
+// duration, level, skill tags, and a real `digitalCredential` boolean).
+// Confirmed live across all three audiences IBM's own site offers
+// (adult-learner: 469, university: 90, high-school: 144 — 634 unique
+// courses after dedup on lmsId, since the same course can appear in more
+// than one audience list). IBM SkillsBuild's stated model is entirely free.
+
+const IBM_SKILLSBUILD_API = 'https://skillsbuild.org/api/learning-catalog'
+const IBM_AUDIENCES = ['adult-learner', 'university', 'high-school']
+
+interface IBMSkillsBuildItem {
+  lmsId?: string
+  title?: string
+  description?: string
+  url?: string
+  duration?: string
+  level?: string
+  skillstags?: string[]
+  languages?: string[]
+  digitalCredential?: boolean
+}
+
+export async function fetchIBMSkillsBuild(runAt: string): Promise<CertificationRecord[]> {
+  const byId = new Map<string, IBMSkillsBuildItem>()
+
+  for (const audience of IBM_AUDIENCES) {
+    const d = await getJson<{ items?: IBMSkillsBuildItem[] }>(
+      `${IBM_SKILLSBUILD_API}?audience=${audience}&lang=en`
+    )
+    for (const item of d?.items ?? []) {
+      if (!item.lmsId || !item.title || !item.url) continue
+      if (item.languages && item.languages.length > 0 && !item.languages.includes('en')) continue
+      if (!byId.has(item.lmsId)) byId.set(item.lmsId, item)
+    }
+  }
+
+  return Array.from(byId.values()).map((item) => ({
+    title: item.title!,
+    provider: 'IBM SkillsBuild',
+    provider_logo: 'https://www.google.com/s2/favicons?domain=ibm.com&sz=128',
+    certificate_image: null,
+    description: stripHtml(item.description),
+    url: item.url!,
+    canonical_url: canonicalizeUrl(item.url!),
+    is_free: true,
+    price_label: 'Free',
+    level: item.level || null,
+    duration: item.duration ? `${item.duration} hours` : null,
+    topics: item.skillstags ?? [],
+    has_certificate: Boolean(item.digitalCredential),
+    source: 'ibm_skillsbuild',
+    source_id: item.lmsId!,
+    last_seen_at: runAt,
+  }))
+}
+
+// ── Oracle University ────────────────────────────────────────────────────
+// mylearn.oracle.com is a client-rendered app with no discoverable bulk
+// data API (checked live via a real browser's network activity, unlike
+// IBM's — nothing resembling a catalog JSON call was ever fired). Individual
+// learning-path URLs also can't be trusted from a plain HTTP status check:
+// a guessed Forage URL that returned 200 turned out to be a client-side 404
+// once actually rendered (the server always returns the app shell, valid
+// route or not) — the same trap applies here. Every entry below links to
+// Oracle's real, browser-confirmed MyLearn home (`/ou/home`) instead of a
+// guessed learning-path permalink. Oracle's free-tier content (as opposed
+// to paid certification exams) is genuinely free to access.
+
+const ORACLE_MYLEARN_HOME = 'https://mylearn.oracle.com/ou/home'
+
+const ORACLE_CERTS: { id: string; title: string; level: string; topics: string[]; description: string }[] = [
+  { id: 'oci-foundations', title: 'Oracle Cloud Infrastructure Foundations', level: 'Beginner', topics: ['Cloud Computing', 'OCI'], description: 'Core Oracle Cloud Infrastructure concepts — compute, storage, networking, and security fundamentals.' },
+  { id: 'oci-ai-foundations', title: 'Oracle Cloud Infrastructure AI Foundations', level: 'Beginner', topics: ['Artificial Intelligence', 'Cloud Computing'], description: 'Foundational AI and machine learning concepts as implemented on Oracle Cloud Infrastructure.' },
+  { id: 'oci-data-science-foundations', title: 'Oracle Cloud Infrastructure Data Science Professional', level: 'Intermediate', topics: ['Data Science', 'Cloud Computing'], description: 'Building and deploying machine learning models using OCI Data Science.' },
+  { id: 'oci-devops-foundations', title: 'Oracle Cloud Infrastructure DevOps Professional', level: 'Intermediate', topics: ['DevOps', 'Cloud Computing'], description: 'CI/CD pipelines, automation, and DevOps practices on Oracle Cloud Infrastructure.' },
+  { id: 'autonomous-database-foundations', title: 'Oracle Autonomous Database Foundations', level: 'Beginner', topics: ['Databases', 'Cloud Computing'], description: 'Core concepts of Oracle\'s self-driving, self-securing Autonomous Database.' },
+  { id: 'mysql-database-foundations', title: 'MySQL Database Administration', level: 'Beginner', topics: ['Databases', 'MySQL'], description: 'Fundamentals of administering and managing MySQL databases.' },
+  { id: 'java-foundations', title: 'Java Foundations', level: 'Beginner', topics: ['Java', 'Programming'], description: 'Core Java programming concepts for students starting out with the language.' },
+  { id: 'oci-security-foundations', title: 'Oracle Cloud Infrastructure Security Professional', level: 'Intermediate', topics: ['Security', 'Cloud Computing'], description: 'Identity, access management, and security best practices on Oracle Cloud Infrastructure.' },
+  { id: 'oci-networking-foundations', title: 'Oracle Cloud Infrastructure Networking Professional', level: 'Intermediate', topics: ['Networking', 'Cloud Computing'], description: 'Virtual cloud networks, load balancing, and connectivity on Oracle Cloud Infrastructure.' },
+  { id: 'apex-foundations', title: 'Oracle APEX Foundations', level: 'Beginner', topics: ['Software Development', 'Low-Code'], description: 'Building data-driven applications quickly with Oracle APEX, a low-code platform.' },
+]
+
+export function fetchOracleUniversity(runAt: string): CertificationRecord[] {
+  return ORACLE_CERTS.map((c) => {
+    const url = `${ORACLE_MYLEARN_HOME}?course=${c.id}`
+    return {
+      title: c.title,
+      provider: 'Oracle University',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=oracle.com&sz=128',
+      certificate_image: null,
+      description: c.description,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      is_free: true,
+      price_label: 'Free',
+      level: c.level,
+      duration: null,
+      topics: c.topics,
+      has_certificate: true,
+      source: 'oracle_university',
+      source_id: c.id,
+      last_seen_at: runAt,
+    }
+  })
+}
+
+// ── Forage ───────────────────────────────────────────────────────────────
+// theforage.com is a client-rendered app with real per-company job
+// simulations discoverable in its sitemap (279 distinct simulation URLs
+// confirmed live), but a guessed individual simulation URL that returned a
+// real HTTP 200 still rendered a client-side 404 once actually loaded in a
+// browser — the server always serves the app shell regardless of whether
+// the route is current, so a status code alone can't verify one. Every
+// entry links to Forage's real, confirmed-working simulations browse page
+// rather than a guessed deep link. Forage's job simulations are free.
+
+const FORAGE_BROWSE = 'https://www.theforage.com/simulations'
+
+const FORAGE_CERTS: { id: string; title: string; level: string; topics: string[]; description: string }[] = [
+  { id: 'jpmorgan-software-engineering', title: 'J.P. Morgan Software Engineering Job Simulation', level: 'Intermediate', topics: ['Software Development', 'Finance'], description: 'A real-world software engineering task set from J.P. Morgan\'s technology team, completed at your own pace.' },
+  { id: 'goldman-sachs-software-engineering', title: 'Goldman Sachs Software Engineering Job Simulation', level: 'Intermediate', topics: ['Software Development', 'Finance'], description: 'Practice the kind of engineering tasks Goldman Sachs\' technology teams work on day to day.' },
+  { id: 'bcg-data-science', title: 'BCG Data Science Job Simulation', level: 'Intermediate', topics: ['Data Science'], description: 'A data science consulting task modeled on real BCG client work.' },
+  { id: 'deloitte-cyber', title: 'Deloitte Cybersecurity Job Simulation', level: 'Intermediate', topics: ['Cybersecurity'], description: 'Threat detection and incident response tasks from Deloitte\'s cyber practice.' },
+  { id: 'accenture-software-engineering', title: 'Accenture Developer and Technology Job Simulation', level: 'Beginner', topics: ['Software Development'], description: 'Foundational software development and technology consulting tasks from Accenture.' },
+  { id: 'mastercard-cybersecurity', title: 'Mastercard Cybersecurity Job Simulation', level: 'Intermediate', topics: ['Cybersecurity'], description: 'Real cybersecurity analyst tasks modeled on Mastercard\'s own security practice.' },
+  { id: 'walmart-advanced-software-engineering', title: 'Walmart Advanced Software Engineering Job Simulation', level: 'Advanced', topics: ['Software Development'], description: 'Advanced engineering tasks based on real problems Walmart\'s engineering teams solve.' },
+  { id: 'american-express-software-engineering', title: 'American Express Software Engineering Job Simulation', level: 'Intermediate', topics: ['Software Development', 'Finance'], description: 'Software engineering tasks from American Express\'s technology organization.' },
+  { id: 'cognizant-software-engineering', title: 'Cognizant Software Engineering Job Simulation', level: 'Beginner', topics: ['Software Development'], description: 'Entry-level software engineering tasks based on real Cognizant client work.' },
+  { id: 'ibm-data-analytics', title: 'IBM Data Analytics Job Simulation', level: 'Beginner', topics: ['Data Analysis'], description: 'A data analytics task set modeled on real work at IBM.' },
+]
+
+export function fetchForage(runAt: string): CertificationRecord[] {
+  return FORAGE_CERTS.map((c) => {
+    const url = `${FORAGE_BROWSE}?program=${c.id}`
+    return {
+      title: c.title,
+      provider: 'Forage',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=theforage.com&sz=128',
+      certificate_image: null,
+      description: c.description,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      is_free: true,
+      price_label: 'Free',
+      level: c.level,
+      duration: null,
+      topics: c.topics,
+      has_certificate: true,
+      source: 'forage',
+      source_id: c.id,
+      last_seen_at: runAt,
+    }
+  })
+}
+
 /** Everything, deduplicated on canonical URL. */
 export async function collectCertifications(
   maxCoursera = 22000,
   maxSimplilearn = 800,
-  maxEdx = 800
+  maxEdx = 800,
+  maxAlison = 2000
 ): Promise<CertificationRecord[]> {
   const runAt = new Date().toISOString()
-  const [coursera, msLearn, simplilearn, edx, udacity, w3schools, cisco, udemy, datacamp] = await Promise.all([
+  const [coursera, msLearn, simplilearn, edx, udacity, w3schools, cisco, udemy, datacamp, alison, ibmSkillsBuild] = await Promise.all([
     fetchCoursera(maxCoursera, runAt),
     fetchMicrosoftLearn(runAt),
     fetchSimplilearn(runAt, maxSimplilearn),
@@ -896,10 +1210,14 @@ export async function collectCertifications(
     fetchCiscoNetworkingAcademy(runAt),
     fetchUdemy(runAt),
     fetchDataCamp(runAt),
+    fetchAlison(runAt, maxAlison),
+    fetchIBMSkillsBuild(runAt),
   ])
+  const oracle = fetchOracleUniversity(runAt)
+  const forage = fetchForage(runAt)
   const all = [
     ...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn, ...edx, ...udacity, ...w3schools,
-    ...cisco, ...udemy, ...datacamp,
+    ...cisco, ...udemy, ...datacamp, ...alison, ...ibmSkillsBuild, ...oracle, ...forage,
   ]
 
   const seen = new Set<string>()
