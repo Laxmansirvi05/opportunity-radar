@@ -11,11 +11,11 @@ import { RobotFallback } from './robot-fallback'
 import { QuickNoteComposer } from './quick-note-composer'
 import { QuickAssistant } from './quick-assistant'
 
-// A further 7% on top of the earlier 25% bump (110 -> 138 -> 148).
+// A further 5% again (110 -> 138 -> 148 -> 155).
 // useRobotPosition clamps against this value, so a position stored while the
 // robot was smaller is pulled back inside the viewport on the next mount
 // rather than leaving it half off-screen.
-const ROBOT_SIZE = 148
+const ROBOT_SIZE = 155
 const LOAD_TIMEOUT_MS = 8000
 
 const RobotSceneInner = dynamic(() => import('./robot-scene-inner'), {

@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAutosaveNote } from '@/features/notes/hooks/use-autosave-note'
 import { NoteRichEditor } from '@/features/notes/components/note-rich-editor'
 import { uploadNoteAttachment } from '@/features/notes/services/notes-client'
+import { usePanelResize, type PanelSize } from './use-panel-resize'
+import { PanelResizeHandle } from './panel-resize-handle'
 
-const COMPOSER_WIDTH = 340
-const COMPOSER_HEIGHT = 300
+const DEFAULT_SIZE: PanelSize = { width: 340, height: 300 }
 const GAP = 12
 const VIEWPORT_PADDING = 12
 
@@ -23,29 +24,29 @@ const STATUS_LABEL: Record<string, string> = {
   error: 'Unable to save',
 }
 
-function computePosition(anchor: QuickNoteComposerProps['anchor']) {
+function computePosition(anchor: QuickNoteComposerProps['anchor'], size: PanelSize) {
   const vw = window.innerWidth
   const vh = window.innerHeight
 
   // Prefer opening above-left of the robot (the common bottom-right resting
   // spot), flipping to whichever side actually has room otherwise — always
   // clamped inside the viewport so it can never render off-screen.
-  const preferAbove = anchor.y > COMPOSER_HEIGHT + GAP + VIEWPORT_PADDING
-  const preferLeft = anchor.x > COMPOSER_WIDTH + GAP + VIEWPORT_PADDING
+  const preferAbove = anchor.y > size.height + GAP + VIEWPORT_PADDING
+  const preferLeft = anchor.x > size.width + GAP + VIEWPORT_PADDING
 
-  let top = preferAbove ? anchor.y - COMPOSER_HEIGHT - GAP : anchor.y + anchor.size + GAP
-  let left = preferLeft ? anchor.x - COMPOSER_WIDTH + anchor.size : anchor.x
+  let top = preferAbove ? anchor.y - size.height - GAP : anchor.y + anchor.size + GAP
+  let left = preferLeft ? anchor.x - size.width + anchor.size : anchor.x
 
-  top = Math.min(Math.max(top, VIEWPORT_PADDING), Math.max(VIEWPORT_PADDING, vh - COMPOSER_HEIGHT - VIEWPORT_PADDING))
-  left = Math.min(Math.max(left, VIEWPORT_PADDING), Math.max(VIEWPORT_PADDING, vw - COMPOSER_WIDTH - VIEWPORT_PADDING))
+  top = Math.min(Math.max(top, VIEWPORT_PADDING), Math.max(VIEWPORT_PADDING, vh - size.height - VIEWPORT_PADDING))
+  left = Math.min(Math.max(left, VIEWPORT_PADDING), Math.max(VIEWPORT_PADDING, vw - size.width - VIEWPORT_PADDING))
 
   return { top, left }
 }
 
 /** Keeps the composer fully on screen, whatever the drag or resize asked for. */
-function clampToViewport(top: number, left: number) {
-  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - COMPOSER_HEIGHT - VIEWPORT_PADDING)
-  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - COMPOSER_WIDTH - VIEWPORT_PADDING)
+function clampToViewport(top: number, left: number, size: PanelSize) {
+  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - size.height - VIEWPORT_PADDING)
+  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - size.width - VIEWPORT_PADDING)
   return {
     top: Math.min(Math.max(top, VIEWPORT_PADDING), maxTop),
     left: Math.min(Math.max(left, VIEWPORT_PADDING), maxLeft),
@@ -59,14 +60,20 @@ function clampToViewport(top: number, left: number) {
  */
 export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClose }: QuickNoteComposerProps) {
   const titleRef = useRef<HTMLInputElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
   // The robot is disabled from dragging while the composer is open, so
   // `anchor` is effectively fixed for this component's whole lifetime — a
   // lazy initializer computes the opening position once on mount without
   // needing an effect. After that the user owns it: dragging the header moves
   // the composer, and `hasMoved` stops a window resize from yanking it back to
   // the robot afterwards.
-  const [style, setStyle] = useState(() => computePosition(anchor))
+  const { size, isResizing, panelRef, startResize, onResizeMove, endResize, resetSize } =
+    usePanelResize('robot_quick_note_size_v1', DEFAULT_SIZE)
+  // The size ref keeps the pointer/resize handlers clamping against the live
+  // size without rebuilding them on every resize frame.
+  const sizeRef = useRef(size)
+  useEffect(() => { sizeRef.current = size }, [size])
+
+  const [style, setStyle] = useState(() => computePosition(anchor, DEFAULT_SIZE))
   const [isDragging, setIsDragging] = useState(false)
   const hasMovedRef = useRef(false)
   const dragOriginRef = useRef<{ pointerX: number; pointerY: number; top: number; left: number } | null>(null)
@@ -88,8 +95,8 @@ export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClos
       setStyle((prev) => {
         // Once the user has placed it themselves, a resize only clamps it back
         // inside the viewport — it never re-anchors to the robot.
-        if (hasMovedRef.current) return clampToViewport(prev.top, prev.left)
-        return computePosition(anchor)
+        if (hasMovedRef.current) return clampToViewport(prev.top, prev.left, sizeRef.current)
+        return computePosition(anchor, sizeRef.current)
       })
     }
     window.addEventListener('resize', onResize)
@@ -121,7 +128,8 @@ export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClos
     hasMovedRef.current = true
     setStyle(clampToViewport(
       origin.top + (event.clientY - origin.pointerY),
-      origin.left + (event.clientX - origin.pointerX)
+      origin.left + (event.clientX - origin.pointerX),
+      sizeRef.current
     ))
   }, [])
 
@@ -165,9 +173,15 @@ export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClos
         ref={panelRef}
         role="dialog"
         aria-label="Quick note"
-        style={{ position: 'fixed', top: style.top, left: style.left, width: COMPOSER_WIDTH }}
-        className={`z-[9999] bg-surface border border-outline-variant rounded-2xl shadow-2xl p-4 flex flex-col gap-3 ${
-          isDragging ? 'shadow-[0_24px_48px_rgba(0,0,0,0.35)] select-none' : ''
+        style={{
+          position: 'fixed',
+          top: style.top,
+          left: style.left,
+          width: size.width,
+          height: size.height,
+        }}
+        className={`relative z-[9999] bg-surface border border-outline-variant rounded-2xl shadow-2xl p-4 flex flex-col gap-3 overflow-hidden ${
+          isDragging || isResizing ? 'shadow-[0_24px_48px_rgba(0,0,0,0.35)] select-none' : ''
         }`}
       >
         <div
@@ -213,6 +227,7 @@ export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClos
             a quick capture should still take a checklist or a pasted
             screenshot, and a second, weaker editor here would mean notes that
             look different depending on where they were written. */}
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
         <NoteRichEditor
           content={content}
           onChange={setContent}
@@ -221,6 +236,7 @@ export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClos
           compact
           minHeight={110}
         />
+        </div>
 
         <div className="flex items-center justify-end pt-1 border-t border-outline-variant/50">
           <span
@@ -230,6 +246,15 @@ export function QuickNoteComposer({ anchor, opportunityId, applicationId, onClos
             {STATUS_LABEL[status] ?? ''}
           </span>
         </div>
+
+        <PanelResizeHandle
+          isResizing={isResizing}
+          onPointerDown={startResize}
+          onPointerMove={onResizeMove}
+          onPointerUp={endResize}
+          onDoubleClick={resetSize}
+          label="Resize quick note"
+        />
       </div>
     </>
   )

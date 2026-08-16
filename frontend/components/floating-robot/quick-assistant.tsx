@@ -10,9 +10,10 @@ import {
   updateConversationTitle,
 } from '@/features/ai-assistant/services/api'
 import type { ChatMessage } from '@/features/ai-assistant/types'
+import { usePanelResize, type PanelSize } from './use-panel-resize'
+import { PanelResizeHandle } from './panel-resize-handle'
 
-const PANEL_WIDTH = 360
-const PANEL_HEIGHT = 440
+const DEFAULT_SIZE: PanelSize = { width: 360, height: 440 }
 const GAP = 12
 const VIEWPORT_PADDING = 12
 const TITLE_MAX = 60
@@ -27,25 +28,25 @@ interface HistoryEntry {
   title: string
 }
 
-function computePosition(anchor: QuickAssistantProps['anchor']) {
+function computePosition(anchor: QuickAssistantProps['anchor'], size: PanelSize) {
   const vw = window.innerWidth
   const vh = window.innerHeight
 
   // Opens above-right of the robot by preference, mirroring the Quick Note's
   // above-left, so the two can sit open side by side rather than on top of
   // each other — always clamped inside the viewport.
-  const preferAbove = anchor.y > PANEL_HEIGHT + GAP + VIEWPORT_PADDING
-  const top = preferAbove ? anchor.y - PANEL_HEIGHT - GAP : anchor.y + anchor.size + GAP
-  const left = anchor.x + anchor.size + GAP + PANEL_WIDTH < vw
+  const preferAbove = anchor.y > size.height + GAP + VIEWPORT_PADDING
+  const top = preferAbove ? anchor.y - size.height - GAP : anchor.y + anchor.size + GAP
+  const left = anchor.x + anchor.size + GAP + size.width < vw
     ? anchor.x + anchor.size + GAP
-    : anchor.x - PANEL_WIDTH - GAP
+    : anchor.x - size.width - GAP
 
-  return clampToViewport(top, left, vw, vh)
+  return clampToViewport(top, left, size, vw, vh)
 }
 
-function clampToViewport(top: number, left: number, vw = window.innerWidth, vh = window.innerHeight) {
-  const maxTop = Math.max(VIEWPORT_PADDING, vh - PANEL_HEIGHT - VIEWPORT_PADDING)
-  const maxLeft = Math.max(VIEWPORT_PADDING, vw - PANEL_WIDTH - VIEWPORT_PADDING)
+function clampToViewport(top: number, left: number, size: PanelSize, vw = window.innerWidth, vh = window.innerHeight) {
+  const maxTop = Math.max(VIEWPORT_PADDING, vh - size.height - VIEWPORT_PADDING)
+  const maxLeft = Math.max(VIEWPORT_PADDING, vw - size.width - VIEWPORT_PADDING)
   return {
     top: Math.min(Math.max(top, VIEWPORT_PADDING), maxTop),
     left: Math.min(Math.max(left, VIEWPORT_PADDING), maxLeft),
@@ -65,7 +66,14 @@ function clampToViewport(top: number, left: number, vw = window.innerWidth, vh =
  * route, not by truncating text here.
  */
 export function QuickAssistant({ anchor, onClose }: QuickAssistantProps) {
-  const [style, setStyle] = useState(() => computePosition(anchor))
+  const { size, isResizing, panelRef, startResize, onResizeMove, endResize, resetSize } =
+    usePanelResize('robot_quick_assistant_size_v1', DEFAULT_SIZE)
+  // Read by the drag/resize handlers so they clamp against the live size
+  // without being rebuilt on every resize frame.
+  const sizeRef = useRef(size)
+  useEffect(() => { sizeRef.current = size }, [size])
+
+  const [style, setStyle] = useState(() => computePosition(anchor, DEFAULT_SIZE))
   const [isDragging, setIsDragging] = useState(false)
   const hasMovedRef = useRef(false)
   const dragOriginRef = useRef<{ pointerX: number; pointerY: number; top: number; left: number } | null>(null)
@@ -114,7 +122,9 @@ export function QuickAssistant({ anchor, onClose }: QuickAssistantProps) {
 
   useEffect(() => {
     const onResize = () => {
-      setStyle((prev) => (hasMovedRef.current ? clampToViewport(prev.top, prev.left) : computePosition(anchor)))
+      setStyle((prev) => (hasMovedRef.current
+        ? clampToViewport(prev.top, prev.left, sizeRef.current)
+        : computePosition(anchor, sizeRef.current)))
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
@@ -137,7 +147,8 @@ export function QuickAssistant({ anchor, onClose }: QuickAssistantProps) {
     hasMovedRef.current = true
     setStyle(clampToViewport(
       origin.top + (event.clientY - origin.pointerY),
-      origin.left + (event.clientX - origin.pointerX)
+      origin.left + (event.clientX - origin.pointerX),
+      sizeRef.current
     ))
   }, [])
 
@@ -244,9 +255,10 @@ export function QuickAssistant({ anchor, onClose }: QuickAssistantProps) {
       <div
         role="dialog"
         aria-label="Quick assistant"
-        style={{ position: 'fixed', top: style.top, left: style.left, width: PANEL_WIDTH, height: PANEL_HEIGHT }}
-        className={`z-[9999] bg-surface border border-outline-variant rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
-          isDragging ? 'shadow-[0_24px_48px_rgba(0,0,0,0.35)] select-none' : ''
+        ref={panelRef}
+        style={{ position: 'fixed', top: style.top, left: style.left, width: size.width, height: size.height }}
+        className={`relative z-[9999] bg-surface border border-outline-variant rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
+          isDragging || isResizing ? 'shadow-[0_24px_48px_rgba(0,0,0,0.35)] select-none' : ''
         }`}
       >
         <div
@@ -393,6 +405,15 @@ export function QuickAssistant({ anchor, onClose }: QuickAssistantProps) {
             <span className="material-symbols-outlined text-[16px]">send</span>
           </button>
         </div>
+
+        <PanelResizeHandle
+          isResizing={isResizing}
+          onPointerDown={startResize}
+          onPointerMove={onResizeMove}
+          onPointerUp={endResize}
+          onDoubleClick={resetSize}
+          label="Resize quick assistant"
+        />
       </div>
     </>
   )
