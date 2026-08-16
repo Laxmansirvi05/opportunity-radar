@@ -783,3 +783,69 @@
   min-height: 90px;
   font-size: 0.95rem;
 }
+
+/* ── Sidebar ────────────────────────────────────────────────────────────────
+   The depth lives on the icon tiles, not the rows. A row that tilts drags its
+   label off the baseline its neighbours sit on, which reads as wobble on a
+   list of ten; a small square that lifts and turns gives the same physical
+   response while the type stays perfectly aligned. Only transform, opacity
+   and box-shadow animate — this component renders on every protected page. */
+
+.sidebar-3d {
+  perspective: 900px;
+  perspective-origin: 20% 50%;
+}
+
+.sidebar-3d .sidebar-tile,
+.sidebar-3d .sidebar-logo {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.sidebar-row:hover .sidebar-tile,
+.sidebar-row:focus-visible .sidebar-tile {
+  transform: translateZ(18px) translateY(-1px) rotateY(-14deg) rotateX(6deg);
+  box-shadow: 6px 8px 16px -8px rgb(0 0 0 / 0.35);
+}
+
+.sidebar-row:active .sidebar-tile {
+  transform: translateZ(6px) rotateY(-6deg) rotateX(2deg) scale(0.96);
+}
+
+/* The active row already carries the primary fill, so its tile only needs a
+   resting lift — pressing it further would fight the filled state. */
+.sidebar-row[aria-current='page'] .sidebar-tile {
+  transform: translateZ(10px) rotateY(-8deg);
+}
+
+.sidebar-3d a:hover .sidebar-logo,
+.sidebar-3d a:focus-visible .sidebar-logo {
+  transform: translateZ(26px) rotateY(-18deg) rotateX(8deg);
+}
+
+.sidebar-cta:hover,
+.sidebar-cta:focus-visible {
+  transform: translateY(-2px) scale(1.015);
+}
+
+.sidebar-cta:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.sidebar-user:hover,
+.sidebar-user:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -12px rgb(0 0 0 / 0.5);
+}
+
+/* The tilt is decorative; navigation must not depend on it. */
+@media (prefers-reduced-motion: reduce) {
+
+  .sidebar-3d .sidebar-tile,
+  .sidebar-3d .sidebar-logo,
+  .sidebar-cta,
+  .sidebar-user {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
