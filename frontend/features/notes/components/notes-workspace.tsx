@@ -297,18 +297,10 @@ export function NotesWorkspace({ initialNotes, initialFolders }: NotesWorkspaceP
         }`}
         aria-label="Notes navigation"
       >
-        <div className="p-3">
-          <button
-            type="button"
-            onClick={() => setEditing({ note: null })}
-            className="w-full h-10 rounded-full bg-primary text-on-primary font-label-lg text-label-lg flex items-center justify-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            New Note
-          </button>
-        </div>
-
-        <nav className="px-2 pb-2">
+        {/* No New Note button here: the header's own (with its template menu)
+            and the empty state's are the two entry points, and a third in the
+            sidebar was just the same action a third time. */}
+        <nav className="px-2 pt-3 pb-2">
           {VIEWS.map((item) => (
             <button
               key={item.value}
