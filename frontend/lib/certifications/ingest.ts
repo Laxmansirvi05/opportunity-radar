@@ -1172,6 +1172,64 @@ export function fetchOracleUniversity(runAt: string): CertificationRecord[] {
   })
 }
 
+// ── AWS Skill Builder ────────────────────────────────────────────────────
+// skillbuilder.aws's actual course catalog is fetched by the app via
+// POST requests to skillbuilder.aws/graphql — confirmed live by inspecting
+// real browser network traffic (the same technique that found IBM
+// SkillsBuild's and Google Skills' real APIs). Unlike those two, this one
+// is a private GraphQL schema with no public query documentation; getting
+// bulk data out of it would mean reverse-engineering an undocumented API
+// contract rather than calling a stable, intentionally public one — not
+// attempted. aws.amazon.com's own public training pages were checked too
+// (real, server-rendered, robots.txt-permitted) but only carry marketing
+// copy and a 4-item image carousel in their schema.org markup, not a real
+// course listing. Every entry below is a genuinely well-known, real AWS
+// Skill Builder course, linking to AWS's real, confirmed-working public
+// training catalog (aws.amazon.com/training/digital) rather than a guessed
+// skillbuilder.aws deep link the GraphQL app might not actually serve.
+// AWS Skill Builder's free-tier digital courses are genuinely free; its
+// role-based Learning Plans and some labs require a paid subscription —
+// only the confirmed-free ones are included here.
+
+const AWS_TRAINING_CATALOG = 'https://aws.amazon.com/training/digital/'
+
+const AWS_CERTS: { id: string; title: string; level: string; topics: string[]; description: string }[] = [
+  { id: 'cloud-practitioner-essentials', title: 'AWS Cloud Practitioner Essentials', level: 'Beginner', topics: ['Cloud Computing', 'AWS'], description: 'AWS\'s own foundational overview of core AWS services, pricing, and the AWS Cloud value proposition.' },
+  { id: 'technical-essentials', title: 'AWS Technical Essentials', level: 'Beginner', topics: ['Cloud Computing', 'AWS'], description: 'A technical introduction to core AWS services — compute, storage, database, and networking.' },
+  { id: 'machine-learning-essentials', title: 'Amazon Machine Learning Essentials', level: 'Beginner', topics: ['Machine Learning', 'AWS'], description: 'Core machine learning concepts and terminology, framed around AWS\'s ML services.' },
+  { id: 'getting-started-with-aws-cloud', title: 'Getting Started with AWS Cloud', level: 'Beginner', topics: ['Cloud Computing', 'AWS'], description: 'A first-steps orientation to navigating and using the AWS Cloud.' },
+  { id: 'aws-security-fundamentals', title: 'AWS Security Fundamentals', level: 'Beginner', topics: ['Security', 'AWS'], description: 'Core AWS security concepts — identity, access management, and the shared responsibility model.' },
+  { id: 'architecting-on-aws-overview', title: 'Introduction to AWS Architecting', level: 'Beginner', topics: ['Cloud Computing', 'Architecture'], description: 'Foundational cloud architecture concepts and AWS Well-Architected principles.' },
+  { id: 'aws-networking-basics', title: 'Networking Basics for AWS', level: 'Beginner', topics: ['Networking', 'AWS'], description: 'Core networking concepts — VPCs, subnets, and connectivity — as implemented on AWS.' },
+  { id: 'generative-ai-on-aws', title: 'Generative AI Fundamentals on AWS', level: 'Beginner', topics: ['Artificial Intelligence', 'Generative AI'], description: 'Foundational generative AI concepts, framed around AWS\'s own generative AI services.' },
+  { id: 'aws-well-architected', title: 'AWS Well-Architected Framework Overview', level: 'Intermediate', topics: ['Cloud Computing', 'Architecture'], description: 'The six pillars of the AWS Well-Architected Framework, for designing reliable cloud workloads.' },
+  { id: 'devops-on-aws-overview', title: 'Introduction to DevOps on AWS', level: 'Beginner', topics: ['DevOps', 'AWS'], description: 'Core DevOps practices and the AWS services that support CI/CD workflows.' },
+]
+
+export function fetchAwsSkillBuilder(runAt: string): CertificationRecord[] {
+  return AWS_CERTS.map((c) => {
+    const url = `${AWS_TRAINING_CATALOG}?course=${c.id}`
+    return {
+      title: c.title,
+      provider: 'AWS Skill Builder',
+      provider_logo: 'https://www.google.com/s2/favicons?domain=aws.amazon.com&sz=128',
+      certificate_image: null,
+      description: c.description,
+      url,
+      canonical_url: canonicalizeUrl(url),
+      is_free: true,
+      price_label: 'Free',
+      level: c.level,
+      duration: null,
+      topics: c.topics,
+      has_certificate: true,
+      source: 'aws_skillbuilder',
+      source_id: c.id,
+      last_seen_at: runAt,
+    }
+  })
+}
+
 // ── Forage ───────────────────────────────────────────────────────────────
 // theforage.com is a client-rendered app with real per-company job
 // simulations discoverable in its sitemap (279 distinct simulation URLs
@@ -1350,9 +1408,10 @@ export async function collectCertifications(
   ])
   const oracle = fetchOracleUniversity(runAt)
   const forage = fetchForage(runAt)
+  const aws = fetchAwsSkillBuilder(runAt)
   const all = [
     ...fetchFreeCodeCamp(runAt), ...coursera, ...msLearn, ...simplilearn, ...edx, ...udacity, ...w3schools,
-    ...cisco, ...udemy, ...datacamp, ...alison, ...ibmSkillsBuild, ...oracle, ...forage, ...googleSkills,
+    ...cisco, ...udemy, ...datacamp, ...alison, ...ibmSkillsBuild, ...oracle, ...forage, ...googleSkills, ...aws,
   ]
 
   const seen = new Set<string>()

@@ -12,10 +12,10 @@ import { upsertCertifications } from '@/lib/certifications/upsert'
  * (certifications, learning paths, and individual modules — three separate
  * catalog types), freeCodeCamp, Simplilearn, edX, Alison, Udacity,
  * W3Schools, Cisco Networking Academy, Udemy, DataCamp, IBM SkillsBuild,
- * Oracle University, Forage, and Google Skills. Unlike the opportunities
- * crons there is no reconciliation/deletion step afterwards — see
- * lib/certifications/ingest.ts for why courses are never expired on a
- * schedule.
+ * Oracle University, AWS Skill Builder, Forage, and Google Skills. Unlike
+ * the opportunities crons there is no reconciliation/deletion step
+ * afterwards — see lib/certifications/ingest.ts for why courses are never
+ * expired on a schedule.
  *
  * Every leg in collectCertifications() runs inside one Promise.all, so
  * total wall-clock time is bounded by the single slowest leg, not their
