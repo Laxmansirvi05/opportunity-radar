@@ -47,11 +47,19 @@ function supabaseStub() {
       insertCalls.push(payload)
       return chain
     }),
+    delete: () => chain,
     update: () => chain,
     eq: () => chain,
+    // The shared-evaluation cache lookup (findRecentAtsV2Evaluation) chains
+    // gte/order/limit before resolving — an empty array here means "no
+    // matching cached evaluation", so every test still exercises a fresh
+    // extractJDIntelligence/evaluateResumeEvidence call as before.
+    gte: () => chain,
+    order: () => chain,
+    limit: () => chain,
     single: vi.fn().mockResolvedValue({ data: STORED_RESUME, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data: STORED_RESUME, error: null }),
-    then: (resolve: (v: unknown) => void) => resolve({ data: null, error: null }),
+    then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
   })
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null }) },

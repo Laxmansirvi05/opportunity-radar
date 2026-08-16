@@ -1,7 +1,8 @@
 import { extractJDIntelligence, evaluateResumeEvidence } from '@/features/resume-toolkit/services/ai/ats-v2-intelligence'
 import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
+import { findRecentAtsV2Evaluation, scoreFromCachedEvaluation } from './shared-evaluation'
 import type { AtsV2Score } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
-import type { StructuredJD } from '@/features/resume-toolkit/lib/schema/resume/ats-v2'
+import type { EvidenceMatrix, StructuredJD } from '@/features/resume-toolkit/lib/schema/resume/ats-v2'
 import type { ParsedResume } from '@/types/resume'
 import { decideTier, tierPlan, deriveSuggestions, suggestionCountForScore, type OptimizationTier, type Suggestion } from './tiers'
 import { generatePolishedResume, generateTargetResume } from './generate'
@@ -22,10 +23,18 @@ export interface StartRunInput {
   targetRole: string
   companyName: string
   userId: string
+  /** Supabase client + the resume's identity, used to reuse a matching
+   *  evaluation from either feature instead of re-running the AI — see
+   *  shared-evaluation.ts. Optional so existing callers (and tests) that
+   *  don't pass them simply always run a fresh evaluation. */
+  supabase?: any
+  resumeId?: string | null
+  resumeUpdatedAt?: string | null
 }
 
 export interface StartRunResult {
   structuredJd: StructuredJD
+  baselineEvidenceMatrix: EvidenceMatrix
   baselineScore: number
   baselineReport: AtsV2Score
   tier: OptimizationTier
@@ -45,29 +54,57 @@ export type StartRunOutcome =
   | { success: false; error: string }
 
 export async function startOptimizationRun(input: StartRunInput): Promise<StartRunOutcome> {
-  const jdRes = await extractJDIntelligence(input.jobDescription, input.companyName, input.targetRole, input.userId)
-  if (!jdRes.success || !jdRes.data) {
-    return { success: false, error: jdRes.error || 'Could not analyse the job description. Please try again.' }
+  // Reuse a matching evaluation the ATS Checker (or an earlier Optimiser run)
+  // already computed for this exact resume + job description, so the two
+  // features never land on two different scores for what is, to the
+  // student, the same question asked twice.
+  const cached = input.supabase
+    ? await findRecentAtsV2Evaluation(
+        input.supabase,
+        input.userId,
+        input.resumeId ?? null,
+        input.jobDescription,
+        input.resumeUpdatedAt ?? null
+      )
+    : null
+
+  let structuredJd: StructuredJD
+  let evidenceMatrix: EvidenceMatrix
+
+  if (cached) {
+    structuredJd = cached.structuredJd
+    evidenceMatrix = cached.evidenceMatrix
+  } else {
+    const jdRes = await extractJDIntelligence(input.jobDescription, input.companyName, input.targetRole, input.userId)
+    if (!jdRes.success || !jdRes.data) {
+      return { success: false, error: jdRes.error || 'Could not analyse the job description. Please try again.' }
+    }
+
+    const evalRes = await evaluateResumeEvidence(input.resume, jdRes.data, input.userId)
+    if (!evalRes.success || !evalRes.data) {
+      return { success: false, error: evalRes.error || 'Could not evaluate your resume against this role. Please try again.' }
+    }
+
+    structuredJd = jdRes.data
+    evidenceMatrix = evalRes.data
   }
 
-  const evalRes = await evaluateResumeEvidence(input.resume, jdRes.data, input.userId)
-  if (!evalRes.success || !evalRes.data) {
-    return { success: false, error: evalRes.error || 'Could not evaluate your resume against this role. Please try again.' }
-  }
-
-  const baselineReport = calculateAtsV2Score(jdRes.data, evalRes.data, input.resume)
+  const baselineReport = cached
+    ? scoreFromCachedEvaluation(cached, input.resume)
+    : calculateAtsV2Score(structuredJd, evidenceMatrix, input.resume)
   const baselineScore = Math.round(baselineReport.overallScore)
   const tier = decideTier(baselineScore)
   const plan = tierPlan(tier)
   const suggestions = plan.generatesSuggestions
-    ? deriveSuggestions(jdRes.data, evalRes.data, {
+    ? deriveSuggestions(structuredJd, evidenceMatrix, {
         maxProjects: suggestionCountForScore(baselineScore),
         maxOther: suggestionCountForScore(baselineScore),
       })
     : []
 
   const result: StartRunResult = {
-    structuredJd: jdRes.data,
+    structuredJd,
+    baselineEvidenceMatrix: evidenceMatrix,
     baselineScore,
     baselineReport,
     tier,
@@ -79,9 +116,9 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
   if (plan.generatesPolished) {
     const gen = await generatePolishedResume(input.resume, input.jobDescription, input.targetRole, input.companyName, input.userId)
     if (gen.success && gen.resume) {
-      const polishedEval = await evaluateResumeEvidence(gen.resume, jdRes.data, input.userId)
+      const polishedEval = await evaluateResumeEvidence(gen.resume, structuredJd, input.userId)
       if (polishedEval.success && polishedEval.data) {
-        const polishedReport = calculateAtsV2Score(jdRes.data, polishedEval.data, gen.resume)
+        const polishedReport = calculateAtsV2Score(structuredJd, polishedEval.data, gen.resume)
         result.polishedResume = gen.resume
         result.polishedReport = polishedReport
         result.polishedScore = Math.round(polishedReport.overallScore)
@@ -104,7 +141,7 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
       jobDescription: input.jobDescription,
       targetRole: input.targetRole,
       companyName: input.companyName,
-      structuredJd: jdRes.data,
+      structuredJd,
       completedSuggestions: [],
       userId: input.userId,
     })

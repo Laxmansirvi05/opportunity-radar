@@ -4,17 +4,19 @@ import { renderResumePdf } from '@/lib/resume-optimizer/pdf'
 import type { ParsedResume } from '@/types/resume'
 
 // ---------------------------------------------------------------------------
-// GET /api/resume/optimization/[id]/download?variant=polished|target
-// Streams the ATS-safe PDF for one of the two generated resumes. 404s rather
-// than substituting the other variant if the requested one was never
-// generated (e.g. the target resume before the checklist is confirmed).
+// GET /api/resume/optimization/[id]/download?variant=baseline|polished|target
+// Streams the ATS-safe PDF for one of the run's resumes. 'baseline' is the
+// original resume the run was scored against (always present); 'polished'
+// and 'target' 404 rather than substituting the other variant if the
+// requested one was never generated (e.g. the target resume before the
+// checklist is confirmed).
 // ---------------------------------------------------------------------------
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const variant = req.nextUrl.searchParams.get('variant')
-  if (variant !== 'polished' && variant !== 'target') {
-    return NextResponse.json({ error: 'variant must be "polished" or "target".' }, { status: 400 })
+  if (variant !== 'baseline' && variant !== 'polished' && variant !== 'target') {
+    return NextResponse.json({ error: 'variant must be "baseline", "polished" or "target".' }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data: run, error } = await supabase
     .from('resume_optimizations')
-    .select('polished_resume, target_resume')
+    .select('source_resume, polished_resume, target_resume')
     .eq('id', id)
     .eq('user_id', user.id)
     .single()
@@ -34,7 +36,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Optimisation run not found.' }, { status: 404 })
   }
 
-  const resume = (variant === 'polished' ? run.polished_resume : run.target_resume) as ParsedResume | null
+  const resume = (
+    variant === 'baseline' ? run.source_resume : variant === 'polished' ? run.polished_resume : run.target_resume
+  ) as ParsedResume | null
   if (!resume) {
     const reason =
       variant === 'target'

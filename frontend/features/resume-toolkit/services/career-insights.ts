@@ -130,6 +130,8 @@ export type LatestAnalysis =
       jobLabel: string
       createdAt: string
       topSuggestions: LatestSuggestionSummary[]
+      sourceResume: ParsedResume | null
+      downloadHref: string
     }
   | {
       kind: 'optimizer'
@@ -140,6 +142,8 @@ export type LatestAnalysis =
       tier: string | null
       createdAt: string
       topSuggestions: LatestSuggestionSummary[]
+      sourceResume: ParsedResume | null
+      downloadHref: string
     }
 
 /**
@@ -156,14 +160,14 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
   const [atsReport, optimization] = await Promise.all([
     supabase
       .from('resume_ats_reports')
-      .select('id, score, created_at, target_job_description, report_data')
+      .select('id, score, created_at, target_job_description, report_data, source_resume')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
     supabase
       .from('resume_optimizations')
-      .select('id, baseline_score, target_role, company_name, tier, suggestions, created_at')
+      .select('id, baseline_score, target_role, company_name, tier, suggestions, created_at, source_resume')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -187,6 +191,8 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
       jobLabel: jd.trim().length > 0 ? jd.trim().slice(0, 60) : 'ATS check',
       createdAt: atsRow.created_at as string,
       topSuggestions: (reportData?.suggestions ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
+      sourceResume: (atsRow.source_resume as ParsedResume | null) ?? null,
+      downloadHref: `/api/resume/ats-history/${atsRow.id}/download`,
     }
   }
 
@@ -200,6 +206,8 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
       tier: (optRow.tier as string) ?? null,
       createdAt: optRow.created_at as string,
       topSuggestions: ((optRow.suggestions as LatestSuggestionSummary[] | null) ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
+      sourceResume: (optRow.source_resume as ParsedResume | null) ?? null,
+      downloadHref: `/api/resume/optimization/${optRow.id}/download?variant=baseline`,
     }
   }
 
@@ -227,6 +235,10 @@ export interface OptimizerHistoryItem {
  * distinct from getScoreHistory's combined 6-point sparkline above. ATS
  * checks and Optimiser runs must never be merged into one list: they are
  * different kinds of record with different "reopen" destinations.
+ *
+ * Capped at 6 per kind — matches the prune both save routes run after every
+ * insert (see lib/resume-optimizer/prune-history.ts), so this limit is a
+ * belt-and-suspenders read-side cap rather than the only enforcement.
  */
 export async function getFullHistory(): Promise<{ ats: AtsHistoryItem[]; optimizer: OptimizerHistoryItem[] }> {
   const supabase = await createClient()
@@ -239,13 +251,13 @@ export async function getFullHistory(): Promise<{ ats: AtsHistoryItem[]; optimiz
       .select('id, score, created_at, target_job_description')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(10),
+      .limit(6),
     supabase
       .from('resume_optimizations')
       .select('id, baseline_score, target_role, company_name, tier, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(10),
+      .limit(6),
   ])
 
   const ats: AtsHistoryItem[] = (atsReports.data ?? []).map((r) => ({

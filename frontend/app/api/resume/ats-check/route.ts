@@ -12,6 +12,8 @@ import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
 import { deriveSuggestions, suggestionCountForScore } from '@/lib/ats-checker/gap-suggestions'
 import { computeAcademicRecommendation } from '@/lib/ats-checker/academic-recommendation'
 import { convertResumeDataToParsedResume, looksLikeParsedResume } from '@/lib/resume-optimizer/convert-resume-data'
+import { findRecentAtsV2Evaluation, scoreFromCachedEvaluation } from '@/lib/resume-optimizer/shared-evaluation'
+import { pruneHistoryTable } from '@/lib/resume-optimizer/prune-history'
 import { jsonrepair } from 'jsonrepair'
 import type { ParsedResume } from '@/types/resume'
 
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest) {
     }
 
     let parsedResumeData: ParsedResume | null = null
+    let resumeUpdatedAt: string | null = null
 
     if (resumeId === 'sample-frontend-dev') {
       parsedResumeData = {
@@ -125,7 +128,7 @@ export async function POST(req: NextRequest) {
     } else if (resumeId) {
       const { data: resume, error: dbError } = await supabase
         .from('resumes')
-        .select('id, parsed_data')
+        .select('id, parsed_data, updated_at')
         .eq('id', resumeId)
         .single()
 
@@ -143,6 +146,7 @@ export async function POST(req: NextRequest) {
       parsedResumeData = looksLikeParsedResume(rawSaved)
         ? (rawSaved as unknown as ParsedResume)
         : convertResumeDataToParsedResume(rawSaved)
+      resumeUpdatedAt = resume.updated_at as string
     } else if (resumeData) {
       // The upload path now sources this from /api/resume/optimization/extract,
       // which already returns the flat ParsedResume shape — but guard the
@@ -192,6 +196,8 @@ export async function POST(req: NextRequest) {
         })
         if (insertError) {
           console.error('[ATS] Failed to store resume-only report', insertError)
+        } else {
+          await pruneHistoryTable(supabase, 'resume_ats_reports', userId)
         }
       }
 
@@ -206,22 +212,34 @@ export async function POST(req: NextRequest) {
     let analysisError: AnalysisError | null = null
 
     try {
-      const jdRes = await extractJDIntelligence(trimmedJd, companyName, targetRole, userId)
-      if (!jdRes.success || !jdRes.data) {
-        analysisError = {
-          stage: 'jd_extraction',
-          message: jdRes.error || 'Could not extract structured requirements from the job description.',
-        }
+      // Reuse a matching evaluation the Optimiser (or an earlier ATS check)
+      // already computed for this exact resume + job description — the two
+      // features run the identical pipeline, so re-asking the AI risks a
+      // different answer to a question that already has one. See
+      // shared-evaluation.ts.
+      const cached = await findRecentAtsV2Evaluation(supabase, userId, resumeId || null, trimmedJd, resumeUpdatedAt)
+
+      if (cached) {
+        const score = scoreFromCachedEvaluation(cached, parsedResumeData)
+        atsV2Data = { score, evidenceMatrix: cached.evidenceMatrix, structuredJd: cached.structuredJd }
       } else {
-        const evalRes = await evaluateResumeEvidence(parsedResumeData, jdRes.data, userId)
-        if (!evalRes.success || !evalRes.data) {
+        const jdRes = await extractJDIntelligence(trimmedJd, companyName, targetRole, userId)
+        if (!jdRes.success || !jdRes.data) {
           analysisError = {
-            stage: 'evidence_evaluation',
-            message: evalRes.error || 'Could not evaluate the resume against the extracted requirements.',
+            stage: 'jd_extraction',
+            message: jdRes.error || 'Could not extract structured requirements from the job description.',
           }
         } else {
-          const score = calculateAtsV2Score(jdRes.data, evalRes.data, parsedResumeData)
-          atsV2Data = { score, evidenceMatrix: evalRes.data, structuredJd: jdRes.data }
+          const evalRes = await evaluateResumeEvidence(parsedResumeData, jdRes.data, userId)
+          if (!evalRes.success || !evalRes.data) {
+            analysisError = {
+              stage: 'evidence_evaluation',
+              message: evalRes.error || 'Could not evaluate the resume against the extracted requirements.',
+            }
+          } else {
+            const score = calculateAtsV2Score(jdRes.data, evalRes.data, parsedResumeData)
+            atsV2Data = { score, evidenceMatrix: evalRes.data, structuredJd: jdRes.data }
+          }
         }
       }
     } catch (e) {
@@ -310,6 +328,8 @@ export async function POST(req: NextRequest) {
 
       if (insertError) {
         console.error('[ATS] Failed to store report', insertError)
+      } else {
+        await pruneHistoryTable(supabase, 'resume_ats_reports', userId)
       }
     }
 

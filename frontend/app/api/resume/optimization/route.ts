@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { startOptimizationRun } from '@/lib/resume-optimizer/run'
+import { pruneHistoryTable } from '@/lib/resume-optimizer/prune-history'
 import { convertResumeDataToParsedResume, looksLikeParsedResume } from '@/lib/resume-optimizer/convert-resume-data'
 import type { ParsedResume } from '@/types/resume'
 
@@ -59,11 +60,12 @@ export async function POST(req: NextRequest) {
 
   let resume: ParsedResume | null = null
   let originalResumeId: string | null = null
+  let resumeUpdatedAt: string | null = null
 
   if (resumeId) {
     const { data, error } = await supabase
       .from('resumes')
-      .select('id, parsed_data')
+      .select('id, parsed_data, updated_at')
       .eq('id', resumeId)
       .eq('user_id', user.id)
       .single()
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
     const raw = data.parsed_data as Record<string, unknown>
     resume = looksLikeParsedResume(raw) ? (raw as unknown as ParsedResume) : convertResumeDataToParsedResume(raw)
     originalResumeId = data.id
+    resumeUpdatedAt = data.updated_at as string
   } else if (resumeData) {
     // The client gets this from POST /api/resume/parse, which returns the
     // same Resume Builder shape — same conversion needed here.
@@ -104,6 +107,9 @@ export async function POST(req: NextRequest) {
     targetRole: trimmedRole,
     companyName: trimmedCompany,
     userId: user.id,
+    supabase,
+    resumeId: originalResumeId,
+    resumeUpdatedAt,
   })
 
   if (!outcome.success) {
@@ -122,7 +128,16 @@ export async function POST(req: NextRequest) {
       company_name: trimmedCompany,
       target_role: trimmedRole,
       baseline_score: result.baselineScore,
-      baseline_report: result.baselineReport,
+      // structuredJd/evidenceMatrix are carried alongside the score fields in
+      // this jsonb column (not part of the AtsV2Score type itself) so a later
+      // ATS Checker run against the same resume + job description can reuse
+      // this exact evaluation instead of asking the AI the same question
+      // twice and risking a different answer — see shared-evaluation.ts.
+      baseline_report: {
+        ...result.baselineReport,
+        structuredJd: result.structuredJd,
+        evidenceMatrix: result.baselineEvidenceMatrix,
+      },
       tier: result.tier,
       suggestions: result.suggestions,
       polished_resume: result.polishedResume ?? null,
@@ -142,6 +157,8 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+
+  await pruneHistoryTable(supabase, 'resume_optimizations', user.id)
 
   return NextResponse.json({ run, warning: result.warning ?? null })
 }

@@ -80,6 +80,17 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
               </Button>
             )}
 
+            {/* Download — a PDF of exactly what was saved, without opening
+                the preview modal first. */}
+            {resume.parsedResume && (
+              <a href={`/api/resume/${resume.id}/download`} title="Download PDF">
+                <Button variant="ghost" size="sm" className="h-8 px-2">
+                  <span className="material-symbols-outlined text-sm">download</span>
+                  <span className="sr-only">Download</span>
+                </Button>
+              </a>
+            )}
+
             {/* Edit */}
             <Link href={`/resume/builder/${resume.id}`}>
               <Button variant="ghost" size="sm" className="h-8 px-2" title="Edit Resume">
@@ -149,7 +160,7 @@ export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow
         <ResumePreviewModal
           resume={previewResume.parsedResume}
           label={previewResume.title}
-          downloadHref={null}
+          downloadHref={`/api/resume/${previewResume.id}/download`}
           onClose={() => setPreviewResume(null)}
         />
       )}

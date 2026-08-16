@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { listResumes } from '@/features/resume-toolkit/services/resume-actions';
 import { getCareerInsights, getLatestAnalysis, getFullHistory } from '@/features/resume-toolkit/services/career-insights';
 import { ResumeListClient } from '@/features/resume-toolkit/components/resume-list-client';
+import { AtsHistoryList, OptimizerHistoryList } from '@/features/resume-toolkit/components/history-lists-client';
+import { LatestAnalysisActions } from '@/features/resume-toolkit/components/latest-analysis-actions';
 
 function matchLevelLabel(score: number): string {
   if (score >= 90) return 'Exceptional match';
@@ -19,10 +21,6 @@ const importanceColor: Record<string, string> = {
   medium: '#434655',
   low: '#737686',
 };
-
-function formatHistoryDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 export default async function ResumeToolkitPrototype() {
   const [result, insights, latestAnalysis, history] = await Promise.all([
@@ -263,6 +261,11 @@ export default async function ResumeToolkitPrototype() {
               >
                 Run a new ATS check
               </Link>
+              <LatestAnalysisActions
+                resume={latestAnalysis.sourceResume}
+                label={latestAnalysis.kind === 'optimizer' ? `${latestAnalysis.targetRole} · ${latestAnalysis.companyName}` : latestAnalysis.jobLabel}
+                downloadHref={latestAnalysis.downloadHref}
+              />
             </div>
           </div>
         ) : (
@@ -475,67 +478,19 @@ export default async function ResumeToolkitPrototype() {
     {(history.ats.length > 0 || history.optimizer.length > 0) && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div style={{ backgroundColor: '#ffffff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '20px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#191b23', margin: '0 0 14px 0' }}>ATS Score History</h2>
-          {history.ats.length === 0 ? (
-            <p style={{ fontSize: '13px', color: '#737686', margin: 0 }}>No ATS checks yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {history.ats.map((h) => (
-                <Link
-                  key={h.id}
-                  href={`/resume/ats?reportId=${h.id}`}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-                    padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0',
-                    textDecoration: 'none', color: 'inherit',
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#191b23', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.jobLabel}</p>
-                    <p style={{ fontSize: '12px', color: '#737686', margin: '2px 0 0 0' }}>{formatHistoryDate(h.createdAt)}</p>
-                  </div>
-                  <span style={{
-                    flexShrink: 0, fontSize: '13px', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px',
-                    color: h.score >= 65 ? '#006f64' : '#943700',
-                    backgroundColor: h.score >= 65 ? '#6df5e1' : '#ffdbcd',
-                  }}>{h.score}</span>
-                </Link>
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 0 14px 0' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#191b23', margin: 0 }}>ATS Score History</h2>
+            <span style={{ fontSize: '11px', color: '#a3a6b8' }}>Last 6 saved</span>
+          </div>
+          <AtsHistoryList initialItems={history.ats} />
         </div>
 
         <div style={{ backgroundColor: '#ffffff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '20px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#191b23', margin: '0 0 14px 0' }}>AI Optimizer History</h2>
-          {history.optimizer.length === 0 ? (
-            <p style={{ fontSize: '13px', color: '#737686', margin: 0 }}>No optimisation runs yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {history.optimizer.map((h) => (
-                <Link
-                  key={h.id}
-                  href={`/resume/copilot?runId=${h.id}`}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-                    padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0',
-                    textDecoration: 'none', color: 'inherit',
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#191b23', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {h.targetRole} · {h.companyName}
-                    </p>
-                    <p style={{ fontSize: '12px', color: '#737686', margin: '2px 0 0 0' }}>{formatHistoryDate(h.createdAt)}</p>
-                  </div>
-                  <span style={{
-                    flexShrink: 0, fontSize: '13px', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px',
-                    color: h.baselineScore >= 65 ? '#006f64' : '#943700',
-                    backgroundColor: h.baselineScore >= 65 ? '#6df5e1' : '#ffdbcd',
-                  }}>{h.baselineScore}</span>
-                </Link>
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 0 14px 0' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#191b23', margin: 0 }}>AI Optimizer History</h2>
+            <span style={{ fontSize: '11px', color: '#a3a6b8' }}>Last 6 saved</span>
+          </div>
+          <OptimizerHistoryList initialItems={history.optimizer} />
         </div>
       </div>
     )}

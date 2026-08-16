@@ -35,3 +35,33 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     report: data.report_data,
   })
 }
+
+// ---------------------------------------------------------------------------
+// DELETE /api/resume/ats-history/[id]
+// Removes one saved ATS check from history. Scoped to the owning user via
+// the .eq('user_id', ...) filter, not just the row id.
+// ---------------------------------------------------------------------------
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { error, count } = await supabase
+    .from('resume_ats_reports')
+    .delete({ count: 'exact' })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[ATS] failed to delete report', error)
+    return NextResponse.json({ error: 'Could not delete this report.' }, { status: 500 })
+  }
+  if (!count) {
+    return NextResponse.json({ error: 'ATS report not found.' }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true })
+}

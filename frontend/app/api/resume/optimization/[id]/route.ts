@@ -136,3 +136,33 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json({ run: updated, warning })
 }
+
+// ---------------------------------------------------------------------------
+// DELETE /api/resume/optimization/[id]
+// Removes one saved Optimiser run from history. Scoped to the owning user
+// via the .eq('user_id', ...) filter, not just the row id.
+// ---------------------------------------------------------------------------
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { error, count } = await supabase
+    .from('resume_optimizations')
+    .delete({ count: 'exact' })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[Optimizer] failed to delete run', error)
+    return NextResponse.json({ error: 'Could not delete this run.' }, { status: 500 })
+  }
+  if (!count) {
+    return NextResponse.json({ error: 'Optimisation run not found.' }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true })
+}
