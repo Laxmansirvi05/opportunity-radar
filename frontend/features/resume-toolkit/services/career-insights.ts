@@ -121,6 +121,29 @@ export interface LatestSuggestionSummary {
   importance: 'critical' | 'high' | 'medium' | 'low'
 }
 
+export interface LatestProjectSuggestion {
+  title: string
+  detail: string
+  guidance: string | null
+  importance: 'critical' | 'high' | 'medium' | 'low'
+}
+
+/** Raw shape of one entry in report_data.suggestions / resume_optimizations.suggestions — see GapSuggestion / Suggestion. */
+interface RawGapSuggestion {
+  type?: string
+  title: string
+  detail?: string
+  guidance?: string | null
+  importance: 'critical' | 'high' | 'medium' | 'low'
+}
+
+function projectSuggestionsFrom(raw: RawGapSuggestion[] | null | undefined): LatestProjectSuggestion[] {
+  return (raw ?? [])
+    .filter((s) => s.type === 'project')
+    .slice(0, 4)
+    .map((s) => ({ title: s.title, detail: s.detail ?? '', guidance: s.guidance ?? null, importance: s.importance }))
+}
+
 export type LatestAnalysis =
   | null
   | {
@@ -130,6 +153,7 @@ export type LatestAnalysis =
       jobLabel: string
       createdAt: string
       topSuggestions: LatestSuggestionSummary[]
+      suggestedProjects: LatestProjectSuggestion[]
       sourceResume: ParsedResume | null
       downloadHref: string
     }
@@ -142,6 +166,7 @@ export type LatestAnalysis =
       tier: string | null
       createdAt: string
       topSuggestions: LatestSuggestionSummary[]
+      suggestedProjects: LatestProjectSuggestion[]
       sourceResume: ParsedResume | null
       downloadHref: string
     }
@@ -182,7 +207,7 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
   const optTime = optRow ? new Date(optRow.created_at as string).getTime() : -Infinity
 
   if (atsTime >= optTime && atsRow) {
-    const reportData = atsRow.report_data as { suggestions?: LatestSuggestionSummary[] } | null
+    const reportData = atsRow.report_data as { suggestions?: RawGapSuggestion[] } | null
     const jd = (atsRow.target_job_description as string | null) ?? ''
     return {
       kind: 'ats',
@@ -191,12 +216,14 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
       jobLabel: jd.trim().length > 0 ? jd.trim().slice(0, 60) : 'ATS check',
       createdAt: atsRow.created_at as string,
       topSuggestions: (reportData?.suggestions ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
+      suggestedProjects: projectSuggestionsFrom(reportData?.suggestions),
       sourceResume: (atsRow.source_resume as ParsedResume | null) ?? null,
       downloadHref: `/api/resume/ats-history/${atsRow.id}/download`,
     }
   }
 
   if (optRow) {
+    const rawSuggestions = optRow.suggestions as RawGapSuggestion[] | null
     return {
       kind: 'optimizer',
       id: optRow.id as string,
@@ -205,7 +232,8 @@ export async function getLatestAnalysis(): Promise<LatestAnalysis> {
       companyName: (optRow.company_name as string) || 'Company',
       tier: (optRow.tier as string) ?? null,
       createdAt: optRow.created_at as string,
-      topSuggestions: ((optRow.suggestions as LatestSuggestionSummary[] | null) ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
+      topSuggestions: (rawSuggestions ?? []).slice(0, 4).map((s) => ({ title: s.title, importance: s.importance })),
+      suggestedProjects: projectSuggestionsFrom(rawSuggestions),
       sourceResume: (optRow.source_resume as ParsedResume | null) ?? null,
       downloadHref: `/api/resume/optimization/${optRow.id}/download?variant=baseline`,
     }

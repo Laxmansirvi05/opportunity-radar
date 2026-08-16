@@ -236,6 +236,34 @@ export default async function ResumeToolkitPrototype() {
               </div>
             )}
 
+            {/* Suggested Projects only — the home card's job is a fast
+                summary, not the full results page. Courses/skills/
+                certifications suggestions and power words stay on the full
+                ATS Checker / Optimiser results view. */}
+            {latestAnalysis.suggestedProjects.length > 0 && (
+              <div>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#434655', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px 0' }}>
+                  Suggested Projects
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {latestAnalysis.suggestedProjects.map((p, i) => (
+                    <div key={i} style={{
+                      padding: '12px 14px', borderRadius: '8px',
+                      backgroundColor: '#f8f9fc', border: '1px solid #E2E8F0',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: importanceColor[p.importance] ?? '#737686', flexShrink: 0 }} />
+                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#191b23', margin: 0 }}>{p.title}</p>
+                      </div>
+                      {p.detail && (
+                        <p style={{ fontSize: '12px', color: '#434655', margin: '6px 0 0 14px', lineHeight: 1.5 }}>{p.detail}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <Link
                 href="/resume/copilot"
