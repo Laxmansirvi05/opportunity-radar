@@ -9,11 +9,13 @@ import { useRobotDrag } from './use-robot-drag'
 import { RobotErrorBoundary } from './robot-error-boundary'
 import { RobotFallback } from './robot-fallback'
 import { QuickNoteComposer } from './quick-note-composer'
+import { QuickAssistant } from './quick-assistant'
 
-// 25% larger than the original 110. useRobotPosition clamps against this
-// value, so a stored position from the smaller robot is pulled back inside
-// the viewport on the next mount rather than leaving it half off-screen.
-const ROBOT_SIZE = 138
+// A further 7% on top of the earlier 25% bump (110 -> 138 -> 148).
+// useRobotPosition clamps against this value, so a position stored while the
+// robot was smaller is pulled back inside the viewport on the next mount
+// rather than leaving it half off-screen.
+const ROBOT_SIZE = 148
 const LOAD_TIMEOUT_MS = 8000
 
 const RobotSceneInner = dynamic(() => import('./robot-scene-inner'), {
@@ -76,6 +78,10 @@ export function FloatingRobot() {
   const [isHovered, setIsHovered] = useState(false)
   const [isActivating, setIsActivating] = useState(false)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
+  // Independent of the composer: both can be open at once (each is draggable,
+  // so they can sit side by side), but the booleans mean there is only ever
+  // one of each — a second triple-tap re-focuses rather than stacking panels.
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
   const [sceneFailed, setSceneFailed] = useState(false)
   // A ref, not state: this only gates a timeout callback's internal
   // decision (has the real onLoad already fired?), never rendered directly.
@@ -96,29 +102,49 @@ export function FloatingRobot() {
     }
   }, [])
 
-  const openComposer = useCallback(() => {
+  const pulse = useCallback(() => {
     setIsActivating(true)
     if (activationTimerRef.current) clearTimeout(activationTimerRef.current)
     activationTimerRef.current = setTimeout(() => setIsActivating(false), 600)
-    setIsComposerOpen(true)
   }, [])
+
+  const openComposer = useCallback(() => {
+    pulse()
+    setIsComposerOpen(true)
+  }, [pulse])
+
+  const openAssistant = useCallback(() => {
+    pulse()
+    setIsAssistantOpen(true)
+  }, [pulse])
 
   const { isDragging, handlers } = useRobotDrag({
     position: position ?? { x: 0, y: 0 },
     setPosition,
     elementRef: wrapperRef,
+    onDoubleTap: openAssistant,
     onTripleTap: openComposer,
-    disabled: isComposerOpen,
+    // Dragging stays available while a panel is open — the panels are their
+    // own draggable windows and the robot is still the way to open the other
+    // one. Only the tap gestures are meaningless once both are showing.
+    disabled: isComposerOpen && isAssistantOpen,
   })
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Keyboard users get one keypress per panel rather than being asked to
+      // perform a two- or three-tap gesture: Enter opens the note, and the
+      // assistant gets its own key.
       if ((e.key === 'Enter' || e.key === ' ') && !isComposerOpen) {
         e.preventDefault()
         openComposer()
       }
+      if ((e.key === 'a' || e.key === 'A') && !isAssistantOpen) {
+        e.preventDefault()
+        openAssistant()
+      }
     },
-    [isComposerOpen, openComposer]
+    [isAssistantOpen, isComposerOpen, openAssistant, openComposer]
   )
 
   if (!position) return null
@@ -143,9 +169,9 @@ export function FloatingRobot() {
         ref={wrapperRef}
         role="button"
         tabIndex={0}
-        aria-label="Notes robot — triple-click, triple-tap, or press Enter to add a quick note"
+        aria-label="Assistant robot — triple-tap or press Enter for a quick note, double-tap or press A for the quick assistant"
         aria-haspopup="dialog"
-        aria-expanded={isComposerOpen}
+        aria-expanded={isComposerOpen || isAssistantOpen}
         onKeyDown={handleKeyDown}
         onPointerEnter={() => setIsHovered(true)}
         onPointerLeave={() => setIsHovered(false)}
@@ -181,6 +207,16 @@ export function FloatingRobot() {
           </RobotErrorBoundary>
         </div>
       </div>
+
+      {isAssistantOpen && (
+        <QuickAssistant
+          anchor={{ x: position.x, y: position.y, size: ROBOT_SIZE }}
+          onClose={() => {
+            setIsAssistantOpen(false)
+            wrapperRef.current?.focus()
+          }}
+        />
+      )}
 
       {isComposerOpen && (
         <QuickNoteComposer

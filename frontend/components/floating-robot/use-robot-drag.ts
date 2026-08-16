@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { useTripleTap } from './use-triple-tap'
+import { useRobotTaps } from './use-triple-tap'
 import type { RobotPosition } from './use-robot-position'
 
 const DRAG_THRESHOLD_PX = 6
@@ -10,6 +10,7 @@ interface UseRobotDragOptions {
   position: RobotPosition
   setPosition: (pos: RobotPosition) => void
   elementRef: React.RefObject<HTMLElement | null>
+  onDoubleTap: () => void
   onTripleTap: () => void
   /** Disables new gestures while true — e.g. while the composer is open. */
   disabled?: boolean
@@ -34,10 +35,10 @@ interface DragState {
  * these into two independent listener sets on the same element would mean
  * re-deriving that distinction twice and risking them disagreeing.
  */
-export function useRobotDrag({ position, setPosition, elementRef, onTripleTap, disabled }: UseRobotDragOptions) {
+export function useRobotDrag({ position, setPosition, elementRef, onDoubleTap, onTripleTap, disabled }: UseRobotDragOptions) {
   const [isDragging, setIsDragging] = useState(false)
   const dragRef = useRef<DragState | null>(null)
-  const { registerTap } = useTripleTap(onTripleTap)
+  const { registerTap } = useRobotTaps({ onDoubleTap, onTripleTap })
 
   const applyTransform = useCallback(
     (pos: RobotPosition) => {

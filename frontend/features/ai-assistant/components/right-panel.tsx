@@ -3,6 +3,7 @@
 import { BookOpen, ChevronRight, Sparkles, Trash2, X } from "lucide-react";
 import { useChatStore } from "../store/chat-store";
 import { QUICK_PROMPTS } from "../types";
+import { QuickAssistantHistory } from "./quick-assistant-history";
 
 interface RightPanelProps {
   mobileOpen?: boolean;
@@ -102,6 +103,8 @@ export function RightPanel({ mobileOpen = false, onMobileClose }: RightPanelProp
           )}
         </div>
       </div>
+
+      <QuickAssistantHistory />
 
       <div className="flex min-h-0 flex-col rounded-[16px] bg-surface-container-low/50 p-[12px]">
         <div className="mb-[8px] flex items-center gap-[8px]">

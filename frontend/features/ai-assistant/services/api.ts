@@ -3,6 +3,11 @@ import type { ChatMessage, OpportunityCard } from "../types";
 
 // ── Database types ──────────────────────────────────────────────────
 
+export type ChatSource = "assistant" | "quick";
+
+/** Quick chats are capped so the robot's history stays a short list, not an archive. */
+export const MAX_QUICK_CONVERSATIONS = 6;
+
 interface DBConversation {
   id: string;
   user_id: string;
@@ -82,7 +87,7 @@ async function checkTablesExist(): Promise<boolean> {
 
 // ── Conversation CRUD ───────────────────────────────────────────────
 
-export async function fetchConversations(): Promise<DBConversation[]> {
+export async function fetchConversations(source: ChatSource = "assistant"): Promise<DBConversation[]> {
   if (!(await checkTablesExist())) return [];
 
   const supabase = createClient();
@@ -99,8 +104,9 @@ export async function fetchConversations(): Promise<DBConversation[]> {
     .from("chat_conversations")
     .select("*")
     .eq("user_id", user.id)
+    .eq("source", source)
     .order("updated_at", { ascending: false })
-    .limit(7);
+    .limit(source === "quick" ? MAX_QUICK_CONVERSATIONS : 7);
 
   if (error) {
     logSupabaseError("SELECT", "chat_conversations", error, { userId: user.id });
@@ -136,7 +142,10 @@ export async function fetchMessages(conversationId: string): Promise<ChatMessage
   }));
 }
 
-export async function createConversation(title: string): Promise<DBConversation | null> {
+export async function createConversation(
+  title: string,
+  source: ChatSource = "assistant"
+): Promise<DBConversation | null> {
   if (!(await checkTablesExist())) return null;
 
   const supabase = createClient();
@@ -149,9 +158,34 @@ export async function createConversation(title: string): Promise<DBConversation 
     return null;
   }
 
+  // Quick chats are capped at MAX_QUICK_CONVERSATIONS: before inserting a new
+  // one, the oldest beyond the cap is removed, so the robot's history stays a
+  // short recent list rather than growing without bound.
+  if (source === "quick") {
+    const { data: existing } = await supabase
+      .from("chat_conversations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("source", "quick")
+      .order("updated_at", { ascending: false });
+
+    const stale = (existing ?? []).slice(MAX_QUICK_CONVERSATIONS - 1).map((row) => row.id as string);
+    if (stale.length > 0) {
+      const { error: pruneError } = await supabase
+        .from("chat_conversations")
+        .delete()
+        .eq("user_id", user.id)
+        .in("id", stale);
+      if (pruneError) {
+        // Not fatal — an over-cap list is better than refusing a new chat.
+        logSupabaseError("DELETE", "chat_conversations", pruneError, { userId: user.id });
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("chat_conversations")
-    .insert([{ title, user_id: user.id }])
+    .insert([{ title, user_id: user.id, source }])
     .select()
     .single();
 
@@ -292,13 +326,16 @@ export async function enforceConversationLimit(): Promise<boolean> {
 // ── AI Chat API call ────────────────────────────────────────────────
 
 export async function sendChatMessage(
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string }[],
+  source: ChatSource = "assistant"
 ): Promise<{ text?: string; opportunities?: OpportunityCard[]; error?: string }> {
   try {
     const res = await fetch("/api/assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
+      // The quick popup asks the same assistant for a short answer; the route
+      // is what enforces brevity, not the caller.
+      body: JSON.stringify({ messages, mode: source === "quick" ? "quick" : undefined }),
     });
 
     const data = await res.json();

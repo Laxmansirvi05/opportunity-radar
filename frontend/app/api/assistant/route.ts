@@ -148,6 +148,10 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { messages } = body;
+    // The robot's Quick Assistant is this same assistant, asked to answer in a
+    // popup rather than a full page. Only the shape of the reply differs —
+    // same route, same gateway, same tables.
+    const isQuick = body.mode === "quick";
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -203,6 +207,16 @@ IMPORTANT RULES:
 - Keep responses concise but thorough.
 - Never search the internet. Only reference opportunities from Opportunity Radar's database.
 ${
+  isQuick
+    ? `
+THIS IS A QUICK CHAT, shown in a small popup beside the user's work. Answer in
+at most 3 short sentences, or at most 4 brief bullet points — whichever fits the
+question better. No headings. No preamble, no sign-off, no "great question".
+Answer the thing asked and stop.
+If a full answer genuinely needs more room, give the short version and add one
+final line: "Ask in the AI Assistant for the full version."`
+    : ""
+}${
   opportunities.length > 0
     ? `\nThe system found ${opportunities.length} matching opportunities from the database. They will be displayed as interactive cards after your message. Briefly introduce them.`
     : wasSearchAttempted
@@ -223,6 +237,13 @@ ${
         systemPrompt,
         userPrompt,
         outputFormat: "text",
+        // Deliberately NOT lowered for quick mode. Lowering it to 400 was
+        // tried and produced replies cut off mid-word: gemini-flash-latest is
+        // a thinking model, so maxOutputTokens is spent on internal reasoning
+        // before any visible text, and a small ceiling starves the answer
+        // rather than shortening it. Brevity is enforced by the instruction in
+        // the system prompt, which shortens what the model decides to say
+        // instead of truncating what it already said.
         maxTokens: 1500,
         temperature: 0.7,
       },
