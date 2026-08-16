@@ -849,3 +849,44 @@
     transform: none !important;
   }
 }
+
+/* ── AI Assistant ───────────────────────────────────────────────────────────
+   Same lift-and-turn depth as the sidebar's nav tiles, so the 3D reads as one
+   idea across the app rather than a different effect on every screen. */
+
+.assistant-prompt {
+  perspective: 700px;
+}
+
+.assistant-prompt:hover,
+.assistant-prompt:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -16px rgb(0 0 0 / 0.5);
+}
+
+.assistant-prompt:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.assistant-prompt:hover .assistant-prompt-tile,
+.assistant-prompt:focus-visible .assistant-prompt-tile {
+  transform: translateZ(14px) rotateY(-12deg) rotateX(6deg);
+}
+
+.assistant-hero {
+  transform-style: preserve-3d;
+}
+
+.assistant-hero:hover {
+  transform: rotateY(-14deg) rotateX(8deg) translateZ(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .assistant-prompt,
+  .assistant-prompt-tile,
+  .assistant-hero {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

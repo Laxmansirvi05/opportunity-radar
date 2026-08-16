@@ -36,7 +36,7 @@ export function AssistantView({ userName = "there" }: AssistantViewProps) {
         {/* MAIN CHAT COLUMN */}
         <main className="flex flex-1 flex-col min-h-0 min-w-0">
           {/* Header */}
-          <header className="z-10 flex h-[64px] shrink-0 items-center bg-surface/80 backdrop-blur-md shadow-sm shadow-black/[0.03] px-[16px] md:px-[32px]">
+          <header className="z-10 flex h-[64px] shrink-0 items-center bg-surface/80 backdrop-blur-md shadow-sm shadow-black/[0.03] px-[16px] md:px-[22px]">
             <div className="flex w-full items-center justify-between">
               <div className="flex min-w-0 items-center gap-[12px]">
                 <span className="grid size-[36px] shrink-0 place-items-center rounded-[12px] bg-primary text-on-primary shadow-sm shadow-primary/20">
@@ -79,24 +79,24 @@ export function AssistantView({ userName = "there" }: AssistantViewProps) {
                 </div>
               </div>
             ) : !hasMessages ? (
-              <div className="mx-auto flex h-full w-full max-w-[720px] animate-in flex-col items-center justify-center fade-in pb-[8vh] pt-[16px] text-center duration-700 ease-out">
-                <div className="grid size-[56px] place-items-center rounded-[16px] bg-primary-container/20 text-primary ring-[6px] ring-primary-container/10">
+              <div className="mx-auto flex w-full max-w-[860px] animate-in flex-col items-center fade-in pb-[16px] pt-[2vh] text-center duration-700 ease-out">
+                <div className="assistant-hero grid size-[52px] place-items-center rounded-[16px] bg-primary text-on-primary shadow-[0_12px_26px_-10px_var(--color-primary)] transition-transform duration-500 ease-note">
                   <Sparkles size={28} strokeWidth={2.5} />
                 </div>
-                <h2 className="mt-[16px] text-4xl font-bold leading-tight tracking-tight text-on-surface md:text-[2.75rem]">
+                <h2 className="mt-[12px] text-[1.9rem] font-bold leading-tight tracking-tight text-on-surface md:text-[2.15rem]">
                   Hi, {userName} <span aria-hidden="true" className="inline-block origin-[70%_70%] hover:animate-wave cursor-default transition-transform hover:scale-110 duration-300">👋</span>
                 </h2>
-                <p className="mt-[12px] max-w-[560px] text-[16px] leading-relaxed text-on-surface-variant/80">
+                <p className="mt-[8px] max-w-[520px] text-[14px] leading-relaxed text-on-surface-variant/80">
                   Ask a learning question, practice interviews, or discover verified opportunities on Opportunity Radar.
                 </p>
-                <div className="mt-[32px] grid w-full grid-cols-1 gap-[16px] sm:grid-cols-2">
+                <div className="mt-[20px] grid w-full grid-cols-1 gap-[10px] sm:grid-cols-2">
                   {SUGGESTION_CHIPS.map((chip) => (
                     <SuggestionChip key={chip} label={chip} onClick={() => void sendMessage(chip)} />
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="mx-auto flex w-full max-w-[820px] flex-col">
+              <div className="mx-auto flex w-full max-w-[860px] flex-col">
                 {activeConversation.messages.map((message, index) => (
                   <ChatBubble
                     key={message.id}
