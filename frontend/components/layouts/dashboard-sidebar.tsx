@@ -3,6 +3,7 @@
 import { logoutAction } from '@/features/auth/actions/auth-actions'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 
 import Image from 'next/image'
@@ -118,6 +119,41 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
   const displayName = userName ?? user.user_metadata?.full_name ?? user.email ?? 'Student'
   const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U'
 
+  // Keyed by the path it was opened on, so a navigation closes it by
+  // derivation rather than by setting state from an effect.
+  const [menuState, setMenuState] = useState<{ open: boolean; path: string }>({ open: false, path: '' })
+  const isMenuOpen = menuState.open && menuState.path === pathname
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const setIsMenuOpen = useCallback(
+    (next: boolean | ((open: boolean) => boolean)) => {
+      setMenuState((prev) => {
+        const wasOpen = prev.open && prev.path === pathname
+        const open = typeof next === 'function' ? next(wasOpen) : next
+        return { open, path: pathname }
+      })
+    },
+    [pathname]
+  )
+
+  const closeMenu = useCallback(() => setIsMenuOpen(false), [setIsMenuOpen])
+
+  useEffect(() => {
+    if (!isMenuOpen) return
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) closeMenu()
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeMenu()
+    }
+    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [closeMenu, isMenuOpen])
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
@@ -188,26 +224,62 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
             <NavRow key={item.href} item={item} isActive={isActive(item.href)} />
           ))}
 
-          {/* Sign Out — the same server action the mobile header uses. */}
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="sidebar-row group/row relative flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left text-on-surface-variant outline-none transition-colors duration-200 hover:text-error focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-            >
-              <span
-                aria-hidden="true"
-                className="sidebar-tile grid size-9 shrink-0 place-items-center rounded-[10px] bg-surface-container text-on-surface-variant transition-all duration-300 ease-note group-hover/row:bg-error-container group-hover/row:text-on-error-container"
-              >
-                <span className="material-symbols-outlined text-[19px]">logout</span>
-              </span>
-              <span className="font-label-md text-label-md">Sign Out</span>
-            </button>
-          </form>
         </div>
+
+        <div className="relative mt-3" ref={menuRef}>
+          {/*
+            Sign Out lives here rather than as its own row: it is the one
+            destructive action on the rail, and putting it behind a deliberate
+            gesture on the account chip stops it sitting one stray click away
+            from Support. Both gestures open it — a right-click, because that
+            is what a context menu means everywhere else, and a double-click,
+            because a right-click is awkward on a trackpad and impossible on
+            touch. A plain click still goes to the profile.
+          */}
+          {isMenuOpen && (
+            <div
+              role="menu"
+              aria-label="Account"
+              className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-xl border border-outline-variant bg-surface-container-high shadow-2xl"
+            >
+              <Link
+                href="/profile"
+                role="menuitem"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-on-surface transition-colors hover:bg-surface-container"
+              >
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">person</span>
+                <span className="font-label-md text-label-md">View profile</span>
+              </Link>
+              <div className="h-px bg-outline-variant" />
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  role="menuitem"
+                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-error transition-colors hover:bg-error-container hover:text-on-error-container"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                  <span className="font-label-md text-label-md">Sign Out</span>
+                </button>
+              </form>
+            </div>
+          )}
 
         <Link
           href="/profile"
-          className="sidebar-user mt-3 flex items-center gap-2.5 rounded-xl border border-outline-variant bg-surface-container-low p-2 outline-none transition-all duration-300 ease-note hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary"
+          aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
+          title="Right-click or double-click for sign-out options"
+          onContextMenu={(event) => { event.preventDefault(); setIsMenuOpen(true) }}
+          onDoubleClick={(event) => { event.preventDefault(); setIsMenuOpen((open) => !open) }}
+          onKeyDown={(event) => {
+            // Keyboard users get the menu without needing a pointer gesture.
+            if (event.key === 'ArrowUp' || (event.shiftKey && event.key === 'F10')) {
+              event.preventDefault()
+              setIsMenuOpen(true)
+            }
+          }}
+          className="sidebar-user flex items-center gap-2.5 rounded-xl border border-outline-variant bg-surface-container-low p-2 outline-none transition-all duration-300 ease-note hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-container font-semibold text-sm text-on-primary-container">
             {avatarUrl ? (
@@ -220,7 +292,14 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
             <span className="truncate font-label-md text-label-md font-semibold text-on-surface">{displayName}</span>
             <span className="truncate font-label-sm text-label-sm text-on-surface-variant">{user.email}</span>
           </span>
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined ml-auto shrink-0 text-[18px] text-on-surface-variant/60"
+          >
+            more_vert
+          </span>
         </Link>
+        </div>
       </div>
     </aside>
   )

@@ -83,8 +83,12 @@ export function FolderCard3D({ folder, onOpen, onContextMenu }: FolderCard3DProp
       style={{ perspective: '1000px', transform: isOpening ? 'scale(1.06)' : undefined }}
     >
       <div
-        className="relative w-full aspect-square transition-transform duration-500 ease-note"
+        // 93% rather than a smaller grid column: shrinking the stage inside the
+        // cell takes 7% off the folder while the grid's own columns, gaps and
+        // label alignment stay exactly where they were.
+        className="relative aspect-square transition-transform duration-500 ease-note"
         style={{
+          width: '93%',
           transformStyle: 'preserve-3d',
           transform: lifted ? 'translateY(-10px) rotateX(-8deg)' : 'rotateX(0deg)',
           filter: lifted ? `drop-shadow(0 18px 28px ${palette.glow})` : 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))',
