@@ -114,8 +114,33 @@ export function serializeResumeToText(data: ResumeData): string {
 
   const skills = data.sections?.skills
   if (skills && !skills.hidden && skills.items.length > 0) {
-    const names = skills.items.filter((s) => !s.hidden).map((s) => s.name).filter(Boolean)
-    if (names.length > 0) lines.push('', 'SKILLS', names.join(', '))
+    // Proficiency comes through with the name. The interviewer calibrates
+    // difficulty from it — asking a "Beginner" the same depth of question as an
+    // "Advanced" wastes a turn — and dropping it threw that signal away.
+    const named = skills.items
+      .filter((s) => !s.hidden && s.name)
+      .map((s) => (s.proficiency ? `${s.name} (${s.proficiency})` : s.name))
+    if (named.length > 0) lines.push('', 'SKILLS', named.join(', '))
+  }
+
+  // Certifications and awards were both being dropped. They are among the most
+  // interview-relevant things a student has — a Meta Front-End certificate or a
+  // hackathon win is exactly what an interviewer opens on — and omitting them
+  // left the agent unable to ask about credentials the candidate actually holds.
+  const certifications = data.sections?.certifications
+  if (certifications && !certifications.hidden && certifications.items.length > 0) {
+    const items = certifications.items
+      .filter((c) => !c.hidden && c.title)
+      .map((c) => `- ${[c.title, c.issuer, c.date].filter(Boolean).join(' · ')}`)
+    if (items.length > 0) lines.push('', 'CERTIFICATIONS', ...items)
+  }
+
+  const awards = data.sections?.awards
+  if (awards && !awards.hidden && awards.items.length > 0) {
+    const items = awards.items
+      .filter((a) => !a.hidden && a.title)
+      .map((a) => `- ${[a.title, a.awarder, a.date].filter(Boolean).join(' · ')}`)
+    if (items.length > 0) lines.push('', 'AWARDS', ...items)
   }
 
   return lines.join('\n').trim()
