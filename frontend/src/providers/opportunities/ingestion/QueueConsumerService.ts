@@ -55,7 +55,7 @@ export class QueueConsumerService {
 
   async processBatch(batchSize: number = 10) {
     const startTime = Date.now();
-    let stats = { processed: 0, inserted: 0, failed: 0 };
+    const stats = { processed: 0, inserted: 0, failed: 0 };
     
     // 1. Recover stuck rows
     await this.recoverStuckRows();

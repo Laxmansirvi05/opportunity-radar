@@ -128,7 +128,7 @@ export function CommandPalette() {
 					<CommandList>
 						<CommandEmpty>
 							<Trans comment="Empty-state message when no command palette results match the search query">
-								The command you're looking for doesn't exist.
+								The command you&apos;re looking for doesn&apos;t exist.
 							</Trans>
 						</CommandEmpty>
 

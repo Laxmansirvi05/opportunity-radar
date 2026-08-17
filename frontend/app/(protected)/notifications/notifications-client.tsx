@@ -125,7 +125,7 @@ export function NotificationsClient() {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <BellRing className="w-8 h-8 text-primary" />
           </div>
-          <h3 className="text-xl font-bold text-on-background mb-2">You're all caught up!</h3>
+          <h3 className="text-xl font-bold text-on-background mb-2">You&apos;re all caught up!</h3>
           <p className="text-on-surface-variant max-w-md mx-auto">
             You have no notifications right now.
           </p>

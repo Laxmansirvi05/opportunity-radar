@@ -93,7 +93,7 @@ export default function TermsOfServicePage() {
                 <p>The AI Search, Resume Optimiser, ATS Checker, AI Assistant, and AI Mock Interview are decision-support tools, not guarantees of outcome. You understand and agree that:</p>
                 <ul className="list-disc pl-6 space-y-2 mb-4 mt-4">
                   <li>AI-generated scores, suggestions, rewritten resumes, and interview feedback are produced by third-party language models and may contain errors, omissions, or inaccuracies — always review AI output before relying on or submitting it.</li>
-                  <li>An ATS score or "match" percentage is an estimate, not a promise of interview or hire outcomes with any employer or applicant tracking system.</li>
+                  <li>An ATS score or &quot;match&quot; percentage is an estimate, not a promise of interview or hire outcomes with any employer or applicant tracking system.</li>
                   <li>You remain solely responsible for the accuracy and truthfulness of any resume, application, or message you send to a third party, whether AI-assisted or not.</li>
                   <li>Content you submit to AI features (resumes, job descriptions, interview audio, chat messages) is processed as described in our{' '}
                     <Link href="/privacy#ai-processing" className="text-primary underline underline-offset-2">Privacy Policy</Link>.</li>
@@ -159,7 +159,7 @@ export default function TermsOfServicePage() {
 
               <section id="disclaimers" className="scroll-mt-24">
                 <h2 className="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-1 mb-4">10. Disclaimers</h2>
-                <p>Opportunity Radar is provided "as is" and "as available," without warranties of any kind, express or implied. We do not guarantee that the Platform will be uninterrupted, error-free, or that any opportunity, certification, or AI-generated result will meet your expectations or result in an offer, admission, or certification outcome.</p>
+                <p>Opportunity Radar is provided &quot;as is&quot; and &quot;as available,&quot; without warranties of any kind, express or implied. We do not guarantee that the Platform will be uninterrupted, error-free, or that any opportunity, certification, or AI-generated result will meet your expectations or result in an offer, admission, or certification outcome.</p>
               </section>
 
               <section id="liability" className="scroll-mt-24">
@@ -174,7 +174,7 @@ export default function TermsOfServicePage() {
 
               <section id="changes-to-terms" className="scroll-mt-24">
                 <h2 className="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-1 mb-4">13. Changes to These Terms</h2>
-                <p>We may update these Terms as the Platform evolves. We'll update the "Last Updated" date above when we do, and for material changes, we'll make a reasonable effort to notify you in-app. Continuing to use the Platform after a change takes effect constitutes acceptance of the updated terms.</p>
+                <p>We may update these Terms as the Platform evolves. We&apos;ll update the &quot;Last Updated&quot; date above when we do, and for material changes, we&apos;ll make a reasonable effort to notify you in-app. Continuing to use the Platform after a change takes effect constitutes acceptance of the updated terms.</p>
               </section>
 
               <section id="governing-law" className="scroll-mt-24">

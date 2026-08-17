@@ -704,7 +704,7 @@ export function ProfileManager({ initialProfile, stats }: ProfileManagerProps) {
                   />
                 ) : (
                   <p className="font-body-lg text-[16px] text-on-surface-variant leading-relaxed whitespace-pre-wrap">
-                    {profile.career_goal ? profile.career_goal : <span className="text-outline italic">No career goal set. Click 'Edit Profile' to add one.</span>}
+                    {profile.career_goal ? profile.career_goal : <span className="text-outline italic">No career goal set. Click &apos;Edit Profile&apos; to add one.</span>}
                   </p>
                 )}
               </div>

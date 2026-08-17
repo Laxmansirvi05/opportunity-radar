@@ -79,7 +79,7 @@ export default function PrivacyPolicyPage() {
               <section className="scroll-mt-24" id="overview">
                 <div className="bg-surface-container-lowest border border-outline-variant p-6 rounded-lg">
                   <p className="font-body-lg text-body-lg leading-relaxed text-on-surface">
-                    Opportunity Radar ("we," "us," "our," or the "Platform") helps students discover opportunities, build and score resumes with AI, practice interviews, and connect with other students. This Privacy Policy explains, in plain language, what information we collect, why we collect it, who we share it with, and the choices and controls you have. By creating an account, you agree to the practices described here.
+                    Opportunity Radar (&quot;we,&quot; &quot;us,&quot; &quot;our,&quot; or the &quot;Platform&quot;) helps students discover opportunities, build and score resumes with AI, practice interviews, and connect with other students. This Privacy Policy explains, in plain language, what information we collect, why we collect it, who we share it with, and the choices and controls you have. By creating an account, you agree to the practices described here.
                   </p>
                 </div>
               </section>
@@ -133,7 +133,7 @@ export default function PrivacyPolicyPage() {
                   </div>
                   <div className="p-6 bg-surface rounded-xl border border-outline-variant">
                     <h4 className="font-headline-sm text-headline-sm mb-2">Communication</h4>
-                    <p className="font-body-md text-body-md text-on-surface-variant">Sending account, security, and deadline-reminder notifications you've opted into.</p>
+                    <p className="font-body-md text-body-md text-on-surface-variant">Sending account, security, and deadline-reminder notifications you&apos;ve opted into.</p>
                   </div>
                   <div className="md:col-span-2 p-6 bg-surface rounded-xl border border-outline-variant">
                     <h4 className="font-headline-sm text-headline-sm mb-2">Platform Integrity & Improvement</h4>
@@ -209,7 +209,7 @@ export default function PrivacyPolicyPage() {
                 <SectionHeading icon="schedule" id="retention">Data Retention</SectionHeading>
                 <div className="p-6 bg-surface border border-outline-variant rounded-lg space-y-3">
                   <p className="font-body-lg text-body-lg">
-                    We keep your account data for as long as your account is active, so features like ATS/Optimiser history and saved resumes work the way you'd expect. Interview audio is not retained after your session ends — only the transcript and generated feedback are kept. When you delete your account, associated personal data is permanently removed as described in Account Deletion below, aside from records we're legally required to retain (such as for fraud prevention or tax/accounting purposes).
+                    We keep your account data for as long as your account is active, so features like ATS/Optimiser history and saved resumes work the way you&apos;d expect. Interview audio is not retained after your session ends — only the transcript and generated feedback are kept. When you delete your account, associated personal data is permanently removed as described in Account Deletion below, aside from records we&apos;re legally required to retain (such as for fraud prevention or tax/accounting purposes).
                   </p>
                 </div>
               </section>
@@ -217,7 +217,7 @@ export default function PrivacyPolicyPage() {
               <section className="scroll-mt-24" id="security">
                 <SectionHeading icon="shield" id="security">Security Standards</SectionHeading>
                 <div className="p-6 bg-surface border border-outline-variant rounded-lg space-y-4">
-                  <p className="font-body-lg text-body-lg">We use TLS encryption for all data in transit, and encryption at rest for stored data. Access to your account data is protected by row-level security policies scoped to your own user id, so one student's data is never readable by another's application session. We restrict internal access to production data to what's necessary for operating the Platform.</p>
+                  <p className="font-body-lg text-body-lg">We use TLS encryption for all data in transit, and encryption at rest for stored data. Access to your account data is protected by row-level security policies scoped to your own user id, so one student&apos;s data is never readable by another&apos;s application session. We restrict internal access to production data to what&apos;s necessary for operating the Platform.</p>
                 </div>
               </section>
 
@@ -238,7 +238,7 @@ export default function PrivacyPolicyPage() {
                   </div>
                   <div className="p-4 bg-surface border border-outline-variant rounded-lg">
                     <h4 className="font-headline-sm text-headline-sm mb-1">Requests Not Self-Serviceable</h4>
-                    <p className="font-body-md text-body-md text-on-surface-variant">For a data export or any request this page doesn't cover, contact us — see Contact Us below.</p>
+                    <p className="font-body-md text-body-md text-on-surface-variant">For a data export or any request this page doesn&apos;t cover, contact us — see Contact Us below.</p>
                   </div>
                 </div>
               </section>
@@ -251,7 +251,7 @@ export default function PrivacyPolicyPage() {
               </section>
 
               <section className="scroll-mt-24" id="children">
-                <SectionHeading icon="child_care" id="children">Children's Privacy</SectionHeading>
+                <SectionHeading icon="child_care" id="children">Children&apos;s Privacy</SectionHeading>
                 <div className="p-6 bg-surface border border-outline-variant rounded-lg space-y-3">
                   <p className="font-body-lg text-body-lg">
                     Opportunity Radar is built for students preparing for internships, jobs, and further study, and is not directed at children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has created an account, contact us and we will remove it.
@@ -263,7 +263,7 @@ export default function PrivacyPolicyPage() {
                 <SectionHeading icon="update" id="changes">Changes to This Policy</SectionHeading>
                 <div className="p-6 bg-surface border border-outline-variant rounded-lg space-y-3">
                   <p className="font-body-lg text-body-lg">
-                    We may update this Privacy Policy as the Platform evolves. When we make a material change, we'll update the "Last Updated" date above and, where appropriate, notify you in-app. Continuing to use Opportunity Radar after a change takes effect means you accept the updated policy.
+                    We may update this Privacy Policy as the Platform evolves. When we make a material change, we&apos;ll update the &quot;Last Updated&quot; date above and, where appropriate, notify you in-app. Continuing to use Opportunity Radar after a change takes effect means you accept the updated policy.
                   </p>
                 </div>
               </section>

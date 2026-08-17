@@ -350,7 +350,7 @@ export default async function OpportunityDetailsPage({
               </div>
             </div>
             <p className="text-xs text-center text-on-surface-variant/80 font-medium">
-              You will be redirected to the company's portal.
+              You will be redirected to the company&apos;s portal.
             </p>
           </div>
 

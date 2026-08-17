@@ -104,7 +104,7 @@ export function AtsCheckerDashboard() {
     setResult(null)
 
     try {
-      let payload: any = {
+      const payload: any = {
         jobDescription: jobDescription.trim(),
         companyName: companyName.trim(),
         targetRole: targetRole.trim(),

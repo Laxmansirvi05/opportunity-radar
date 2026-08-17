@@ -261,7 +261,7 @@ export default async function DashboardPage() {
             ) : (
               <div className="p-6 text-center border-2 border-dashed border-outline-variant rounded-xl bg-surface-container-lowest">
                 <span className="material-symbols-outlined text-3xl text-primary mb-2">verified</span>
-                <p className="font-label-md text-on-background font-bold">You're all caught up!</p>
+                <p className="font-label-md text-on-background font-bold">You&apos;re all caught up!</p>
                 <p className="text-sm text-on-surface-variant mt-1">Explore fresh opportunities to find your next role.</p>
               </div>
             )}

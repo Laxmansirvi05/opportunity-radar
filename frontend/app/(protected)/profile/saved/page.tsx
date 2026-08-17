@@ -61,7 +61,7 @@ export default async function SavedOpportunitiesPage() {
           <span className="material-symbols-outlined text-outline text-[48px] mb-4">bookmark_border</span>
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-2">No saved opportunities</h2>
           <p className="font-body-md text-on-surface-variant max-w-[448px]">
-            You haven't saved any opportunities yet. When you see something interesting, click the bookmark icon to save it here for later.
+            You haven&apos;t saved any opportunities yet. When you see something interesting, click the bookmark icon to save it here for later.
           </p>
           <Link
             href="/search"

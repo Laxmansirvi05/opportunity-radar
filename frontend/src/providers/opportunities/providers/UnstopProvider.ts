@@ -44,8 +44,8 @@ export class UnstopProvider extends OpportunityProvider {
     // Example: https://unstop.com/internships/software-development-intern-fintech-startup-bengaluru-955681
     try {
       const parts = url.split('/');
-      let slug = parts[parts.length - 1] || '';
-      let category = parts[parts.length - 2] || 'jobs';
+      const slug = parts[parts.length - 1] || '';
+      const category = parts[parts.length - 2] || 'jobs';
       
       const idMatches = slug.match(/-(\d+)$/);
       const id = idMatches ? idMatches[1] : String(Math.random());

@@ -166,7 +166,7 @@ export class InternshalaProvider extends OpportunityProvider {
 
   async fetch(): Promise<any[]> {
     try {
-      let allData: any[] = [];
+      const allData: any[] = [];
       // Fetch specifically from priority cities and keywords
       const urls = [
         // Software Development
