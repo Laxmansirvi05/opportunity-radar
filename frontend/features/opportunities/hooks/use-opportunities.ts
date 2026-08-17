@@ -70,6 +70,12 @@ export function useOpportunities(filters: SearchFilters): UseOpportunitiesResult
   const filtersKey = JSON.stringify(filters)
 
   useEffect(() => {
+    // This effect kicks off an async fetch whose first statement flips a
+    // loading flag. The rule fires on that synchronous setState, but moving it
+    // after the await would mean the spinner only appears once the request is
+    // already in flight — a worse experience traded for a green lint line.
+    // Same justification convention as hub-message.tsx and tracker-board.tsx.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtersKey])
