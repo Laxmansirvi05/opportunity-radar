@@ -943,3 +943,143 @@
     transform: none !important;
   }
 }
+
+/* ── Mock interview intake ──────────────────────────────────────────────────
+   Same lift-and-turn depth as the sidebar's nav tiles, the note folders and
+   the Assistant's prompts — the 3D reads as one idea across the app rather
+   than a different effect per screen. */
+
+.interview-step,
+.interview-card {
+  perspective: 800px;
+}
+
+.interview-step:hover,
+.interview-card:hover,
+.interview-step:focus-visible,
+.interview-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px -18px rgb(0 0 0 / 0.5);
+}
+
+.interview-card:active {
+  transform: translateY(0) scale(0.995);
+}
+
+.interview-step-tile,
+.interview-card-tile {
+  transform-style: preserve-3d;
+}
+
+.interview-step:hover .interview-step-tile,
+.interview-card:hover .interview-card-tile,
+.interview-step:focus-visible .interview-step-tile,
+.interview-card:focus-visible .interview-card-tile {
+  transform: translateZ(14px) rotateY(-12deg) rotateX(6deg);
+  box-shadow: 5px 7px 14px -8px rgb(0 0 0 / 0.4);
+}
+
+.interview-cta:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.015);
+}
+
+.interview-cta:active:not(:disabled) {
+  transform: translateY(0) scale(0.985);
+}
+
+/* The header band. One hue at two depths, matching the sidebar's AI Search
+   button — a second colour here would compete with the primary-tinted step
+   that marks where the student currently is. */
+.interview-hero {
+  background:
+    radial-gradient(120% 140% at 85% 0%, color-mix(in oklab, var(--color-primary) 14%, transparent) 0%, transparent 60%),
+    linear-gradient(160deg,
+      color-mix(in oklab, var(--color-primary) 7%, var(--color-surface-container-low)) 0%,
+      var(--color-surface-container-low) 100%);
+  box-shadow: 0 18px 40px -32px rgb(0 0 0 / 0.55);
+}
+
+.interview-stat {
+  transform-style: preserve-3d;
+  transition: transform 400ms var(--ease-note, cubic-bezier(0.16, 1, 0.3, 1)), box-shadow 400ms;
+}
+
+.interview-hero:hover .interview-stat {
+  transform: translateZ(10px) rotateX(5deg);
+  box-shadow: 0 10px 20px -14px rgb(0 0 0 / 0.45);
+}
+
+.interview-panel {
+  box-shadow: 0 16px 34px -30px rgb(0 0 0 / 0.5);
+}
+
+/* ── Microphone meter ───────────────────────────────────────────────────────
+   Ten bars on a tilted plane. Each bar's lit portion scales up from its bottom
+   edge and pushes toward the viewer as it fills, so a louder voice reads as
+   the meter physically rising out of the card rather than just changing
+   colour. --fill is a 0–1 number written per frame by the rAF loop. */
+
+.mic-meter {
+  perspective: 560px;
+  perspective-origin: 50% 130%;
+}
+
+.mic-bar {
+  position: relative;
+  width: 14px;
+  flex: none;
+  border-radius: 5px;
+  background: color-mix(in oklab, var(--color-on-surface) 9%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22);
+  transform-style: preserve-3d;
+  /* calc on a unitless custom property: --fill is a plain number, so an
+     unlit bar resolves to translateZ(0). */
+  transform: rotateX(16deg) translateZ(calc(var(--fill, 0) * 12px));
+  will-change: transform;
+}
+
+.mic-bar-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-origin: bottom center;
+  transform: scaleY(var(--fill, 0));
+  background: linear-gradient(to top,
+    color-mix(in oklab, var(--color-primary) 78%, black) 0%,
+    var(--color-primary) 100%);
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--color-primary) 70%, transparent);
+}
+
+/* The top of the scale is a warning, not a target: past bar 8 the student is
+   loud enough that a laptop mic starts clipping. */
+.mic-bar:nth-child(n+9) .mic-bar-fill {
+  background: linear-gradient(to top,
+    color-mix(in oklab, var(--color-error) 60%, var(--color-primary)) 0%,
+    var(--color-error) 100%);
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--color-error) 70%, transparent);
+}
+
+.mic-check-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -12px rgb(0 0 0 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .interview-step,
+  .interview-card,
+  .interview-step-tile,
+  .interview-card-tile,
+  .interview-stat,
+  .mic-check-btn,
+  .interview-cta {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+
+  /* The meter still has to report a level — it is a diagnostic, not an
+     animation — so the bars keep filling, only the depth is dropped. */
+  .mic-bar {
+    transform: none !important;
+  }
+}

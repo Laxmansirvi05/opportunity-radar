@@ -13,17 +13,40 @@ import type { ResumeData } from '@reactive-resume/schema/resume/data'
 /**
  * POST /api/interview/start — begin a mock interview.
  *
- * Body: { opportunity_id?: string, resume_id?: string }. Both optional:
- * an interview can be practised standalone (no JD) or for a specific
- * listing. Mirrors /api/ai-search's shape — the browser never talks to
- * the agent directly, and the run is recorded against the signed-in user
- * before we ever call out.
+ * Body: { opportunity_id?, resume_id?, role?, company?, job_description? }.
+ *
+ * Two ways to target an interview, and they are not exclusive: pick a real
+ * listing (opportunity_id fills role/company/JD from the database), or type
+ * them in for a role that isn't listed here. Typed values win where both are
+ * present, so a student can pick a listing and then adjust the role.
+ *
+ * The agent's own /api/prep marks jd_text and company required, so supplying
+ * them is the difference between a generic interview and one about the job
+ * the student is actually preparing for.
+ *
+ * Mirrors /api/ai-search's shape — the browser never talks to the agent
+ * directly, and the run is recorded against the signed-in user before we
+ * ever call out.
  */
 export const maxDuration = 60
 
 interface StartBody {
   opportunity_id?: string
   resume_id?: string
+  role?: string
+  company?: string
+  job_description?: string
+}
+
+const ROLE_MAX = 120
+const COMPANY_MAX = 120
+const JD_MAX = 20000
+
+/** Trims and caps a free-text field, returning null for anything empty. */
+function cleanText(value: unknown, max: number): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim().slice(0, max)
+  return trimmed.length > 0 ? trimmed : null
 }
 
 export async function POST(req: NextRequest) {
@@ -91,6 +114,12 @@ export async function POST(req: NextRequest) {
       jdText = buildJobDescriptionText(opp)
     }
   }
+
+  // Typed values override whatever the listing supplied: the student is
+  // looking at the form, so what they typed is the more recent intent.
+  roleTitle = cleanText(body.role, ROLE_MAX) ?? roleTitle
+  company = cleanText(body.company, COMPANY_MAX) ?? company
+  jdText = cleanText(body.job_description, JD_MAX) ?? jdText
 
   const cvText = serializeResumeToText(resume.parsed_data as ResumeData)
 
