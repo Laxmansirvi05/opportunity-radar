@@ -1,3 +1,67 @@
+
+/**
+ * The two resume shapes this converter accepts.
+ *
+ * `normalizeToAtsResume` is deliberately tolerant: it is fed either the flat
+ * ParsedResume the scoring engine uses or the Resume Builder's nested
+ * Reactive Resume `sections` structure, both read straight out of JSONB. That
+ * tolerance was previously expressed as `any`, which also switched off
+ * checking on everything downstream — `item.description.split(...)` and
+ * friends were unchecked, so a shape change upstream became a runtime crash
+ * rather than a build error.
+ *
+ * Every field is optional and typed as what the code actually treats it as.
+ * Fields the code only ever hands to Array.isArray stay `unknown`, because
+ * that is genuinely all that is known about them until the guard runs.
+ */
+interface RawItem {
+  name?: string
+  title?: string
+  company?: string
+  position?: string
+  period?: string
+  date?: string
+  description?: string
+  issuer?: string
+  organization?: string
+  school?: string
+  institution?: string
+  degree?: string
+  keywords?: unknown
+  values?: unknown
+  list?: unknown
+  items?: unknown
+}
+
+interface RawSection {
+  items?: unknown
+}
+
+interface RawResumeData {
+  name?: string
+  email?: string
+  phone?: string
+  summary?: string | { content?: string }
+  basics?: { name?: string; email?: string; phone?: string; summary?: string }
+  skills?: unknown
+  experience?: unknown
+  projects?: unknown
+  education?: unknown
+  certifications?: unknown
+  sections?: {
+    skills?: RawSection
+    experience?: RawSection
+    projects?: RawSection
+    education?: RawSection
+    certifications?: RawSection
+  }
+}
+
+interface AtsExperience { company: string; role: string; start_date: string; bullets: string[] }
+interface AtsProject { name: string; title: string; description: string; technologies: string[]; bullets: string[] }
+interface AtsEducation { institution: string; degree: string; degree_level: string }
+interface AtsCertification { name: string; issuer: string; date: string }
+
 // ---------------------------------------------------------------------------
 // Normalization and Aliases for deterministic skill matching
 // ---------------------------------------------------------------------------
@@ -63,7 +127,7 @@ export function normalizeText(text?: string): string {
  * or the older ParsedResume format) into a predictable ParsedResume structure
  * that the ATS scoring engine can safely use without crashing.
  */
-export function normalizeToAtsResume(rawData: any) {
+export function normalizeToAtsResume(rawData: RawResumeData | null | undefined) {
   const name = rawData?.name || rawData?.basics?.name || ''
   const email = rawData?.email || rawData?.basics?.email
   const phone = rawData?.phone || rawData?.basics?.phone
@@ -79,16 +143,17 @@ export function normalizeToAtsResume(rawData: any) {
   // Process skills: structured items -> flattened string array
   let skills: string[] = []
 
-  const extractSkillsFromItem = (item: any) => {
+  const extractSkillsFromItem = (item: unknown) => {
     if (typeof item === 'string') {
       item.split(/[,;\n]/).forEach((s) => {
         const cleaned = s.replace(/^[-\s•*:-]+/, '').trim()
         if (cleaned) skills.push(cleaned)
       })
     } else if (item && typeof item === 'object') {
-      const kwArrays = [item.keywords, item.values, item.list, item.items].filter(Array.isArray)
+      const entry = item as RawItem
+      const kwArrays = [entry.keywords, entry.values, entry.list, entry.items].filter(Array.isArray)
       kwArrays.forEach((arr) => {
-        arr.forEach((kw: any) => {
+        arr.forEach((kw: unknown) => {
           if (typeof kw === 'string') {
             kw.split(/[,;\n]/).forEach((s) => {
               const cleaned = s.replace(/^[-\s•*:-]+/, '').trim()
@@ -97,15 +162,15 @@ export function normalizeToAtsResume(rawData: any) {
           }
         })
       })
-      if (typeof item.description === 'string' && item.description.trim()) {
-        const cleanDesc = item.description.replace(/<[^>]*>?/gm, '').trim()
+      if (typeof entry.description === 'string' && entry.description.trim()) {
+        const cleanDesc = entry.description.replace(/<[^>]*>?/gm, '').trim()
         cleanDesc.split(/[,;\n]/).forEach((s: string) => {
           const cleaned = s.replace(/^[-\s•*:-]+/, '').trim()
           if (cleaned && cleaned.length < 50) skills.push(cleaned)
         })
       }
-      if (typeof item.name === 'string' && item.name.trim()) {
-        const cleanName = item.name.trim()
+      if (typeof entry.name === 'string' && entry.name.trim()) {
+        const cleanName = entry.name.trim()
         if (!['programming', 'web', 'tools', 'languages', 'skills', 'ai / data', 'frameworks', 'frontend', 'backend', 'databases', 'cloud', 'libraries'].includes(cleanName.toLowerCase())) {
           skills.push(cleanName)
         }
@@ -122,11 +187,15 @@ export function normalizeToAtsResume(rawData: any) {
   skills = [...new Set(skills.map(s => s.trim()).filter(s => s.length > 0))]
 
   // Process experience
-  let experience: any[] = []
+  let experience: AtsExperience[] = []
   if (Array.isArray(rawData?.experience)) {
-    experience = rawData.experience
+    // Already flat: this branch is the pass-through for data that is
+    // ParsedResume-shaped to begin with. Asserted rather than validated,
+    // which is what the function has always done — stating it as the real
+    // element type rather than `never` keeps the assumption legible.
+    experience = rawData.experience as AtsExperience[]
   } else if (Array.isArray(rawData?.sections?.experience?.items)) {
-    experience = rawData.sections.experience.items.map((item: any) => ({
+    experience = (rawData.sections!.experience!.items as RawItem[]).map((item) => ({
       company: item.company || '',
       role: item.position || '',
       start_date: item.period || '',
@@ -135,11 +204,15 @@ export function normalizeToAtsResume(rawData: any) {
   }
 
   // Process projects
-  let projects: any[] = []
+  let projects: AtsProject[] = []
   if (Array.isArray(rawData?.projects)) {
-    projects = rawData.projects
+    // Already flat: this branch is the pass-through for data that is
+    // ParsedResume-shaped to begin with. Asserted rather than validated,
+    // which is what the function has always done — stating it as the real
+    // element type rather than `never` keeps the assumption legible.
+    projects = rawData.projects as AtsProject[]
   } else if (Array.isArray(rawData?.sections?.projects?.items)) {
-    projects = rawData.sections.projects.items.map((item: any) => {
+    projects = (rawData.sections!.projects!.items as RawItem[]).map((item) => {
       const projName = item.name || ''
       const cleanDesc = item.description ? item.description.replace(/<[^>]*>?/gm, '').trim() : ''
       let technologies: string[] = []
@@ -162,11 +235,15 @@ export function normalizeToAtsResume(rawData: any) {
   }
 
   // Process education
-  let education: any[] = []
+  let education: AtsEducation[] = []
   if (Array.isArray(rawData?.education)) {
-    education = rawData.education
+    // Already flat: this branch is the pass-through for data that is
+    // ParsedResume-shaped to begin with. Asserted rather than validated,
+    // which is what the function has always done — stating it as the real
+    // element type rather than `never` keeps the assumption legible.
+    education = rawData.education as AtsEducation[]
   } else if (Array.isArray(rawData?.sections?.education?.items)) {
-    education = rawData.sections.education.items.map((item: any) => ({
+    education = (rawData.sections!.education!.items as RawItem[]).map((item) => ({
       institution: item.school || item.institution || '',
       degree: item.degree || '',
       degree_level: 'other'
@@ -174,11 +251,15 @@ export function normalizeToAtsResume(rawData: any) {
   }
 
   // Process certifications
-  let certifications: any[] = []
+  let certifications: AtsCertification[] = []
   if (Array.isArray(rawData?.certifications)) {
-    certifications = rawData.certifications
+    // Already flat: this branch is the pass-through for data that is
+    // ParsedResume-shaped to begin with. Asserted rather than validated,
+    // which is what the function has always done — stating it as the real
+    // element type rather than `never` keeps the assumption legible.
+    certifications = rawData.certifications as AtsCertification[]
   } else if (Array.isArray(rawData?.sections?.certifications?.items)) {
-    certifications = rawData.sections.certifications.items.map((item: any) => ({
+    certifications = (rawData.sections!.certifications!.items as RawItem[]).map((item) => ({
       name: item.name || item.title || '',
       issuer: item.issuer || item.organization || '',
       date: item.date || item.period || ''
