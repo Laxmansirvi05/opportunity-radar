@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 
 const RECENT_KEY = 'opportunity-radar-recent-searches'
 const MAX_RECENT = 5
@@ -9,17 +9,20 @@ const MAX_RECENT = 5
  * Hook for Recent Searches backed by localStorage.
  */
 export function useRecentSearches() {
-  const [recentSearches, setRecentSearches] = useState<string[]>([])
-
-  // Load from localStorage on mount
-  useEffect(() => {
+  // Read once in a lazy initialiser rather than an effect: this hook is
+  // client-only ('use client' above), so there is no server render to
+  // disagree with, and loading in an effect meant one render with an empty
+  // list before the stored searches appeared.
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
     try {
       const recent = localStorage.getItem(RECENT_KEY)
-      if (recent) setRecentSearches(JSON.parse(recent))
+      return recent ? (JSON.parse(recent) as string[]) : []
     } catch {
-      // Silently handle corrupted localStorage
+      // A corrupt entry just means "no history".
+      return []
     }
-  }, [])
+  })
 
   // ── Track a recent search ─────────────────────────────────────────
   const addRecentSearch = useCallback((query: string) => {
