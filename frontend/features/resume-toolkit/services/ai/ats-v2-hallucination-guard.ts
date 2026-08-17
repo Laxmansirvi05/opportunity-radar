@@ -1,6 +1,24 @@
 import type { ParsedResume } from '@/types/resume'
 import type { EvidenceReference, EvidenceMatrix } from '../../lib/schema/resume/ats-v2'
 
+/**
+ * Reads a property that the declared type does not promise.
+ *
+ * The guard deliberately probes fields that only some resume shapes carry
+ * (a skill's `keywords`, an experience's `bullets` vs `highlights`, a
+ * `rawText` blob). Those were previously reached with `as any`, which
+ * switched off checking for the whole expression — including the
+ * `.toLowerCase()` calls made on the results. Returning `unknown` keeps the
+ * probe but forces the narrowing that the surrounding `typeof` and
+ * `Array.isArray` checks were already doing anyway.
+ */
+function optionalProp(value: unknown, key: string): unknown {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)[key]
+    : undefined
+}
+
+
 export interface VerificationResult {
   isValid: boolean
   reason?: string
@@ -17,11 +35,13 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
       if (typeof skill === 'string') {
         snippets.push(skill.toLowerCase())
       } else if (skill && typeof skill === 'object') {
-        if ((skill as any).name && typeof (skill as any).name === 'string') {
-          snippets.push((skill as any).name.toLowerCase())
+        const skillName = optionalProp(skill, 'name')
+        if (typeof skillName === 'string') {
+          snippets.push(skillName.toLowerCase())
         }
-        if (Array.isArray((skill as any).keywords)) {
-          for (const kw of (skill as any).keywords) {
+        const keywords = optionalProp(skill, 'keywords')
+        if (Array.isArray(keywords)) {
+          for (const kw of keywords) {
             if (typeof kw === 'string') snippets.push(kw.toLowerCase())
           }
         }
@@ -33,7 +53,7 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
     for (const exp of resume.experience) {
       if (exp.company) snippets.push(exp.company.toLowerCase())
       if (exp.role) snippets.push(exp.role.toLowerCase())
-      const bullets = (exp as any).bullets || (exp as any).highlights || []
+      const bullets = optionalProp(exp, 'bullets') ?? optionalProp(exp, 'highlights') ?? []
       if (Array.isArray(bullets)) {
         for (const h of bullets) {
           if (typeof h === 'string') snippets.push(h.toLowerCase())
@@ -51,7 +71,7 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
           if (t) snippets.push(t.toLowerCase())
         }
       }
-      const projHighlights = (proj as any).highlights || []
+      const projHighlights = optionalProp(proj, 'highlights') ?? []
       if (Array.isArray(projHighlights)) {
         for (const h of projHighlights) {
           if (typeof h === 'string') snippets.push(h.toLowerCase())
@@ -68,8 +88,9 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
     }
   }
 
-  if ((resume as any).certifications && Array.isArray((resume as any).certifications)) {
-    for (const cert of (resume as any).certifications) {
+  const certifications = optionalProp(resume, 'certifications')
+  if (Array.isArray(certifications)) {
+    for (const cert of certifications) {
       if (typeof cert === 'string') snippets.push(cert.toLowerCase())
       else if (cert && typeof cert === 'object') {
         if (cert.name) snippets.push(String(cert.name).toLowerCase())
@@ -79,8 +100,9 @@ export function extractAllResumeTextSnippets(resume: ParsedResume): string[] {
     }
   }
 
-  if ((resume as any).awards && Array.isArray((resume as any).awards)) {
-    for (const award of (resume as any).awards) {
+  const awards = optionalProp(resume, 'awards')
+  if (Array.isArray(awards)) {
+    for (const award of awards) {
       if (typeof award === 'string') snippets.push(award.toLowerCase())
       else if (award && typeof award === 'object') {
         if (award.name) snippets.push(String(award.name).toLowerCase())
@@ -103,8 +125,9 @@ export function verifyEvidence(
   const exactLower = reference.exactText.trim().toLowerCase()
   
   // PRIMARY SOURCE OF TRUTH: rawText
-  if ((resume as any).rawText) {
-    const rawLower = ((resume as any).rawText as string).toLowerCase()
+  const rawText = optionalProp(resume, 'rawText')
+  if (typeof rawText === 'string') {
+    const rawLower = rawText.toLowerCase()
     
     // 1. Direct inclusion match
     if (rawLower.includes(exactLower)) {
@@ -168,7 +191,7 @@ export function sanitizeEvidenceMatrix(
 ): { sanitizedMatrix: EvidenceMatrix; rejectedCount: number } {
   let rejectedCount = 0
 
-  const sanitizedEvaluations = matrix.evaluations.map((evaluation: any) => {
+  const sanitizedEvaluations = matrix.evaluations.map((evaluation) => {
     const validReferences = (evaluation.evidenceReferences || [])
       .filter((ref: EvidenceReference) => {
         const v = verifyEvidence(resume, ref)
