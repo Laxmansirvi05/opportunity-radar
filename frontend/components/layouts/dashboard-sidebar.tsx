@@ -164,8 +164,11 @@ export function DashboardSidebar({ user, avatarUrl, userName }: DashboardSidebar
       className="sidebar-3d hidden md:flex flex-col h-screen w-64 shrink-0 sticky top-0 z-40 overflow-y-auto overflow-x-hidden border-r border-outline-variant bg-surface"
     >
       <div className="flex flex-col gap-1 px-3 pb-3 pt-5">
+        {/* The wordmark goes home, to the landing page — Command Center has
+            its own row in the Workspace group, so pointing the logo there too
+            made it a duplicate and left no way back out to the public site. */}
         <Link
-          href="/dashboard"
+          href="/"
           className="group/logo flex items-center gap-2.5 rounded-xl px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <span
