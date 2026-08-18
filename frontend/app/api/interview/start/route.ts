@@ -8,7 +8,7 @@ import {
   InterviewAgentError,
   messageForCode,
 } from '@/lib/interview/agent-client'
-import { checkRateLimit } from '@/lib/ai-gateway'
+import { checkRateLimit, recordFeatureUsage } from '@/lib/ai-gateway'
 import type { ResumeData } from '@reactive-resume/schema/resume/data'
 import { ParsedResumeSchema } from '@/types/resume'
 
@@ -189,6 +189,14 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+
+  // Count this accepted session against the daily limit. checkRateLimit above
+  // only READS the count (from ai_usage_log); like AI Search, the interview
+  // never routes through callAI, so without this record the voice_interview
+  // limit was a no-op — the persistent count stayed at 0 and only the
+  // unreliable in-memory map incremented. Recorded only for a session that was
+  // actually created; best-effort. See recordFeatureUsage / the AI Search fix.
+  await recordFeatureUsage(user.id, 'voice_interview')
 
   return NextResponse.json({ session_id: session.id }, { status: 202 })
 }
