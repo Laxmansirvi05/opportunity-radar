@@ -216,6 +216,41 @@ rather than re-deriving them.
       ("no longer available to new users"), so there is no fallback and no
       second opinion.
 
+## Run history (same resume each time)
+
+                        baseline  filter-v1  filter-v2 + key rotation
+    discovered              26        17          20
+    skipped_no_content      18         9          12
+    waste rate             69%       53%         60%
+    scored ok                7         7           8
+    scoring failures         1         1           0
+    returned                 7         6           8
+    tier                  good      good        FULL
+
+Key rotation (gateway commit e999e20) is what made the last run possible at
+all: three consecutive attempts before it died with 503s, every provider
+exhausted. That run logged 14 rotations and zero scoring failures — the first
+clean scoring pass of the day.
+
+Read the skip RATE with care. These runs are not comparable: the last one
+broadened (9 extra URLs admitted) where the previous did not, so it is a
+different pool. 9 -> 12 is noise across differing pools, not a regression, and
+one run is not a trend — a lesson already learned once here by predicting a
+doubling and getting 7 -> 6.
+
+What is solid: returned 7 -> 8, scoring failures 1 -> 0, and tier reaching
+FULL for the first time.
+
+### Still open on this thread
+- [ ] The ~12 remaining skips are LEGITIMATE postings the pipeline cannot read
+      (board roots and junk are now filtered out). This is the extraction
+      thread — the <script>-noise finding from render-service, where stripping
+      script/style cut 154KB of HTML to 2,951 chars of real text. Last known
+      lever on result quality.
+- [ ] Pacing between gateway calls. Rotation now ABSORBS the burst that trips
+      Groq's ~12k tokens/min; it does not prevent it. 14 rotations for one run
+      is a lot of key budget spent on avoidable retries.
+
 ## Deployment (after the above)
 
 - [ ] `AI_AGENT_URL` and `AI_AGENT_INTERNAL_SECRET` set in Vercel. Without the
