@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/ai-gateway'
 import {
   submitResume,
   looksLikePdf,
@@ -22,6 +23,18 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Please sign in.' } }, { status: 401 })
+  }
+
+  // Daily cap, on top of the one-at-a-time guard below. That guard stops two
+  // runs overlapping but nothing stopped a student starting run after run all
+  // day, each costing 5-20 minutes of scraping, Chromium and scoring calls.
+  // Same reasoning and mechanism as POST /api/interview/start.
+  const allowed = await checkRateLimit(user.id, 'ai_search')
+  if (!allowed) {
+    return NextResponse.json(
+      { error: { code: 'RATE_LIMITED', message: 'You have run several searches today. Please try again tomorrow.' } },
+      { status: 429 }
+    )
   }
 
   // One run at a time per student. The agent is single-threaded and free-tier

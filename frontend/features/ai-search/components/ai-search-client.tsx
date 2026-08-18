@@ -156,7 +156,7 @@ export function AiSearchClient() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl mx-auto w-full px-4 md:px-8 py-8 flex flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-8 md:px-8">
         <header>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="material-symbols-outlined text-primary">auto_awesome</span>
@@ -213,7 +213,7 @@ function UploadPanel({
   onStart: () => void
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
@@ -326,6 +326,8 @@ function Results({ result, onReset }: { result: AgentResult; onReset: () => void
   const { headline, feedbackProminence } = tierPresentation(result.result_tier, result.opportunity_count)
   const ourFault = shortfallIsOurFault(result)
   const feedback = result.resume_feedback?.trim()
+  const weak = result.weak_profile
+  const weakReasons = weak?.reasons?.filter((r) => r?.trim()) ?? []
 
   return (
     <div className="flex flex-col gap-5">
@@ -365,6 +367,44 @@ function Results({ result, onReset }: { result: AgentResult; onReset: () => void
         </div>
       )}
 
+      {/*
+        Why the count is what it is, in the agent's own words.
+
+        The agent already explains its shortfall precisely — "3 scored below the
+        minimum fit threshold of 50 and were not padded into the results", "1
+        could not be scored (provider errors), so they were excluded rather than
+        guessed at" — and none of it was rendered. A student who asked for ten
+        and got three saw a thin list and reasonably concluded the product was
+        weak, when in fact it had refused to pad the results with bad matches.
+        Showing the reasoning turns a disappointing number into a credible one.
+
+        Rendered verbatim, and only when the agent actually returned fewer than
+        it aimed for.
+      */}
+      {weakReasons.length > 0 && (
+        <details className="group rounded-2xl border border-outline-variant bg-surface-container-low p-4 open:pb-5">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-on-surface">
+            <span className="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-300 group-open:rotate-90">
+              chevron_right
+            </span>
+            {typeof weak?.returned === 'number' && typeof weak?.target === 'number'
+              ? `Why ${weak.returned} of ${weak.target}, and not more`
+              : 'Why these results, and not more'}
+          </summary>
+          <ul className="mt-3 flex flex-col gap-2 pl-7">
+            {weakReasons.map((reason) => (
+              <li key={reason} className="flex gap-2 text-sm leading-relaxed text-on-surface-variant">
+                <span aria-hidden="true" className="mt-[7px] size-1.5 shrink-0 rounded-full bg-outline" />
+                {reason}
+              </li>
+            ))}
+          </ul>
+          {weak?.gaps_note && (
+            <p className="mt-3 pl-7 text-xs leading-relaxed text-on-surface-variant/80">{weak.gaps_note}</p>
+          )}
+        </details>
+      )}
+
       {result.opportunities.length === 0 ? (
         <div className="bg-surface border border-dashed border-outline-variant rounded-2xl p-10 text-center flex flex-col items-center gap-3">
           <span className="material-symbols-outlined text-outline text-[44px]">search_off</span>
@@ -378,7 +418,7 @@ function Results({ result, onReset }: { result: AgentResult; onReset: () => void
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-4 lg:grid-cols-2">
           {result.opportunities.map((o, i) => <OpportunityCard key={`${o.apply_url}-${i}`} o={o} />)}
         </div>
       )}
@@ -394,7 +434,7 @@ function OpportunityCard({ o }: { o: AgentOpportunity }) {
   const chips = [o.employment_type, o.work_mode, location].filter(Boolean) as string[]
 
   return (
-    <article className="bg-surface border border-outline-variant rounded-2xl p-5 shadow-sm hover:border-primary/50 hover:shadow-md transition-all flex flex-col gap-3">
+    <article className="ai-result-card flex h-full flex-col gap-3 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm transition-all duration-300 ease-note hover:border-primary/50 hover:shadow-md">
       <div className="flex items-start gap-3">
         <CompanyLogo
           src={null}

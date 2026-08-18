@@ -66,6 +66,42 @@ describe('attributing a shortfall', () => {
     expect(shortfallIsOurFault(null)).toBe(false)
     expect(shortfallIsOurFault(undefined)).toBe(false)
   })
+
+  it('does not blame us for a stray provider error on a good run', () => {
+    // Regression: the real shape of a successful run. The agent reports every
+    // provider hiccup it absorbs, so matching the reason text alone flagged
+    // this — and the panel announced "Something went wrong on our side" above
+    // its own "Good match rate" copy, then offered to re-run a search that had
+    // just succeeded. 1 unscoreable posting out of 26, returning 7 good
+    // matches, is not a failure of ours.
+    expect(shortfallIsOurFault({
+      status: 'partial',
+      result_tier: 'good',
+      opportunity_count: 7,
+      opportunities: [],
+      resume_strength: 'strong',
+      weak_profile: {
+        returned: 7,
+        target: 8,
+        reasons: [
+          '1 of 26 opportunities could not be scored (provider errors), so they were excluded rather than guessed at.',
+          '18 discovered pages had no readable job details, so they were not scored or shown.',
+        ],
+      },
+    })).toBe(false)
+  })
+
+  it('still blames us when our failure genuinely produced a thin result', () => {
+    expect(shortfallIsOurFault({
+      status: 'weak_profile',
+      result_tier: 'very_limited',
+      opportunity_count: 1,
+      opportunities: [],
+      weak_profile: {
+        reasons: ['9 of 10 opportunities could not be scored (provider errors).'],
+      },
+    })).toBe(true)
+  })
 })
 
 describe('error copy', () => {

@@ -64,6 +64,20 @@ export interface AgentOpportunity {
   employment_type?: string | null
   work_mode?: string | null
   salary?: string | null
+  /**
+   * WARNING: this means "a salary was DISCLOSED", not "this role is paid".
+   *
+   * The agent computes it as `!!(salary.min || salary.max) || salaryDisclosedAsString`,
+   * so a posting that simply never published its pay comes back `false` —
+   * indistinguishable from one that stated it is unpaid. Measured on a real
+   * run: all 7 returned matches were `false`, and none of them actually said
+   * they were unpaid.
+   *
+   * So never render this as an "Unpaid" badge. Telling a student an internship
+   * is unpaid when nobody established that is the same class of fabrication
+   * that got nine ingestion providers deleted. Treat `false` as "not stated"
+   * and show nothing, or read `salary` directly, which is null when absent.
+   */
   is_paid?: boolean | null
   deadline?: string | null
   requirements?: string[] | null
@@ -238,6 +252,23 @@ export function tierPresentation(tier: ResultTier, count: number): {
  * was weak when our scoring failed.
  */
 export function shortfallIsOurFault(result: AgentResult | null | undefined): boolean {
-  const reasons = result?.weak_profile?.reasons ?? []
+  if (!result) return false
+
+  // A good outcome is never "our fault", however the pipeline got there.
+  //
+  // Matching the reason text alone was too eager: the agent reports every
+  // provider hiccup it absorbs, so a run that discovered 26 postings, scored
+  // them, and returned 7 good matches still carried "1 of 26 could not be
+  // scored (provider errors)" — and the panel announced "Something went wrong
+  // on our side" above its own text saying "Good match rate", then offered to
+  // re-run a search that had just succeeded. Telling a student their
+  // successful search failed is worse than saying nothing at all.
+  //
+  // The distinction the guide actually cares about is whether OUR failure is
+  // why they got a thin result — so a tier that is already full or good rules
+  // it out before the reasons are consulted.
+  if (result.result_tier === 'full' || result.result_tier === 'good') return false
+
+  const reasons = result.weak_profile?.reasons ?? []
   return reasons.some((r) => /could not be scored|provider error|on our side/i.test(r))
 }

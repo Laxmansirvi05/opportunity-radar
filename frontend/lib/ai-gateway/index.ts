@@ -46,6 +46,13 @@ const RATE_LIMITS: Record<string, { max: number; windowMs: number }> = {
   // request with its own provider cost on that side. Reusing checkRateLimit
   // here rather than duplicating the mechanism.
   voice_interview:  { max: 10,  windowMs: 86_400_000 },
+  // AI Search is the most expensive thing a single click can start here: one
+  // run drives a scraping pipeline, a headless Chromium, and a scoring call
+  // per discovered posting, taking 5-20 minutes of real compute. Like
+  // voice_interview it never routes through callAI, so POST /api/ai-search had
+  // no throttle of any kind. Deliberately tighter than the others — a student
+  // has one resume, and re-running it repeatedly cannot improve the result.
+  ai_search:        { max: 5,   windowMs: 86_400_000 },
 }
 
 // SEC-01: `checkRateLimit` previously did `if (!limit) return true`, so any
