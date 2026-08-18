@@ -68,10 +68,41 @@ rather than re-deriving them.
 ## Known quality gaps (diagnosed, not bugs in our code)
 
 - [ ] **69% of discovery is wasted.** 18 of 26 pages had no readable job
-      details. The skip itself is a deliberate, documented token optimisation;
-      the real problem is render-service extraction. **Highest-value fix
-      available to this feature** — would roughly double results without
-      touching anything else.
+      details. **Highest-value fix available to this feature** — would roughly
+      double results without touching anything else.
+
+      Located, not yet fixed. The skip fires in the workflow's scoring node:
+
+          function hasScorableContent(opp) {
+            return nonEmpty(opp.company) || nonEmpty(opp.description) ||
+                   nonEmpty(opp.requirements) || nonEmpty(opp.skills);
+          }
+
+      So an item is skipped only when ALL FOUR are empty — the skip is a
+      deliberate, documented token optimisation ("~30% of a run's entire token
+      budget spent to produce zeros") and is correctly reported separately from
+      scoring failures. It is a symptom, not the bug.
+
+      The open question is WHICH of two things is failing, and they need
+      different fixes:
+        (a) render-service returns nothing usable (Cloudflare challenge, JS
+            timeout, bot block) — fix is in render-service/renderer.js; or
+        (b) render-service returns good HTML and the extraction/standardize
+            step fails to map it onto company/description/requirements/skills
+            — fix is in the workflow's extract node.
+
+      To find out, next session:
+        1. Bring the stack up (docker compose up postgres redis, then the four
+           services; they were all down at the end of 18 Aug).
+        2. Run one search and capture a SKIPPED item's full payload —
+           specifically whether `raw` / rendered HTML is present and non-trivial.
+           If `raw` is substantial, it is (b). If empty or a challenge page,
+           it is (a).
+        3. `POST http://localhost:3100/api/fetch` with `{"url": …}` and the
+           `x-api-key` header reproduces one page in isolation.
+
+      Do not guess between (a) and (b) — they share a symptom and nothing
+      else.
 - [ ] **Score calibration.** A frontend resume scored 100 on a SQL internship
       off "student with existing SQL knowledge", outranking four well-matched
       frontend roles. Lives in the gateway's `score_fit` prompt. Note the
