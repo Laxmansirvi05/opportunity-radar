@@ -225,7 +225,7 @@ function RoomStage({ personaId }: { personaId: string | null }) {
               const isMe = t.participantInfo.identity === localParticipant.identity
               // Stable key: participant identity + segment index — survives
               // reorders and deduplication, unlike a bare array index.
-              const key = `${t.participantInfo.identity}-${t.id ?? i}`
+              const key = `${t.participantInfo.identity}-${t.streamInfo?.id ?? i}`
               return (
                 <div key={key} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                   <span className="text-[9px] uppercase tracking-wide text-on-surface-variant/60 mb-0.5">

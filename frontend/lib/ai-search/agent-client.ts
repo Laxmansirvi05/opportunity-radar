@@ -65,18 +65,14 @@ export interface AgentOpportunity {
   work_mode?: string | null
   salary?: string | null
   /**
-   * WARNING: this means "a salary was DISCLOSED", not "this role is paid".
+   * Tristate: `true` when a salary was disclosed, `null` when pay is unknown.
+   * It is NOT a claim that a role is unpaid.
    *
-   * The agent computes it as `!!(salary.min || salary.max) || salaryDisclosedAsString`,
-   * so a posting that simply never published its pay comes back `false` —
-   * indistinguishable from one that stated it is unpaid. Measured on a real
-   * run: all 7 returned matches were `false`, and none of them actually said
-   * they were unpaid.
-   *
-   * So never render this as an "Unpaid" badge. Telling a student an internship
-   * is unpaid when nobody established that is the same class of fabrication
-   * that got nine ingestion providers deleted. Treat `false` as "not stated"
-   * and show nothing, or read `salary` directly, which is null when absent.
+   * The agent now emits only `true` or `null` (fixed 18 Aug in Standardize
+   * Opportunity) — precisely so "no pay found" can never be shown as "unpaid",
+   * the same fabrication class that got nine ingestion providers deleted.
+   * `false` should not occur; if it ever does, treat it as `null`. Render a
+   * "Paid" affordance only on `true`, never an "Unpaid" one on anything else.
    */
   is_paid?: boolean | null
   deadline?: string | null
