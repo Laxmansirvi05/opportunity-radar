@@ -50,6 +50,8 @@ export function InterviewStart({ opportunity, resumes }: InterviewStartProps) {
   const [resumeId, setResumeId] = useState<string | null>(resumes[0]?.id ?? null)
   const [uploading, setUploading] = useState(false)
   const [uploadName, setUploadName] = useState<string | null>(null)
+  // The extracted resume itself, sent with the start request for this run only.
+  const [uploadedResume, setUploadedResume] = useState<unknown>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [role, setRole] = useState(opportunity?.title ?? '')
@@ -72,7 +74,15 @@ export function InterviewStart({ opportunity, resumes }: InterviewStartProps) {
       const form = new FormData()
       form.append('file', file)
       const res = await fetch('/api/resume/optimization/extract', { method: 'POST', body: form })
-      if (!res.ok) throw new Error('Could not read that file')
+      const body = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(body?.error ?? 'Could not read that file')
+      // Keep the extracted resume, don't just note the filename. This response
+      // used to be thrown away, so an upload set a label and nothing else: the
+      // screen enabled Start and the request then failed with NO_RESUME,
+      // because the server went looking for a *saved* resume the student did
+      // not have. The extracted structure is what actually gets interviewed.
+      if (!body?.resume) throw new Error('Could not read that file')
+      setUploadedResume(body.resume)
       setUploadName(file.name)
       // An uploaded CV is used for this run only; a saved resume still wins if
       // one is selected, so the two sources never silently disagree.
@@ -94,6 +104,7 @@ export function InterviewStart({ opportunity, resumes }: InterviewStartProps) {
         body: JSON.stringify({
           opportunity_id: opportunity?.id,
           resume_id: resumeId ?? undefined,
+          resume_upload: uploadedResume ?? undefined,
           role: role.trim(),
           company: company.trim(),
           job_description: jobDescription.trim(),
@@ -216,7 +227,7 @@ export function InterviewStart({ opportunity, resumes }: InterviewStartProps) {
                       <li key={r.id}>
                         <button
                           type="button"
-                          onClick={() => { setResumeId(r.id); setUploadName(null) }}
+                          onClick={() => { setResumeId(r.id); setUploadName(null); setUploadedResume(null) }}
                           className={`interview-card w-full rounded-xl border p-3 text-left transition-all duration-300 ease-note ${
                             selected ? 'border-primary bg-primary-container/25' : 'border-outline-variant hover:border-primary/40 bg-surface'
                           }`}

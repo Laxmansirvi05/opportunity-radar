@@ -1,4 +1,5 @@
 import type { ResumeData } from '@reactive-resume/schema/resume/data'
+import type { ParsedResume } from '@/types/resume'
 
 /**
  * Client for the DeepInterview voice-interview service.
@@ -146,6 +147,67 @@ export function serializeResumeToText(data: ResumeData): string {
   return lines.join('\n').trim()
 }
 
+/**
+ * Serializes an uploaded-and-extracted resume (the ParsedResume shape returned
+ * by /api/resume/optimization/extract) into the same plain-text form.
+ *
+ * A second serializer is needed because the two resume sources genuinely carry
+ * different shapes: a *saved* resume is Reactive Resume's nested ResumeData
+ * (basics + sections), while a freshly *uploaded* PDF comes back as the flat
+ * ParsedResume the optimiser produces. Same output contract, so the agent
+ * cannot tell which path a candidate came in through.
+ */
+export function serializeParsedResumeToText(resume: ParsedResume): string {
+  const lines: string[] = []
+  if (resume.name) lines.push(resume.name)
+  const contact = [resume.email, resume.phone, resume.linkedin, resume.github].filter(Boolean).join(' · ')
+  if (contact) lines.push(contact)
+
+  if (resume.summary) lines.push('', 'SUMMARY', resume.summary)
+
+  if (resume.experience?.length) {
+    lines.push('', 'EXPERIENCE')
+    for (const item of resume.experience) {
+      const period = [item.start_date, item.end_date ?? 'Present'].filter(Boolean).join(' - ')
+      const header = [item.role, item.company, period, item.location].filter(Boolean).join(' · ')
+      if (header) lines.push(`- ${header}`)
+      for (const bullet of item.bullets ?? []) lines.push(`  ${bullet}`)
+    }
+  }
+
+  if (resume.education?.length) {
+    lines.push('', 'EDUCATION')
+    for (const item of resume.education) {
+      const header = [item.degree, item.field, item.institution, item.graduation_year]
+        .filter(Boolean)
+        .join(' · ')
+      if (header) lines.push(`- ${header}`)
+    }
+  }
+
+  if (resume.projects?.length) {
+    lines.push('', 'PROJECTS')
+    for (const item of resume.projects) {
+      const header = [item.name, item.technologies?.join(', ')].filter(Boolean).join(' · ')
+      if (header) lines.push(`- ${header}`)
+      if (item.description) lines.push(`  ${item.description}`)
+    }
+  }
+
+  if (resume.skills?.length) lines.push('', 'SKILLS', resume.skills.join(', '))
+
+  // Same reasoning as the saved-resume path: these are among the most
+  // interview-relevant things a student has, so they must not be dropped.
+  if (resume.certifications?.length) {
+    lines.push('', 'CERTIFICATIONS', ...resume.certifications.map((c) => `- ${c}`))
+  }
+  if (resume.achievements?.length) {
+    lines.push('', 'ACHIEVEMENTS', ...resume.achievements.map((a) => `- ${a}`))
+  }
+
+  return lines.join('\n').trim()
+}
+
 /** Builds a JD text block from an Opportunity Radar opportunity row. */
 export function buildJobDescriptionText(opp: {
   title: string
@@ -235,7 +297,17 @@ export interface ScoreCard {
 
 export interface SessionView {
   session_id: string
-  status: string // pending | in_progress | complete | no_answers | error | rejected
+  status: string // prep | ready | in_progress | complete | no_answers | error | rejected
+  /**
+   * Completed prep step keys, in order — a subset of cv_analysis, jd_analysis,
+   * company_research, gap_matching, question_planner. The agent maintains this
+   * specifically so a client can show live prep progress, and we need it to
+   * know when it is safe to join the room: the worker aborts with "no
+   * InterviewContext for session" if the candidate connects before the plan
+   * exists.
+   */
+  progress?: string[]
+  prep_warnings?: string[]
   context?: {
     job?: { company_name?: string | null; title?: string | null }
     answers?: { question_id: string; transcript: string }[]

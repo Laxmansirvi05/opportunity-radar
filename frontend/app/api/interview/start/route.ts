@@ -3,12 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import {
   startPrep,
   serializeResumeToText,
+  serializeParsedResumeToText,
   buildJobDescriptionText,
   InterviewAgentError,
   messageForCode,
 } from '@/lib/interview/agent-client'
 import { checkRateLimit } from '@/lib/ai-gateway'
 import type { ResumeData } from '@reactive-resume/schema/resume/data'
+import { ParsedResumeSchema } from '@/types/resume'
 
 /**
  * POST /api/interview/start — begin a mock interview.
@@ -33,6 +35,13 @@ export const maxDuration = 60
 interface StartBody {
   opportunity_id?: string
   resume_id?: string
+  /**
+   * A resume uploaded on the intake screen, already extracted to structure by
+   * /api/resume/optimization/extract. Sent for this run only and never saved:
+   * a student practising against a one-off CV should not have it silently
+   * appear in Resume Builder.
+   */
+  resume_upload?: unknown
   role?: string
   company?: string
   job_description?: string
@@ -76,20 +85,40 @@ export async function POST(req: NextRequest) {
     body = {}
   }
 
-  // Resume: reuse what's already in Resume Builder rather than asking for a
-  // second upload — VOICE-INTERVIEW-INTEGRATION.md §3 and
-  // OPPORTUNITY_RADAR_CORRECTIONS.md Addition 4 are both explicit about this.
-  const resumeQuery = supabase
-    .from('resumes')
-    .select('id, parsed_data')
-    .eq('user_id', user.id)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-  const { data: resume } = body.resume_id
-    ? await supabase.from('resumes').select('id, parsed_data').eq('id', body.resume_id).eq('user_id', user.id).maybeSingle()
-    : await resumeQuery.maybeSingle()
+  // Two resume sources, in priority order.
+  //
+  // A resume uploaded on the intake screen wins, because it is the most recent
+  // thing the student chose. Otherwise reuse what's already in Resume Builder
+  // rather than asking for a second upload — VOICE-INTERVIEW-INTEGRATION.md §3
+  // and OPPORTUNITY_RADAR_CORRECTIONS.md Addition 4 are both explicit on that.
+  //
+  // The upload branch matters more than it looks: a student whose account has
+  // no saved resume can only get in this way, and without it the intake screen
+  // accepted a PDF, enabled Start, and then failed here with NO_RESUME.
+  let cvText: string | null = null
+  let resumeId: string | null = null
 
-  if (!resume?.parsed_data) {
+  const uploaded = ParsedResumeSchema.safeParse(body.resume_upload)
+  if (uploaded.success) {
+    cvText = serializeParsedResumeToText(uploaded.data)
+  } else {
+    const resumeQuery = supabase
+      .from('resumes')
+      .select('id, parsed_data')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    const { data: resume } = body.resume_id
+      ? await supabase.from('resumes').select('id, parsed_data').eq('id', body.resume_id).eq('user_id', user.id).maybeSingle()
+      : await resumeQuery.maybeSingle()
+
+    if (resume?.parsed_data) {
+      cvText = serializeResumeToText(resume.parsed_data as ResumeData)
+      resumeId = resume.id
+    }
+  }
+
+  if (!cvText) {
     return NextResponse.json(
       { error: { code: 'NO_RESUME', message: messageForCode('NO_RESUME') } },
       { status: 422 }
@@ -121,8 +150,6 @@ export async function POST(req: NextRequest) {
   company = cleanText(body.company, COMPANY_MAX) ?? company
   jdText = cleanText(body.job_description, JD_MAX) ?? jdText
 
-  const cvText = serializeResumeToText(resume.parsed_data as ResumeData)
-
   let externalSessionId: string
   try {
     externalSessionId = await startPrep({
@@ -145,7 +172,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_id: user.id,
       opportunity_id: opportunityId,
-      resume_id: resume.id,
+      resume_id: resumeId,
       role_title: roleTitle,
       company,
       status: 'pending',

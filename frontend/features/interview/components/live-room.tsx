@@ -105,6 +105,7 @@ function RoomStage({ personaId }: { personaId: string | null }) {
   const transcriptions = useTranscriptions()
   const { send, isSending } = useChat()
   const [draft, setDraft] = useState('')
+  const transcriptScrollRef = useRef<HTMLDivElement>(null)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
 
   const persona = useMemo(() => getPersona(personaId), [personaId])
@@ -123,7 +124,12 @@ function RoomStage({ personaId }: { personaId: string | null }) {
             : 'Idle'
 
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll the transcript's own scroll container, not scrollIntoView.
+    // scrollIntoView walks up and scrolls every scrollable ancestor including
+    // the document, so each new turn dragged the whole page down while the
+    // candidate was mid-interview. Setting scrollTop moves only this panel.
+    const el = transcriptScrollRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }, [transcriptions.length])
 
   async function sendDraft() {
@@ -139,7 +145,7 @@ function RoomStage({ personaId }: { personaId: string | null }) {
   }
 
   return (
-    <div className="w-full flex flex-col md:flex-row gap-4 items-stretch">
+    <div className="w-full flex flex-col md:flex-row gap-4 items-stretch md:h-[calc(100vh-11rem)]">
       {/* Avatar / state stage */}
       <div className="flex-1 flex flex-col items-center gap-4">
         <div className="w-full flex items-center justify-between text-xs">
@@ -190,7 +196,7 @@ function RoomStage({ personaId }: { personaId: string | null }) {
       </div>
 
       {/* Transcript + text fallback */}
-      <div className="flex-1 flex flex-col bg-surface border border-outline-variant rounded-xl overflow-hidden max-h-[480px] md:max-h-none">
+      <div className="flex flex-col bg-surface border border-outline-variant rounded-xl overflow-hidden h-[60vh] md:h-[calc(100vh-11rem)] md:w-[440px] md:shrink-0">
         <div className="px-4 py-2.5 border-b border-outline-variant flex items-center justify-between shrink-0">
           <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Transcript</span>
           {connected && (
@@ -201,7 +207,7 @@ function RoomStage({ personaId }: { personaId: string | null }) {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5">
+        <div ref={transcriptScrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 flex flex-col gap-2.5">
           {transcriptions.length === 0 ? (
             <p className="text-xs text-on-surface-variant/70">The conversation will appear here as you speak.</p>
           ) : (

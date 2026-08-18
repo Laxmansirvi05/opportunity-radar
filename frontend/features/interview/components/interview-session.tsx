@@ -15,9 +15,25 @@ interface StatusResponse {
   role_title?: string | null
   company?: string | null
   report?: { scorecard: ScoreCard; overall_score: number | null; degraded: boolean } | null
+  agent_status?: string
+  prep_progress?: string[]
   transient_error?: string
   error?: { code: string; message: string }
 }
+
+/** The agent's own prep step keys, in the order it runs them. */
+const PREP_STEPS: { key: string; label: string }[] = [
+  { key: 'cv_analysis', label: 'Reading your resume' },
+  { key: 'jd_analysis', label: 'Reading the job description' },
+  { key: 'company_research', label: 'Looking up the company' },
+  { key: 'gap_matching', label: 'Comparing you to the role' },
+  { key: 'question_planner', label: 'Writing your questions' },
+]
+
+/** Prep gate: how often to re-check, and how long before giving up. Prep is a
+ *  five-node LLM pipeline, so a minute is normal and three is the ceiling. */
+const PREP_POLL_MS = 2_500
+const PREP_TIMEOUT_MS = 3 * 60_000
 
 /** Poll cadence while waiting for the agent to finish scoring — the room
  *  itself is real-time, this only applies after disconnect. */
@@ -30,6 +46,9 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
   const [report, setReport] = useState<{ scorecard: ScoreCard; degraded: boolean } | null>(null)
   const [liveKit, setLiveKit] = useState<{ token: string; url: string } | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // Prep steps completed so far, shown while waiting so a 45-60s wait reads as
+  // progress rather than a hang.
+  const [prepProgress, setPrepProgress] = useState<string[]>([])
   const scorePollStarted = useRef<number | null>(null)
 
   const fetchStatus = useCallback(async (): Promise<StatusResponse | null> => {
@@ -83,6 +102,32 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
   const startCall = useCallback(async () => {
     setPhase('connecting')
     try {
+      // Wait for prep before joining. The room is created the moment a token is
+      // minted, which dispatches the worker; if the question plan is not built
+      // yet the worker logs "no InterviewContext for session" and aborts, and
+      // the candidate is left staring at CONNECTING with no interviewer and no
+      // error. Prep runs 45-60s, so this gap is the normal case, not an edge
+      // one — the old code called /token immediately and hit it every time.
+      const deadline = Date.now() + PREP_TIMEOUT_MS
+      for (;;) {
+        const statusRes = await fetch(`/api/interview/${sessionId}`, { cache: 'no-store' })
+        const status = await statusRes.json().catch(() => null)
+        // A terminal status here means the session ended before it began;
+        // fall through and let the normal handling report it.
+        if (!statusRes.ok || status?.status !== 'in_progress') break
+        const agentStatus = status?.agent_status
+        if (agentStatus && agentStatus !== 'prep') break
+        setPrepProgress(Array.isArray(status?.prep_progress) ? status.prep_progress : [])
+        if (Date.now() > deadline) {
+          setErrorMessage(
+            'The interviewer is taking longer than expected to prepare. Please try starting again.'
+          )
+          setPhase('error')
+          return
+        }
+        await new Promise((r) => setTimeout(r, PREP_POLL_MS))
+      }
+
       const res = await fetch(`/api/interview/${sessionId}/token`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) {
@@ -169,7 +214,41 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
   }
 
   if (phase === 'connecting') {
-    return <div className="flex items-center justify-center py-20 text-sm text-on-surface-variant">Connecting to the interviewer…</div>
+    // Named steps, not a bare spinner: this wait is the agent reading the CV
+    // and the job description and writing a question plan, which takes the best
+    // part of a minute. Showing which steps are done makes that legible as work
+    // rather than as a hang, and it is the same progress the agent publishes.
+    const done = new Set(prepProgress)
+    return (
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-20">
+        <p className="font-title-md text-title-md text-on-surface">Getting your interviewer ready</p>
+        <p className="font-body-sm text-body-sm text-center text-on-surface-variant">
+          It&apos;s reading your resume and the job description, then writing questions for this
+          specific role. This takes about a minute.
+        </p>
+        <ul className="mt-2 flex w-full flex-col gap-2">
+          {PREP_STEPS.map((s) => (
+            <li key={s.key} className="flex items-center gap-2.5">
+              <span
+                aria-hidden="true"
+                className={`material-symbols-outlined text-[18px] ${
+                  done.has(s.key) ? 'text-primary' : 'text-on-surface-variant/40'
+                }`}
+              >
+                {done.has(s.key) ? 'check_circle' : 'radio_button_unchecked'}
+              </span>
+              <span
+                className={`font-body-sm text-body-sm ${
+                  done.has(s.key) ? 'text-on-surface' : 'text-on-surface-variant'
+                }`}
+              >
+                {s.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
   }
 
   if (phase === 'live' && liveKit) {

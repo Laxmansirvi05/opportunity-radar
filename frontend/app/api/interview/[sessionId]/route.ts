@@ -143,11 +143,22 @@ export async function GET(
     return NextResponse.json({ session_id: session.id, status: 'failed', report: null })
   }
 
-  // Still running.
+  // Still running. The agent's own status rides along, because "prep" and
+  // "ready" mean very different things to the caller and both used to collapse
+  // into in_progress here: the browser could not tell that the question plan
+  // did not exist yet, joined the room anyway, and the worker aborted with
+  // "no InterviewContext for session" — leaving the room on CONNECTING with no
+  // interviewer and no error. prep_progress drives the waiting UI.
   if (session.status !== 'in_progress') {
     await supabase.from('interview_sessions').update({ status: 'in_progress' }).eq('id', session.id)
   }
-  return NextResponse.json({ session_id: session.id, status: 'in_progress', report: null })
+  return NextResponse.json({
+    session_id: session.id,
+    status: 'in_progress',
+    agent_status: view.status,
+    prep_progress: view.progress ?? [],
+    report: null,
+  })
 }
 
 async function finalize(
