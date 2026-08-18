@@ -92,10 +92,15 @@ rather than re-deriving them.
           "new row violates row-level security policy"
       Defence in depth also holds: every query in both route handlers filters
       `.eq('user_id', user.id)` independently of RLS.
-- [~] **Rate limit — mechanism tested, wiring verified, runtime not (18 Aug).**
-      checkRateLimit is unit-tested (ai-gateway-rate-limit-default.test.ts et al)
-      and the ai_search entry (5/24h) + the route's call are verified by reading.
-      The 6th-request-429 runtime check needs an authenticated session.
+- [x] **Rate limit — BUG FOUND & FIXED (18 Aug).** Running the test surfaced
+      that the limit was a NO-OP: checkRateLimit's RPC only READS ai_usage_log,
+      and nothing wrote an ai_search row (that insert lives in callAI, which AI
+      Search never calls), so it always counted 0 and the only accumulator was
+      the per-process in-memory map (empty on serverless cold start).
+      recordFeatureUsage now writes a usage row on each accepted start. Proven
+      against the real RPC: 6 requests -> exactly 5 recorded, 6th denied, 7th
+      would deny. NOTE: voice_interview has the same latent flaw (also never
+      calls callAI) — flagged, not yet fixed.
 - [x] **Agent dies mid-run — CODE-VERIFIED (18 Aug).** Poll route: unreachable
       -> transient_error (keeps polling, run may still be live); stays dead ->
       PIPELINE_TIMEOUT by job age -> failed. Honest, no infinite spin. Not
