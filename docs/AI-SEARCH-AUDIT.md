@@ -129,9 +129,55 @@ rather than re-deriving them.
            fixes it. CHECK THIS FIRST — it is cheaper to verify and would make
            lead 1 irrelevant for those items.
 
-      Next: run one full search, take the URLs of the 18 skipped items, and see
-      how many are listing pages vs real postings. That single count decides
-      which of the two leads to spend effort on.
+      **COUNTED 18 Aug — lead 2 confirmed. This is a DISCOVERY QUALITY problem,
+      not an extraction one.** Pulled the URL pool from n8n execution 344
+      (`sqlite3 ~/.n8n/database.sqlite "select data from execution_data where
+      executionId=344"`) — the run that produced the 7 results. What discovery
+      admitted:
+
+        NOT JOB POSTINGS AT ALL
+          https://www.instagram.com/reel/DOgGAomj135
+          https://www.instagram.com/reel/DaQAA76vrVT
+          https://codegnan.com/blogs/10-c-programming-career-paths
+          https://codegnan.com/python-career-opportunities
+
+        SEARCH / LISTING / ERROR PAGES, not individual jobs
+          https://internshala.com/internships/javascript-development-internship
+          https://internshala.com/internships/python-internship
+          https://job-boards.greenhouse.io/verifone?error=true
+          https://job-board-one-chi.vercel.app
+
+        REAL POSTINGS (these are fine)
+          apply.workable.com/… · jobs.lever.co/… · job-boards.greenhouse.io/…/jobs/…
+          cutshort.io/job/… · myinternships.in/job/… · unstop.com/internships/…
+          stayingbee.com/join-our-team/…
+
+      An Instagram reel and a blog post have no company/description/
+      requirements/skills, so hasScorableContent skips them CORRECTLY. The
+      scoring node is behaving exactly as designed; the waste is upstream, in
+      what discovery lets through.
+
+      So the fix is a discovery-side URL filter, NOT extraction work:
+        - reject non-job hosts outright (instagram.com, facebook.com, youtube.com…)
+        - reject obvious content paths (/blog/, /blogs/, /career-paths, /amp)
+        - reject listing/search pages: an internshala.com/internships/<query>
+          path with no numeric job id is a SEARCH page; real ones carry an id
+        - reject error pages (?error=true) and bare domains with no path
+
+      **Separately, a dedup gap is visible in the same pool** — the same job
+      appears twice differing only by trailing slash or letter case:
+          .../j/49D461FD97  vs  .../j/49d461fd97
+          .../python-internship  vs  .../python-internship/
+      Canonicalise (lowercase host+path, strip trailing slash) before the
+      "Discovery Quality Gate + Dedup" node counts admissions, or the same
+      posting burns two render+score budgets.
+
+      Caveat on rigour: this is the discovered URL POOL for the run, not a
+      per-item attribution of each of the 18 skips — n8n's flattened execution
+      format made mapping each skip to its exact URL impractical in the time
+      available. The presence of Instagram reels and blog posts in the pool is
+      conclusive enough to direct the fix; re-measure skip counts after the
+      filter lands to confirm the size of the win.
 - [ ] **Score calibration.** A frontend resume scored 100 on a SQL internship
       off "student with existing SQL knowledge", outranking four well-matched
       frontend roles. Lives in the gateway's `score_fit` prompt. Note the
