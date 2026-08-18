@@ -13,13 +13,7 @@ import { createClient } from '@supabase/supabase-js'
  * Protected by CRON_SECRET — Vercel Cron Jobs (or any external scheduler)
  * must send this header. Without it the route 401s.
  *
- * To wire this up in vercel.json:
- * {
- *   "crons": [{
- *     "path": "/api/cron/sweep-interviews",
- *     "schedule": "*/15 * * * *"
- *   }]
- * }
+ * Wire this up in vercel.json as a cron with schedule "every 15 minutes".
  */
 
 const STALE_THRESHOLD_MINUTES = 30

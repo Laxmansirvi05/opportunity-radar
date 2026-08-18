@@ -355,6 +355,49 @@ our failure presented as a fact about the world.
       the skipped_no_content sentence. Fix AFTER pacing, so the numbers it
       reports are real.
 
+### ROOT CAUSE FOUND — silent render failures (18 Aug, final)
+
+The guard_skipped/no_response split settled it in one run:
+
+    extraction_status: extracted 50 | guard_skipped 20 | no_response 0
+    scoring_status   : scored 21 | extraction_failed 0 | skipped_no_content 7
+
+no_response = 0. The gateway NEVER fails — that theory is dead for good, and
+rotation is doing its job. All losses are guard_skipped, and the guard says why:
+
+    "extracted content is only 0 chars (min 50); extraction_meta.blocks_kept
+     is 0 (extractor found nothing usable); no header"
+
+Checked clean_text on those items directly: 0 chars, every one. So Extract Main
+Content is NOT at fault — it is handed nothing. The loss is upstream.
+
+The cause is the 'playwright' node (HTTP call to render-service :3100/fetch):
+
+    onError: continueRegularOutput
+
+When a render fails, n8n passes the item through with an EMPTY payload instead
+of stopping it. $json.data is undefined, Clean HTML produces clean_text = 0,
+the guard skips it, and Build Response tells the student "N discovered pages
+had no readable job details" — a claim about the POSTING, when the truth is our
+own fetch failed. Same mislabel family as is_paid and skipped_no_content.
+
+Confirmed the pages themselves are fine: fetching those URLs by hand returns
+7,982 clean chars with correct headings.
+
+Note also instagram.com/reel appears among the guard_skipped items, so the
+discovery filter is not rejecting it on this path — worth checking whether the
+filter runs before or after this branch.
+
+### FIX (not yet applied — needs a session with room to verify)
+  1. Stop treating a failed render as a valid empty item. Either set the node
+     to stop on error for that item, or tag it (render_failed) and carry the
+     reason through, so it can never be counted as skipped_no_content.
+  2. Add render_failed as a distinct scoring_status, alongside the
+     guard_skipped/no_response split already in place.
+  3. Then correct Build Response copy so only genuinely thin pages are
+     described as having no job details.
+  4. Re-measure. scored was 21 this run (best of the day, up from 15).
+
 ### no_response is TWO things — my instrumentation conflated them
 
 Read the gateway log for a failing run, as the previous entry said to do:
