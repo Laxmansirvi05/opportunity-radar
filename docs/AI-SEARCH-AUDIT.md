@@ -101,8 +101,37 @@ rather than re-deriving them.
         3. `POST http://localhost:3100/api/fetch` with `{"url": …}` and the
            `x-api-key` header reproduces one page in isolation.
 
-      Do not guess between (a) and (b) — they share a symptom and nothing
-      else.
+      **ANSWERED 18 Aug: it is (b), extraction — not rendering.**
+      Started render-service alone and fetched a real posting URL
+      (`POST localhost:3100/fetch`, note the path is /fetch, NOT /api/fetch):
+
+          HTTP 200 · html 516,248 chars · visible text 94,648 chars
+          jsRendered: true · cloudflareDetected: false · renderTimeMs: 3695
+
+      Chromium runs the page's JS and returns half a megabyte of real content,
+      so the renderer is not blocked, challenged or timing out. The break is
+      between that HTML and the four fields.
+
+      Two concrete leads from the captured payload, both unverified:
+
+        1. The extracted visible text BEGINS with inline <script> contents —
+           `var os_type = "Windows"; var browser_name = 'chrome'; …`. Whatever
+           consumes this HTML is treating script bodies as page text. If ~94k
+           chars of mostly-script are handed to the extraction model, it may
+           find nothing job-shaped in its window and return empty fields, which
+           then correctly trip hasScorableContent and get skipped. Stripping
+           script/style/nav before extraction is the obvious first fix.
+
+        2. That same payload contains `view = "internship/search/search"` — the
+           URL is a SEARCH RESULTS page, not an individual posting. If discovery
+           is admitting listing pages alongside job pages, empty per-job fields
+           are exactly what you would expect, and no amount of extraction work
+           fixes it. CHECK THIS FIRST — it is cheaper to verify and would make
+           lead 1 irrelevant for those items.
+
+      Next: run one full search, take the URLs of the 18 skipped items, and see
+      how many are listing pages vs real postings. That single count decides
+      which of the two leads to spend effort on.
 - [ ] **Score calibration.** A frontend resume scored 100 on a SQL internship
       off "student with existing SQL knowledge", outranking four well-matched
       frontend roles. Lives in the gateway's `score_fit` prompt. Note the
