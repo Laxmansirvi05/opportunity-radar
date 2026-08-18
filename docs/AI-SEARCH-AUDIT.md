@@ -355,6 +355,65 @@ our failure presented as a fact about the world.
       the skipped_no_content sentence. Fix AFTER pacing, so the numbers it
       reports are real.
 
+### THE ACTUAL ROOT CAUSE — render-service Chromium was uninstalled (18 Aug, late)
+
+Chased the guard_skipped items into render-service's OWN log (/tmp/render.log,
+not the gateway log). Every failing item showed:
+
+    browserType.launch: Executable doesn't exist at
+    .../ms-playwright/chromium_headless_shell-1234/chrome-headless-shell...
+    "Please run: npx playwright install"
+
+The Playwright browser cache was EMPTY — chromium.executablePath() pointed at a
+binary that was not on disk. So render-service returned 500 on every single
+render, retried 3x, and the item reached Clean HTML with no HTML at all. This
+is what actually produced guard_skipped 20 and 40 in the last runs — NOT the
+data/html mismatch, NOT extraction logic, NOT rate limits. A missing browser
+binary.
+
+(Earlier in the session render-service worked — I fetched the 7,982-char robusta
+page successfully. The cache was wiped or updated at some point mid-session,
+which is why the skip numbers jumped between runs.)
+
+FIXED: npx playwright install chromium (downloaded chromium-1234 +
+chrome-headless-shell + ffmpeg), restarted render-service BY PORT (lsof -t
+-iTCP:3100, not pkill -f which matches the wrong process). Verified: the exact
+palantir URL that was 500ing now returns 200 with 734,027 chars of HTML.
+
+Lesson: this cost several wrong theories because I read the GATEWAY log and the
+n8n execution data, but not the render-service log, for far too long. When an
+item has clean_text=0 but html is also absent, the fetch failed — go straight
+to the fetcher's own log.
+
+### NEXT RUN THEN BLOCKED — Tavily search quota exhausted
+
+With render-service fixed, the very next full run failed EARLIER, at the
+discovery stage (HTTP Request -> api.tavily.com/search):
+
+    HTTP 432 — "This request exceeds your plan's set usage limit."
+
+Tavily's free tier is spent. This is the discovery search provider and it has
+NO fallback: the workflow references Exa in comments but no EXA_API_KEY is set
+in .env, and the frontend key pool has no search keys to forward (unlike the 9
+LLM keys). So end-to-end AI Search cannot complete right now for a reason I
+cannot fix without a key I do not have.
+
+This is a genuine external blocker, not a code bug. Options for the next session,
+in order of effort:
+  1. Wait for Tavily's quota to reset (daily/monthly depending on plan).
+  2. Add a second Tavily key and rotate (same pattern as the gateway LLM pool)
+     — but the HTTP Request node reads $env.TAVILY_API_KEY directly, so this
+     needs the node changed to try a pool, or the search moved behind a small
+     rotating proxy.
+  3. Wire Exa as a real fallback provider (EXA_API_KEY + a branch in Build
+     Multi-Source Search Plan / HTTP Request).
+
+State of the extraction thread: the code fixes are in (Playwright reinstalled,
+Clean HTML reads .html, guard_skipped/no_response/render split instrumented).
+Whether they actually raise the returned count CANNOT be measured until a
+search provider has quota. Do not claim the extraction win until one clean run
+completes with render-service healthy AND search working.
+
 ### ROOT CAUSE FOUND — silent render failures (18 Aug, final)
 
 The guard_skipped/no_response split settled it in one run:
