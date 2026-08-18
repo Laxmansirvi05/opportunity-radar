@@ -1,3 +1,40 @@
+# AI SEARCH — EXTRACTION THREAD CLOSED (18 Aug, verified end-to-end)
+
+First fully-healthy run of the day (render-service + search + n8n CLI all
+working at once):
+
+    extraction_status: extracted 95, guard_skipped 0, no_response 0, parse_failed 0
+    scoring_status:    scored 44,  extraction_failed 0, skipped_no_content 0
+    scoring summary:   17 attempted, 17 succeeded, 0 failed
+    returned:          10 of 10   tier: FULL   strength: strong
+
+Zero skips of any kind. A full slate of 10 real matches (Anvaya, Avadhuta,
+Nizam, Falcon, Spritle, Copilot GTM, Rejolut, Virtu, Raptee, Codec).
+
+Root cause of the whole extraction saga: render-service's Playwright Chromium
+was uninstalled mid-session, so every render 500'd and items reached the guard
+with empty content. NOT script noise, truncation, field selection, the gateway,
+rate limiting, or pacing — all five were wrong. A missing browser binary.
+
+What actually had to be true for a clean run, and each had blocked it in turn:
+  1. Chromium installed (npx playwright install chromium) — the real fix
+  2. Clean HTML reads .html not just .data (render branch) — commit 361659e
+  3. Gateway key rotation across 9 keys — commit e999e20 (absorbs Groq limits)
+  4. A search key with quota — user supplied a fresh Tavily key
+  5. n8n SERVER stopped — the pipeline uses `n8n execute` (CLI), which needs
+     port 5679; a running n8n server holds it and the CLI produces no output.
+     Do NOT run `n8n start` while using this pipeline.
+  6. job-server started with .env sourced — it passes process.env to the
+     n8n execute child, so a stale job-server = a stale Tavily key in n8n.
+
+OPERATIONAL NOTE for restarts (all four are plain node processes + n8n CLI):
+  - render-service :3100  — needs Chromium installed; restart BY PORT
+  - ai-gateway :4000, search-planner :4200, job-server :4300 — source .env first
+  - do NOT run `n8n start`; the pipeline shells out to `n8n execute`
+  - restart by port (lsof -t -iTCP:PORT), never pkill -f (matches wrong procs)
+
+---
+
 # AI Search — completion audit
 
 The plan for taking AI Search to genuinely finished, not demo-finished.
