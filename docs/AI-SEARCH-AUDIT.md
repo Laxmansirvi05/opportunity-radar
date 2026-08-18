@@ -241,6 +241,40 @@ doubling and getting 7 -> 6.
 What is solid: returned 7 -> 8, scoring failures 1 -> 0, and tier reaching
 FULL for the first time.
 
+### Extraction fix measured (commit 35759e7) — no effect on skips
+
+                    baseline  filter-v1  +rotation  +extraction
+    discovered          26        17         20         20
+    skipped_no_content  18         9         12         12
+    scored ok            7         7          8          8
+    returned             7         6          8          8
+    tier              good      good       full       full
+
+The fix DID take effect — scores moved (90/88/85 vs 100/92/90) and different
+companies surfaced — so the model is now receiving main_content instead of
+truncated whole-page text. But the skip count did not move at all.
+
+Conclusion: the 12 skipped items fail BEFORE extraction quality matters. They
+arrive with no company, description, requirements or skills whatsoever, so
+choosing a better field cannot rescue them. The fix is still correct on its own
+merits (the model was being fed navigation chrome), but it is NOT the lever on
+the skip count.
+
+Two theories now dead, both by measurement rather than argument:
+  - <script> noise — Clean HTML already strips script/style/noscript/template/
+    svg/canvas.
+  - field selection/truncation — fixed, skips unchanged.
+
+What is left for the 12: find out what render-service actually returns for one
+of THEM specifically. Every inspection so far used a URL picked by hand, not a
+confirmed member of the skipped set. Capture a skipped item's own payload
+(status, html length, cloudflareDetected) before theorising again.
+
+### NEW — postings admitted with no title
+Two results came back with title None and low scores (FloLabs 60, Redis 50).
+A posting with no title should probably not be shown to a student at all;
+at minimum it should not occupy a slot above a titled one.
+
 ### Still open on this thread
 - [ ] The ~12 remaining skips are LEGITIMATE postings the pipeline cannot read
       (board roots and junk are now filtered out). This is the extraction
