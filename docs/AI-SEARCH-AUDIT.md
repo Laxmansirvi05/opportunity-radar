@@ -270,6 +270,46 @@ of THEM specifically. Every inspection so far used a URL picked by hand, not a
 confirmed member of the skipped set. Capture a skipped item's own payload
 (status, html length, cloudflareDetected) before theorising again.
 
+### BREAKTHROUGH — the skips are NOT thin pages (18 Aug, execution 350)
+
+Resolved all 12 confirmed skipped URLs for the first time by dereferencing
+n8n's flat pointer array (objects hold INDEX pointers; find the index of the
+'skipped_no_content' string, then match objects whose scoring_status points at
+it). Every prior inspection used a hand-picked URL, which is why three theories
+in a row missed.
+
+The 12 are mostly REAL ATS postings — lever.co/palantir, workable/robusta,
+ashbyhq/ramp, cutshort.io/job — not junk. Fetched three through render-service:
+
+  workable/robusta/j/1A49B1E6C2   200  cleaned 7,982  "Senior Frontend
+                                                       Developer (AEM/CMS)"
+  lever.co/palantir/e27af7ab…     200  cleaned 7,469  "Software Engineer,
+                                                       Internship"
+  ashbyhq.com/ramp/31f7e045…      200  cleaned   145  "Job not found" (dead)
+
+TWO OF THREE HAVE REAL, READABLE JOB CONTENT and were still skipped. So the
+failure is neither rendering nor the pages themselves — it is between render
+and hasScorableContent.
+
+Leading hypothesis, NOT yet proven: extraction is an LLM call (HTTP Request2,
+task extract_opportunity) and that run logged 14 key rotations from rate
+limiting. If those calls fail under pressure, the item reaches scoring with
+empty fields and is counted as skipped_no_content — "nothing to match on" —
+when the truth is "we failed to extract it". That would also explain why the
+main_content fix changed nothing: the calls never succeeded to begin with.
+
+This matters beyond the count. skipped_no_content is reported to the student as
+a property of the POSTING ("no readable job details"). If it is really our
+extraction failing, that is the same class of mislabel as the is_paid trap:
+our failure presented as a fact about the world.
+
+Next, in order:
+  1. Instrument the extraction call — log HTTP status and whether the response
+     parsed, per item. Do not infer.
+  2. If extraction calls are failing, split the status: extraction_failed vs
+     skipped_no_content. They must never be reported the same way.
+  3. Only then judge whether pacing or more keys is the fix.
+
 ### NEW — postings admitted with no title
 Two results came back with title None and low scores (FloLabs 60, Redis 50).
 A posting with no title should probably not be shown to a student at all;
