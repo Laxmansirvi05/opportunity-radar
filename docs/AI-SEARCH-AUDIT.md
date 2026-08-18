@@ -75,7 +75,7 @@ rather than re-deriving them.
 
 ## Must fix before real students use it
 
-- [ ] **`is_paid` means "salary was disclosed", not "this role is paid."**
+- [x] **(FIXED — see is_paid tristate below) `is_paid` meant "salary was disclosed", not "this role is paid."**
       Computed in workflows.json standardize node as
       `!!(salary.min || salary.max) || salaryDisclosedAsString`. A posting that
       never published pay returns `false`, indistinguishable from one that said
@@ -124,7 +124,7 @@ rather than re-deriving them.
 
 ## Known quality gaps (diagnosed, not bugs in our code)
 
-- [ ] **69% of discovery is wasted.** 18 of 26 pages had no readable job
+- [x] **(RESOLVED — extraction root cause was missing Chromium; 0 skips now) 69% of discovery was wasted.** 18 of 26 pages had no readable job
       details. **Highest-value fix available to this feature** — would roughly
       double results without touching anything else.
 
@@ -571,7 +571,7 @@ at minimum it should not occupy a slot above a titled one.
       thread — the <script>-noise finding from render-service, where stripping
       script/style cut 154KB of HTML to 2,951 chars of real text. Last known
       lever on result quality.
-- [ ] Pacing between gateway calls. Rotation now ABSORBS the burst that trips
+- [x] Pacing — TRIED, made it worse, reverted; not needed (extraction fixed via Chromium). Rotation absorbs the burst. Rotation now ABSORBS the burst that trips
       Groq's ~12k tokens/min; it does not prevent it. 14 rotations for one run
       is a lot of key budget spent on avoidable retries.
 
