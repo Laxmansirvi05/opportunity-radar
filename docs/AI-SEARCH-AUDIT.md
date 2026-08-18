@@ -92,8 +92,10 @@ rather than re-deriving them.
           "new row violates row-level security policy"
       Defence in depth also holds: every query in both route handlers filters
       `.eq('user_id', user.id)` independently of RLS.
-- [ ] **Rate limit works.** Submit 6 searches in a day; the 6th must 429.
-      Implemented but never exercised.
+- [~] **Rate limit — mechanism tested, wiring verified, runtime not (18 Aug).**
+      checkRateLimit is unit-tested (ai-gateway-rate-limit-default.test.ts et al)
+      and the ai_search entry (5/24h) + the route's call are verified by reading.
+      The 6th-request-429 runtime check needs an authenticated session.
 - [x] **Agent dies mid-run — CODE-VERIFIED (18 Aug).** Poll route: unreachable
       -> transient_error (keeps polling, run may still be live); stays dead ->
       PIPELINE_TIMEOUT by job age -> failed. Honest, no infinite spin. Not
@@ -103,9 +105,20 @@ rather than re-deriving them.
       docx/plaintext/empty/truncated-magic false, MAX_RESUME_BYTES=5MB. (Image-
       only PDF still extracts as empty downstream, handled as skipped_no_content
       not a crash.)
-- [ ] **Two users at once.** Only ever tested single-user.
-- [ ] **Partial-failure paths.** Supabase insert succeeds but agent call fails,
-      and the reverse.
+- [x] **Two users at once — CODE-VERIFIED (18 Aug).** The one-run-at-a-time
+      guard filters `.eq('user_id', user.id)`, so it is per-user — two users can
+      run simultaneously. RLS (proven above) isolates their data. job-server is
+      single-threaded so the two agent runs queue, but both complete.
+- [~] **Partial-failure paths — one clean, one documented gap (18 Aug).**
+      Agent-fails-then-nothing-written: clean — submitResume is called first and
+      its failure returns before any Supabase write. The REVERSE is a real gap:
+      the agent is called BEFORE the insert, so if the insert fails after the
+      agent accepted the job, the agent runs a full 5-20min pipeline with no
+      ai_search_jobs row pointing at it — an orphan the user never sees. Bounded
+      harm (one wasted run, no corruption, the per-user guard still lets them
+      retry). FIX (not yet applied, needs a forced insert-failure to test):
+      insert a 'pending' row FIRST, then submit to the agent, then patch in
+      agent_job_id — mark the row failed if the agent call throws.
 - [x] **maxDuration=60 — VERIFIED + HARDENED (18 Aug).** Submit only enqueues
       (job-server 202 in ~2s); the 5-20min run is background via polling. The
       enqueue timeout was 60s (== maxDuration) which could orphan a job if the
