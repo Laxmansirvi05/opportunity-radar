@@ -109,16 +109,14 @@ rather than re-deriving them.
       guard filters `.eq('user_id', user.id)`, so it is per-user — two users can
       run simultaneously. RLS (proven above) isolates their data. job-server is
       single-threaded so the two agent runs queue, but both complete.
-- [~] **Partial-failure paths — one clean, one documented gap (18 Aug).**
-      Agent-fails-then-nothing-written: clean — submitResume is called first and
-      its failure returns before any Supabase write. The REVERSE is a real gap:
-      the agent is called BEFORE the insert, so if the insert fails after the
-      agent accepted the job, the agent runs a full 5-20min pipeline with no
-      ai_search_jobs row pointing at it — an orphan the user never sees. Bounded
-      harm (one wasted run, no corruption, the per-user guard still lets them
-      retry). FIX (not yet applied, needs a forced insert-failure to test):
-      insert a 'pending' row FIRST, then submit to the agent, then patch in
-      agent_job_id — mark the row failed if the agent call throws.
+- [x] **Partial-failure paths — FIXED (18 Aug, insert-first).** Agent-fails is
+      clean (row marked failed, retry freed). The orphan (insert fails after the
+      agent accepted) is eliminated: the row is now written BEFORE the agent is
+      called, so an insert failure means no agent job exists. agent_job_id made
+      nullable (migration 20260819000000) for the brief pre-agent window; poll
+      route treats null as 'processing'; age timeout backstops the rare step-3
+      update failure. DB sequence verified via SQL; 499/499 tests; build passes.
+      Frontend route still wants one authenticated end-to-end run.
 - [x] **maxDuration=60 — VERIFIED + HARDENED (18 Aug).** Submit only enqueues
       (job-server 202 in ~2s); the 5-20min run is background via polling. The
       enqueue timeout was 60s (== maxDuration) which could orphan a job if the
