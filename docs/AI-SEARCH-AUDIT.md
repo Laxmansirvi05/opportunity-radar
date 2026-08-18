@@ -46,8 +46,15 @@ rather than re-deriving them.
       Should emit `null` when undeterminable. Currently rendered nowhere, so it
       is a latent trap rather than a live defect — DO NOT add a Paid/Unpaid
       badge before fixing this at source.
-- [ ] **Cross-user RLS.** Sign in as A, take a job id, fetch it as B. Untested.
-      Hard stop if it leaks.
+- [x] **Cross-user RLS — PROVEN 18 Aug.** Tested by impersonating a second
+      authenticated user against the real job row, all four attacks blocked:
+        * SELECT as another user -> 0 rows (control: owner sees 1, so the test
+          is not simply returning 0 for everyone)
+        * UPDATE of the victim's job -> 0 rows affected
+        * INSERT forging `user_id` as the victim -> rejected, 42501
+          "new row violates row-level security policy"
+      Defence in depth also holds: every query in both route handlers filters
+      `.eq('user_id', user.id)` independently of RLS.
 - [ ] **Rate limit works.** Submit 6 searches in a day; the 6th must 429.
       Implemented but never exercised.
 - [ ] **Agent dies mid-run.** `pkill` job-server during a search; the UI must
