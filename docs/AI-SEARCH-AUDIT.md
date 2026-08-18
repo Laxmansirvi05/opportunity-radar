@@ -539,7 +539,9 @@ A posting with no title should probably not be shown to a student at all;
 at minimum it should not occupy a slot above a titled one.
 
 ### Still open on this thread
-- [ ] The ~12 remaining skips are LEGITIMATE postings the pipeline cannot read
+- [x] Extraction FIXED & verified — root cause was render-service's Chromium
+      being uninstalled; reinstalled + Clean HTML reads .html. Clean run: 0
+      skips, 10/10, full tier. (was: ~12 legitimate postings unreadable)
       (board roots and junk are now filtered out). This is the extraction
       thread — the <script>-noise finding from render-service, where stripping
       script/style cut 154KB of HTML to 2,951 chars of real text. Last known
