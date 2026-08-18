@@ -172,8 +172,39 @@ rather than re-deriving them.
       "Discovery Quality Gate + Dedup" node counts admissions, or the same
       posting burns two render+score budgets.
 
-      Caveat on rigour: this is the discovered URL POOL for the run, not a
-      per-item attribution of each of the 18 skips — n8n's flattened execution
+      **MEASURED 18 Aug, after the filter + dedup landed (commit a658b85).**
+      Same resume, same pipeline:
+
+                            before    after
+          discovered           26        17
+          skipped_no_content   18         9
+          waste rate          69%       53%
+          scored ok             7         7
+          returned              7         6
+
+      The filter works at the front: 9 junk URLs no longer reach the pipeline,
+      saving 9 Chromium renders and 9 scoring calls — about a third of the run's
+      cost. No more Instagram reels or blog posts.
+
+      **But the prediction that this would "roughly double results" was WRONG.**
+      Results went 7 -> 6. Removing junk does not make the remaining pages
+      scoreable: 9 of the 17 legitimate URLs STILL have no readable job details.
+      There is a second, independent problem underneath the one that was fixed —
+      and it is the extraction/script-noise lead that was set aside as "made
+      irrelevant" by the listing-page finding. It was not irrelevant, it was
+      hidden behind the junk. Both were real.
+
+      The 7 -> 6 drop is most likely run-to-run variance in what discovery
+      surfaces (a 17-URL pool is not the same pool as 26), not a regression from
+      the filter — but that is UNPROVEN. Re-run twice more before concluding.
+
+      Next on this thread: take the 9 still-skipped URLs from a fresh run, and
+      check whether their rendered HTML actually contains job details that
+      extraction is failing to pull out (the <script>-noise lead), or whether
+      they are genuinely thin pages. That decides whether extraction work pays.
+
+      Caveat on the original count: that was the discovered URL POOL for the
+      run, not a per-item attribution of each of the 18 skips — n8n's flattened execution
       format made mapping each skip to its exact URL impractical in the time
       available. The presence of Instagram reels and blog posts in the pool is
       conclusive enough to direct the fix; re-measure skip counts after the
