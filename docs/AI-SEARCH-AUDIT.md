@@ -303,12 +303,36 @@ a property of the POSTING ("no readable job details"). If it is really our
 extraction failing, that is the same class of mislabel as the is_paid trap:
 our failure presented as a fact about the world.
 
-Next, in order:
-  1. Instrument the extraction call — log HTTP status and whether the response
-     parsed, per item. Do not infer.
-  2. If extraction calls are failing, split the status: extraction_failed vs
-     skipped_no_content. They must never be reported the same way.
-  3. Only then judge whether pacing or more keys is the fix.
+**PROVEN 18 Aug (commit 6ba151a, instrumented run).** The hypothesis held:
+
+    extraction_status            scoring_status
+      extracted           34       scored              15
+      extracted_from_text  0       extraction_failed    5
+      parse_failed         0       skipped_no_content   1
+      no_response         20
+
+  20 extraction calls returned nothing usable from the gateway. Of the items
+  that reached scoring with empty fields, FIVE were our extraction failing and
+  only ONE was a genuinely thin page.
+
+  So the old reporting was backwards five times out of six. "N discovered pages
+  had no readable job details" was mostly us failing to read a perfectly good
+  posting — confirmed independently by fetching those URLs, which returned real
+  job content with correct titles.
+
+  parse_failed = 0 is itself informative: the model is not answering badly, it
+  is not answering at all. That points at the gateway/provider layer (timeouts,
+  exhausted chain), not at the extraction prompt.
+
+  Remaining, in order:
+   1. PACING between gateway calls — now clearly the right fix, not more keys.
+      20 no_response in one run, against a chain that rotates 9 keys, means the
+      burst is outrunning capacity rather than lacking it.
+   2. Once extraction succeeds, re-measure returned/tier. The 15 scored here is
+      already the highest of the day.
+   3. Student-facing copy in Build Response still folds extraction_failed into
+      the skipped_no_content sentence. Fix AFTER pacing, so the numbers it
+      reports are real.
 
 ### NEW — postings admitted with no title
 Two results came back with title None and low scores (FloLabs 60, Redis 50).
