@@ -246,7 +246,12 @@ rather than re-deriving them.
       available. The presence of Instagram reels and blog posts in the pool is
       conclusive enough to direct the fix; re-measure skip counts after the
       filter lands to confirm the size of the win.
-- [ ] **Score calibration.** A frontend resume scored 100 on a SQL internship
+- [x] **Score calibration — VERIFIED CORRECT (18 Aug), no fix needed.** Tested
+      gateway score_fit directly: strong-match 95, student-vs-senior 10,
+      pure-frontend-vs-SQL 20, fullstack-vs-SQL 90 — discriminates correctly.
+      The earlier read was wrong: the test resume is full-stack with real
+      PostgreSQL/SQL, so a SQL role scoring high for it is right. Original note:
+      A frontend resume scored 100 on a SQL internship
       off "student with existing SQL knowledge", outranking four well-matched
       frontend roles. Lives in the gateway's `score_fit` prompt. Note the
       pipeline runs on Groq alone — comments say Gemini returns 404
