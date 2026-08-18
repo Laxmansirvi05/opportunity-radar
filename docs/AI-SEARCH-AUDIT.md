@@ -311,7 +311,8 @@ our failure presented as a fact about the world.
       parse_failed         0       skipped_no_content   1
       no_response         20
 
-  20 extraction calls returned nothing usable from the gateway. Of the items
+  CORRECTED 18 Aug — see "no_response is two things" below. 'no_response' does
+  NOT mean the gateway failed. Of the items
   that reached scoring with empty fields, FIVE were our extraction failing and
   only ONE was a genuinely thin page.
 
@@ -353,6 +354,45 @@ our failure presented as a fact about the world.
    3. Student-facing copy in Build Response still folds extraction_failed into
       the skipped_no_content sentence. Fix AFTER pacing, so the numbers it
       reports are real.
+
+### no_response is TWO things — my instrumentation conflated them
+
+Read the gateway log for a failing run, as the previous entry said to do:
+
+    provider_failed 58 total
+      groq        PROVIDER_RATE_LIMITED       40
+      gemini      PROVIDER_TRANSIENT_FAILURE  12
+      openrouter  PROVIDER_RATE_LIMITED        3
+      gemini      PROVIDER_TIMEOUT             2
+    key rotations 40
+    requests completed 58 — ALL status 200
+    durations: median 1.7s, p90 4.9s, max 71.7s (node timeout is n8n's 300s
+                default, so nothing is timing out on our side)
+
+EVERY gateway request eventually succeeded. Rotation absorbed all 40 groq rate
+limits exactly as designed. So the gateway is NOT the problem, and the rate
+limiting that looked alarming is being handled.
+
+The item counts do not reconcile with 58 requests, and the reason is the
+'guard node' that sits between Extract Main Content and HTTP Request2. It marks
+an item extraction_skipped when clean_text and main_content are both empty or
+shorter than MIN_CONTENT_LENGTH = 50, and those items NEVER REACH THE GATEWAY.
+They then arrive at JSON Parse with neither data nor text — which my
+instrumentation labels 'no_response'.
+
+So no_response conflates "we asked and got nothing" with "we never asked", and
+the second is the common case. My earlier conclusion that "20 extraction calls
+returned nothing usable from the gateway" was WRONG, and the pacing experiment
+was built on it — which is why pacing made things worse rather than better.
+
+Next, and this time cheap and specific:
+  1. Split the status properly: guard_skipped (never sent) vs no_response
+     (sent, nothing back). One line in JSON Parse — provenance already carries
+     extraction_skipped and skip_reason from the guard.
+  2. Then ask the real question: why is main_content under 50 chars for these
+     pages, when render-service returns 7,000+ cleaned chars for the same URLs?
+     That points at Extract Main Content's heading detection, not at capacity,
+     not at the gateway, and not at rate limits.
 
 ### NEW — postings admitted with no title
 Two results came back with title None and low scores (FloLabs 60, Redis 50).

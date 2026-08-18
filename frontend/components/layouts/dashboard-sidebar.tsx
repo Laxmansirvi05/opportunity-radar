@@ -41,6 +41,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/resume', icon: 'description', label: 'Resume' },
       { href: '/interview', icon: 'record_voice_over', label: 'Mock Interview' },
+      { href: '/interview/history', icon: 'history', label: 'Interview History' },
       { href: '/assistant', icon: 'smart_toy', label: 'AI Assistant' },
     ],
   },

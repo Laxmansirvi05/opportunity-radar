@@ -20,6 +20,7 @@ import Image from 'next/image'
 // simply unreachable on a phone. This is that "everything else" menu.
 const MORE_NAV_ITEMS = [
   { href: '/interview', icon: 'record_voice_over', label: 'Mock Interview' },
+  { href: '/interview/history', icon: 'history', label: 'Interview History' },
   { href: '/certifications', icon: 'school', label: 'Certifications' },
   { href: '/notes', icon: 'note_stack', label: 'Notes' },
   { href: '/ai-search', icon: 'auto_awesome', label: 'AI Search' },
