@@ -172,6 +172,32 @@ async function logUsage(result: AIResult, context: GatewayContext): Promise<void
 
 const inMemoryRateLimits = new Map<string, number[]>()
 
+export async function recordFeatureUsage(userId: string, feature: string): Promise<void> {
+  // Durably record one usage row so checkRateLimit's counting RPC (which reads
+  // ai_usage_log) actually accumulates for features that DON'T go through
+  // callAI. callAI logs usage as a side effect of an LLM call; AI Search and
+  // the voice interview never call it, so without this their rate limits only
+  // ever lived in the per-process in-memory map — empty on every serverless
+  // cold start, i.e. effectively no limit at all. Found 18 Aug by testing the
+  // RPC directly. Service-role because ai_usage_log inserts are service-side.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    await supabase.from('ai_usage_log').insert({
+      feature,
+      user_id: userId,
+      provider: 'agent',
+      success: true,
+    })
+  } catch {
+    // Best-effort: a failed usage write must never block a run the user is
+    // entitled to. The worst case is one uncounted start.
+  }
+}
+
 export async function checkRateLimit(
   userId: string | undefined,
   feature: string

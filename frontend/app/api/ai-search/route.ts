@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/ai-gateway'
+import { checkRateLimit, recordFeatureUsage } from '@/lib/ai-gateway'
 import {
   submitResume,
   looksLikePdf,
@@ -148,6 +148,13 @@ export async function POST(req: NextRequest) {
   if (patchError) {
     console.error('[AI Search] could not link agent_job_id:', patchError.message)
   }
+
+  // Count this accepted start against the daily limit. checkRateLimit above
+  // only READS the count (from ai_usage_log via its RPC); this is what makes it
+  // accumulate, since AI Search never calls callAI (which is where usage is
+  // normally logged). Recorded only for a real start — an already_running or a
+  // failed submit does not count. Best-effort by design.
+  await recordFeatureUsage(user.id, 'ai_search')
 
   return NextResponse.json({ job_id: row.id, status: 'processing' }, { status: 202 })
 }
