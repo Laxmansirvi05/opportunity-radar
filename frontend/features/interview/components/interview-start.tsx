@@ -29,7 +29,7 @@ type Step = 'resume' | 'role' | 'style'
 const STEPS: { id: Step; label: string; hint: string }[] = [
   { id: 'resume', label: 'Your resume', hint: 'What the interviewer reads before the call' },
   { id: 'role', label: 'The role', hint: 'What the questions are actually about' },
-  { id: 'style', label: 'Interviewer', hint: 'Who you practise against' },
+  { id: 'style', label: 'Interviewer', hint: 'How the interview feels' },
 ]
 
 const JD_MIN = 40
@@ -406,6 +406,12 @@ export function InterviewStart({ opportunity, resumes }: InterviewStartProps) {
                   )
                 })}
               </div>
+
+              <p className="mt-2 font-body-sm text-body-sm text-on-surface-variant/70 italic">
+                Persona sets the display name and style label shown during the interview. The
+                interviewer&apos;s questions and voice are the same across all four — this is a
+                visual preference while we work on distinct interview styles.
+              </p>
 
               {error && (
                 <p role="alert" className="mt-4 rounded-xl bg-error-container px-3 py-2 font-body-sm text-body-sm text-on-error-container">

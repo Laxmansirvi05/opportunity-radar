@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { ScoreCard } from '@/lib/interview/agent-client'
 
 /**
@@ -5,6 +6,9 @@ import type { ScoreCard } from '@/lib/interview/agent-client'
  * integration doc in this project repeats: never fabricate, never show a
  * placeholder as data — a missing section is omitted, not filled with
  * "N/A" or a stub.
+ *
+ * Now also renders model answers (what a great answer would have looked like)
+ * and a "Try again" link that takes the student back to the intake screen.
  */
 export function ReportView({
   scorecard,
@@ -21,13 +25,22 @@ export function ReportView({
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-bold text-on-background">Your interview report</h1>
-        {(roleTitle || company) && (
-          <p className="text-sm text-on-surface-variant mt-0.5">
-            {[roleTitle, company].filter(Boolean).join(' · ')}
-          </p>
-        )}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-on-background">Your interview report</h1>
+          {(roleTitle || company) && (
+            <p className="text-sm text-on-surface-variant mt-0.5">
+              {[roleTitle, company].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+        <Link
+          href="/interview"
+          className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">replay</span>
+          Try again
+        </Link>
       </div>
 
       {degraded && (
@@ -96,6 +109,25 @@ export function ReportView({
         </div>
       )}
 
+      {!!scorecard.model_answers?.length && (
+        <div>
+          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Model answers</h2>
+          <p className="text-xs text-on-surface-variant mb-2">
+            What a strong answer would have covered for each question.
+          </p>
+          <div className="flex flex-col gap-2">
+            {scorecard.model_answers.map((ma) => (
+              <div key={ma.question_id} className="bg-surface border border-outline-variant rounded-lg px-4 py-3">
+                <p className="text-xs text-on-surface-variant mb-1 font-semibold uppercase tracking-wide">
+                  {ma.question_id.replace(/_/g, ' ')}
+                </p>
+                <p className="text-sm text-on-surface leading-relaxed">{ma.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!!scorecard.next_steps?.length && (
         <div>
           <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Next steps</h2>
@@ -119,6 +151,23 @@ export function ReportView({
           </p>
         </div>
       )}
+
+      {/* Bottom actions */}
+      <div className="flex items-center gap-3 pt-2 border-t border-outline-variant">
+        <Link
+          href="/interview"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">replay</span>
+          Start a new interview
+        </Link>
+        <Link
+          href="/dashboard"
+          className="px-4 py-2 rounded-lg text-on-surface-variant text-sm font-medium hover:bg-surface-container"
+        >
+          Back to dashboard
+        </Link>
+      </div>
     </div>
   )
 }

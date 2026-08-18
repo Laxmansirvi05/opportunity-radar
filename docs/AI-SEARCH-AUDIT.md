@@ -325,9 +325,29 @@ our failure presented as a fact about the world.
   exhausted chain), not at the extraction prompt.
 
   Remaining, in order:
-   1. PACING between gateway calls — now clearly the right fix, not more keys.
-      20 no_response in one run, against a chain that rotates 9 keys, means the
-      burst is outrunning capacity rather than lacking it.
+   1. PACING — TRIED 18 Aug AND IT MADE THINGS WORSE. Reverted.
+      Set n8n HTTP Request2 batching to batchSize 1 / batchInterval 1500ms and
+      raised waitBetweenTries 2s -> 5s. Result on the only measurement:
+
+                            before pacing   after pacing
+        extracted                34              30
+        no_response              20              32
+        extraction_failed         5               8
+        returned                  8               5
+        tier                   full            good
+
+      So spacing the calls did not relieve the pressure — it roughly doubled
+      the failures. Plausible reading: stretching a run over a longer window
+      exposes it to MORE rate-limit windows and burns more of a daily quota,
+      rather than fitting inside a per-minute one. It may also be provider-state
+      variance between runs; one measurement is not proof, and this is the
+      fourth theory on this thread to die on contact with data.
+
+      Reverted to the pre-pacing workflow (instrumentation kept). Do NOT retry
+      naive pacing without first establishing WHICH limit is being hit —
+      per-minute tokens, per-day quota, or concurrent requests. The gateway logs
+      the provider and code per attempt; read those for one failing run before
+      changing timing again.
    2. Once extraction succeeds, re-measure returned/tier. The 15 scored here is
       already the highest of the day.
    3. Student-facing copy in Build Response still folds extraction_failed into

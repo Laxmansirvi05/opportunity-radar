@@ -36,8 +36,11 @@ const PREP_POLL_MS = 2_500
 const PREP_TIMEOUT_MS = 3 * 60_000
 
 /** Poll cadence while waiting for the agent to finish scoring — the room
- *  itself is real-time, this only applies after disconnect. */
-const SCORE_POLL_MS = 4_000
+ *  itself is real-time, this only applies after disconnect. Starts at 2s and
+ *  doubles each round (capped at 15s) so we're fast for the happy path but
+ *  gentle on the server for a slow score. */
+const SCORE_POLL_INITIAL_MS = 2_000
+const SCORE_POLL_MAX_MS = 15_000
 const SCORE_POLL_TIMEOUT_MS = 3 * 60_000
 
 export function InterviewSession({ sessionId, personaId }: { sessionId: string; personaId: string | null }) {
@@ -49,7 +52,9 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
   // Prep steps completed so far, shown while waiting so a 45-60s wait reads as
   // progress rather than a hang.
   const [prepProgress, setPrepProgress] = useState<string[]>([])
+  const [prepWarnings, setPrepWarnings] = useState<string[]>([])
   const scorePollStarted = useRef<number | null>(null)
+  const scorePollInterval = useRef(SCORE_POLL_INITIAL_MS)
 
   const fetchStatus = useCallback(async (): Promise<StatusResponse | null> => {
     const res = await fetch(`/api/interview/${sessionId}`, { cache: 'no-store' })
@@ -118,6 +123,9 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
         const agentStatus = status?.agent_status
         if (agentStatus && agentStatus !== 'prep') break
         setPrepProgress(Array.isArray(status?.prep_progress) ? status.prep_progress : [])
+        if (Array.isArray(status?.prep_warnings) && status.prep_warnings.length > 0) {
+          setPrepWarnings(status.prep_warnings)
+        }
         if (Date.now() > deadline) {
           setErrorMessage(
             'The interviewer is taking longer than expected to prepare. Please try starting again.'
@@ -150,6 +158,7 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
   // migration + the [sessionId] route's own comment on why.
   const handleEnded = useCallback(() => {
     scorePollStarted.current = Date.now()
+    scorePollInterval.current = SCORE_POLL_INITIAL_MS
     setPhase('scoring')
   }, [])
 
@@ -173,7 +182,8 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
           setPhase('error')
           return
         }
-        setTimeout(poll, SCORE_POLL_MS)
+        setTimeout(poll, scorePollInterval.current)
+        scorePollInterval.current = Math.min(scorePollInterval.current * 2, SCORE_POLL_MAX_MS)
         return
       }
       if (cancelled || !body) return
@@ -198,7 +208,8 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
         setPhase('error')
         return
       }
-      setTimeout(poll, SCORE_POLL_MS)
+      setTimeout(poll, scorePollInterval.current)
+      scorePollInterval.current = Math.min(scorePollInterval.current * 2, SCORE_POLL_MAX_MS)
     }
 
     poll()
@@ -247,6 +258,16 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
             </li>
           ))}
         </ul>
+        {prepWarnings.length > 0 && (
+          <div className="mt-3 flex w-full flex-col gap-1.5 rounded-xl border border-outline-variant bg-tertiary-container/30 px-4 py-3">
+            {prepWarnings.map((w, i) => (
+              <p key={i} className="flex items-start gap-2 font-body-sm text-body-sm text-on-surface">
+                <span className="material-symbols-outlined text-tertiary text-[16px] mt-0.5">info</span>
+                {w}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     )
   }

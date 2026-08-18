@@ -157,6 +157,7 @@ export async function GET(
     status: 'in_progress',
     agent_status: view.status,
     prep_progress: view.progress ?? [],
+    prep_warnings: view.prep_warnings ?? [],
     report: null,
   })
 }
@@ -168,9 +169,24 @@ async function finalize(
   scorecard: ScoreCard | null
 ) {
   const now = new Date().toISOString()
+
+  // Compute duration from started_at — the schema has a duration_seconds column
+  // that was previously never populated.
+  let durationSeconds: number | null = null
+  const { data: sessionRow } = await supabase
+    .from('interview_sessions')
+    .select('started_at')
+    .eq('id', sessionId)
+    .maybeSingle()
+  if (sessionRow?.started_at) {
+    durationSeconds = Math.round(
+      (new Date(now).getTime() - new Date(sessionRow.started_at).getTime()) / 1000
+    )
+  }
+
   await supabase
     .from('interview_sessions')
-    .update({ status, ended_at: now })
+    .update({ status, ended_at: now, duration_seconds: durationSeconds })
     .eq('id', sessionId)
 
   if (!scorecard) return null

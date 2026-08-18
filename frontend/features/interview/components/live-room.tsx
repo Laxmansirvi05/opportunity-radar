@@ -67,8 +67,14 @@ export function LiveRoom({
       <RoomAudioRenderer />
       <StartAudio label="Click to enable interview audio" />
       {error && (
-        <div className="w-full bg-error-container text-on-error-container rounded-xl p-4 text-sm">
-          {error}
+        <div className="w-full bg-error-container text-on-error-container rounded-xl p-4 text-sm flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button
+            onClick={handleDisconnected}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-error text-on-error text-xs font-semibold cursor-pointer"
+          >
+            End interview
+          </button>
         </div>
       )}
       <RoomStage personaId={personaId} />
@@ -128,9 +134,13 @@ function RoomStage({ personaId }: { personaId: string | null }) {
     // scrollIntoView walks up and scrolls every scrollable ancestor including
     // the document, so each new turn dragged the whole page down while the
     // candidate was mid-interview. Setting scrollTop moves only this panel.
+    //
+    // Depends on the transcriptions array reference, not just .length: LiveKit
+    // can update an existing segment (partial → final) without changing count,
+    // and the scroll should still follow.
     const el = transcriptScrollRef.current
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-  }, [transcriptions.length])
+  }, [transcriptions])
 
   async function sendDraft() {
     const text = draft.trim()
@@ -213,8 +223,11 @@ function RoomStage({ personaId }: { personaId: string | null }) {
           ) : (
             transcriptions.map((t, i) => {
               const isMe = t.participantInfo.identity === localParticipant.identity
+              // Stable key: participant identity + segment index — survives
+              // reorders and deduplication, unlike a bare array index.
+              const key = `${t.participantInfo.identity}-${t.id ?? i}`
               return (
-                <div key={i} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                <div key={key} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                   <span className="text-[9px] uppercase tracking-wide text-on-surface-variant/60 mb-0.5">
                     {isMe ? 'You' : persona.name}
                   </span>
