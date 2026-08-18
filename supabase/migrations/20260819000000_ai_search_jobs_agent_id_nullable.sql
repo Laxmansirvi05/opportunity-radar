@@ -1,0 +1,13 @@
+-- Allow ai_search_jobs.agent_job_id to be NULL, for insert-first ordering.
+--
+-- The submit route used to call the agent FIRST and insert the row second, so
+-- an insert failure after the agent had accepted a job orphaned a running
+-- 5-20min pipeline with no row pointing at it. Insert-first eliminates that:
+-- the row is written before the agent is called, so an insert failure means no
+-- agent job was ever created. That requires a brief window where the row exists
+-- with agent_job_id not yet set.
+--
+-- The UNIQUE constraint is unaffected — Postgres permits multiple NULLs in a
+-- UNIQUE column, so two starting rows do not collide, and two real agent ids
+-- still cannot.
+alter table public.ai_search_jobs alter column agent_job_id drop not null;

@@ -91,23 +91,17 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let agentJobId: string
-  try {
-    agentJobId = await submitResume(file, file.name || 'resume.pdf')
-  } catch (e) {
-    const err = e instanceof AgentError ? e : new AgentError('INTERNAL_ERROR', String(e))
-    console.error('[AI Search] submit failed:', err.code, err.message)
-    return NextResponse.json(
-      { error: { code: err.code, message: messageForCode(err.code) } },
-      { status: err.httpStatus }
-    )
-  }
-
+  // Insert-first ordering. The row is written BEFORE the agent is called, so an
+  // insert failure means no agent job was ever created — no orphan. (The old
+  // order called the agent first, so an insert failure after the agent accepted
+  // a job left a 5-20min pipeline running with no row to poll it.) agent_job_id
+  // is null for the moment between here and the patch below; the poll route and
+  // the age-based timeout both tolerate that.
   const { data: row, error: insertError } = await supabase
     .from('ai_search_jobs')
     .insert({
       user_id: user.id,
-      agent_job_id: agentJobId,
+      agent_job_id: null,
       status: 'processing',
       resume_filename: file.name || null,
     })
@@ -120,6 +114,39 @@ export async function POST(req: NextRequest) {
       { error: { code: 'INTERNAL_ERROR', message: messageForCode('INTERNAL_ERROR') } },
       { status: 500 }
     )
+  }
+
+  let agentJobId: string
+  try {
+    agentJobId = await submitResume(file, file.name || 'resume.pdf')
+  } catch (e) {
+    const err = e instanceof AgentError ? e : new AgentError('INTERNAL_ERROR', String(e))
+    console.error('[AI Search] submit failed:', err.code, err.message)
+    // The agent never took the job; fail the row we just created so it does not
+    // sit in 'processing' until the age timeout, and so the per-user guard frees
+    // the student to retry immediately.
+    await supabase
+      .from('ai_search_jobs')
+      .update({ status: 'failed', error: { code: err.code, message: messageForCode(err.code) }, completed_at: new Date().toISOString() })
+      .eq('id', row.id)
+      .eq('user_id', user.id)
+    return NextResponse.json(
+      { error: { code: err.code, message: messageForCode(err.code) } },
+      { status: err.httpStatus }
+    )
+  }
+
+  // Link the row to the accepted agent job. If this update fails the agent is
+  // running but the row has no id yet; the poll route reports 'processing' and
+  // the age timeout resolves it — a far rarer and softer failure than the
+  // original orphan, since the row exists and the student can see it.
+  const { error: patchError } = await supabase
+    .from('ai_search_jobs')
+    .update({ agent_job_id: agentJobId })
+    .eq('id', row.id)
+    .eq('user_id', user.id)
+  if (patchError) {
+    console.error('[AI Search] could not link agent_job_id:', patchError.message)
   }
 
   return NextResponse.json({ job_id: row.id, status: 'processing' }, { status: 202 })

@@ -62,6 +62,15 @@ export async function GET(
     return NextResponse.json({ job_id: job.id, status: 'failed', error: timeoutError })
   }
 
+  // agent_job_id can be null in the brief insert-first window (the row is
+  // written before the agent is called). A later request can surface such a
+  // row via the active-job guard, so treat "no agent id yet" as still starting
+  // rather than calling fetchJob(null). The age-based PIPELINE_TIMEOUT above is
+  // the backstop if it never gets set (e.g. the agent_job_id update failed).
+  if (!job.agent_job_id) {
+    return NextResponse.json({ job_id: job.id, status: 'processing' })
+  }
+
   let agentJob
   try {
     agentJob = await fetchJob(job.agent_job_id)
