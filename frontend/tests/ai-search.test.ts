@@ -133,6 +133,9 @@ describe('pdf detection', () => {
     // A .docx renamed .pdf is the exact case the agent rejects downstream.
     expect(await looksLikePdf(blob('PK docx payload'))).toBe(false)
     expect(await looksLikePdf(blob('just some text'))).toBe(false)
+    // 0-byte and near-empty files: no %PDF magic, so rejected before upload.
+    expect(await looksLikePdf(blob(''))).toBe(false)
+    expect(await looksLikePdf(blob('%PD'))).toBe(false)
   })
 })
 

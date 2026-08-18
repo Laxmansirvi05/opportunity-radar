@@ -94,13 +94,22 @@ rather than re-deriving them.
       `.eq('user_id', user.id)` independently of RLS.
 - [ ] **Rate limit works.** Submit 6 searches in a day; the 6th must 429.
       Implemented but never exercised.
-- [ ] **Agent dies mid-run.** `pkill` job-server during a search; the UI must
-      say something true rather than spin.
-- [ ] **Bad uploads.** Corrupt PDF, >5MB, non-PDF, image-only PDF, 0-byte.
+- [x] **Agent dies mid-run — CODE-VERIFIED (18 Aug).** Poll route: unreachable
+      -> transient_error (keeps polling, run may still be live); stays dead ->
+      PIPELINE_TIMEOUT by job age -> failed. Honest, no infinite spin. Not
+      runtime-tested (needs a live job + kill), but the path is sound.
+- [x] **Bad uploads — VERIFIED (18 Aug).** Submit route: missing/corrupt form
+      -> 400, >5MB -> 413, non-PDF magic bytes -> 415. Unit-tested: %PDF true,
+      docx/plaintext/empty/truncated-magic false, MAX_RESUME_BYTES=5MB. (Image-
+      only PDF still extracts as empty downstream, handled as skipped_no_content
+      not a crash.)
 - [ ] **Two users at once.** Only ever tested single-user.
 - [ ] **Partial-failure paths.** Supabase insert succeeds but agent call fails,
       and the reverse.
-- [ ] **`maxDuration = 60`** on the submit route — is it enough under load?
+- [x] **maxDuration=60 — VERIFIED + HARDENED (18 Aug).** Submit only enqueues
+      (job-server 202 in ~2s); the 5-20min run is background via polling. The
+      enqueue timeout was 60s (== maxDuration) which could orphan a job if the
+      agent hung near the ceiling; tightened to 45s to leave 15s margin.
 
 ## Known quality gaps (diagnosed, not bugs in our code)
 

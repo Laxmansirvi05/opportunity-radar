@@ -165,9 +165,14 @@ export async function submitResume(file: Blob, filename: string): Promise<string
       method: 'POST',
       body: form,
       headers: agentAuthHeaders(),
-      // Generous: this call only enqueues, but the service is single-threaded
-      // and can be busy accepting.
-      signal: AbortSignal.timeout(60_000),
+      // 45s, deliberately BELOW the route's maxDuration=60. This call only
+      // enqueues (job-server returns 202 the moment it accepts the upload —
+      // observed ~2s), so 45s is already very generous. Keeping it under the
+      // function ceiling matters: if it equalled 60s and the agent hung, Vercel
+      // could kill the route mid-insert AFTER the agent accepted the job,
+      // orphaning it — the agent has the job but Supabase has no row for the
+      // user to see. The 15s margin lets the surrounding auth/insert finish.
+      signal: AbortSignal.timeout(45_000),
     })
   } catch (e) {
     throw new AgentError(
