@@ -57,12 +57,34 @@ export function ReportView({
         <p className="text-base text-on-surface leading-relaxed">{scorecard.summary}</p>
       )}
 
-      {typeof scorecard.overall_score === 'number' && (
-        <div className="bg-surface border border-outline-variant rounded-xl p-6 flex items-center gap-4">
-          <span className="text-4xl font-bold text-primary">{Math.round(scorecard.overall_score)}</span>
-          <span className="text-sm text-on-surface-variant">Overall score, out of 100</span>
-        </div>
-      )}
+      {typeof scorecard.overall_score === 'number' && (() => {
+        // The agent scores on a 0-5 scale (see post/prompts.py "OVERALL SCORE
+        // /5"); students expect a percentage, so present it out of 100.
+        const pct = Math.round(Math.max(0, Math.min(5, scorecard.overall_score)) * 20)
+        const band = pct >= 75 ? 'Strong' : pct >= 50 ? 'Solid, with gaps' : pct >= 25 ? 'Needs work' : 'Early stage'
+        const ring = pct >= 75 ? 'text-emerald-500' : pct >= 50 ? 'text-primary' : pct >= 25 ? 'text-amber-500' : 'text-error'
+        return (
+          <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-surface p-6 flex items-center gap-6">
+            <div className="relative grid place-items-center h-24 w-24 shrink-0">
+              <svg viewBox="0 0 36 36" className="h-24 w-24 -rotate-90">
+                <circle cx="18" cy="18" r="15.9" fill="none" className="stroke-outline-variant/40" strokeWidth="3" />
+                <circle
+                  cx="18" cy="18" r="15.9" fill="none"
+                  className={`${ring} transition-all duration-700`}
+                  strokeWidth="3" strokeLinecap="round"
+                  strokeDasharray={`${pct} 100`}
+                />
+              </svg>
+              <span className="absolute text-2xl font-bold text-on-background">{pct}</span>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Overall score</p>
+              <p className="text-3xl font-bold text-on-background leading-tight">{pct}<span className="text-lg text-on-surface-variant font-semibold"> / 100</span></p>
+              <p className={`text-sm font-semibold ${ring}`}>{band}</p>
+            </div>
+          </div>
+        )
+      })()}
 
       {hasScores && (
         <div>

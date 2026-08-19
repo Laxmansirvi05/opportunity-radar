@@ -41,7 +41,13 @@ const PREP_TIMEOUT_MS = 3 * 60_000
  *  gentle on the server for a slow score. */
 const SCORE_POLL_INITIAL_MS = 2_000
 const SCORE_POLL_MAX_MS = 15_000
-const SCORE_POLL_TIMEOUT_MS = 3 * 60_000
+// Scoring is a heavy pass — it grades every competency AND writes a model
+// answer for each question, which on a longer interview measured ~4 min end to
+// end. Three minutes cut it off just before it finished and showed a scary
+// "something went wrong" even though the report was seconds away. Give it real
+// headroom; the answers are already saved, so the only cost of waiting is the
+// spinner. See the "Scoring your interview" copy for the expectation we set.
+const SCORE_POLL_TIMEOUT_MS = 8 * 60_000
 
 export function InterviewSession({ sessionId, personaId }: { sessionId: string; personaId: string | null }) {
   const [phase, setPhase] = useState<Phase>('loading')
