@@ -284,12 +284,28 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
 
   if (phase === 'scoring') {
     return (
-      <div className="flex flex-col items-center gap-4 py-20 text-center">
-        <span className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden />
-        <div className="w-full max-w-sm">
-          <h1 className="font-bold text-on-background">Scoring your interview…</h1>
-          <p className="text-sm text-on-surface-variant mt-1">This updates automatically — no need to refresh.</p>
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-20 text-center">
+        <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" aria-hidden />
+        <div className="w-full">
+          <h1 className="text-lg font-bold text-on-background">Building your report…</h1>
+          <p className="text-sm text-on-surface-variant mt-1">
+            Grading every answer against the role, then writing a model answer for each
+            question. This usually takes <span className="font-semibold text-on-surface">2–3 minutes</span> —
+            it updates on its own, and your answers are already saved.
+          </p>
         </div>
+        <ul className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
+          {[
+            'Scoring each competency',
+            'Reviewing your spoken answers',
+            'Writing model answers & next steps',
+          ].map((label) => (
+            <li key={label} className="flex items-center gap-2.5 text-sm text-on-surface-variant">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              {label}
+            </li>
+          ))}
+        </ul>
       </div>
     )
   }
