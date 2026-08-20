@@ -92,7 +92,7 @@ Opportunity radar/
 │  │  ├─ notes/, assistant/, profile/, …
 │  ├─ lib/                        ← supabase clients, cron-auth, ingestion, agent-client
 │  ├─ types/                      ← shared types (opportunity.ts, database.types.ts, …)
-│  ├─ tests/                      ← Vitest suite (61 files, 551 tests)
+│  ├─ tests/                      ← Vitest suite (63 files, 568 tests)
 │  └─ next.config.ts              ← CSP, image domains, headers
 ├─ supabase/migrations/          ← SQL migrations (source of truth for DB changes)
 ├─ PROJECT_AUDIT.md              ← the detailed audit
@@ -117,7 +117,7 @@ Scores are from `PROJECT_AUDIT.md` (✅ verified live · 🟡 built, spot-checke
 | **Certifications** | `/certifications` | ✅ audited this pass | 95% |
 | **Auth** | `/(auth)/*`, `/auth/callback`, `proxy.ts` | ✅ fully audited this pass | 100% |
 | **AI Assistant** | `/assistant` | 🟡 chat w/ opportunity attaching | 85% |
-| **Notes** | `/notes` (+11 API routes) | 🟡 security audited clean; behaviour untested | 88% |
+| **Notes** | `/notes` (+11 API routes) | ✅ security + behaviour audited this pass | 97% |
 | **Résumé toolkit** | `/resume/*` | ✅ all 4 dead builder buttons implemented this pass | 90% |
 | **Certifications/Tracker/Notifications/Profile/Settings/Support/Dashboard** | respective | 🟡 built & wired | 80% |
 
@@ -166,7 +166,7 @@ cd frontend
 npm install
 # create .env.local with the vars in §7 (ask the owner for values)
 npm run dev          # Next dev server (Turbopack)
-npm run test         # Vitest — 551 tests
+npm run test         # Vitest — 568 tests
 npm run lint         # ESLint
 npx tsc --noEmit     # typecheck (see caveat below)
 ```
@@ -241,7 +241,7 @@ Real "People also viewed" (there's a `recently_viewed` table to back it), richer
 
 ## 12. Testing & quality gates
 
-- **Vitest:** `npm run test` → **551 tests / 61 files, all passing.** Tests live in `frontend/tests/`.
+- **Vitest:** `npm run test` → **568 tests / 63 files, all passing.** Tests live in `frontend/tests/`.
 - **Lint:** ⚠️ *corrected 20 Aug 2026 — this previously claimed all first-party code was ESLint-clean; it is not.* `npm run lint` reports **362 problems (216 errors, 146 warnings)**. The **audited features are** clean (`opportunities`, `search`, `hub`, `tracker`, `certifications` produce zero output) — but `scripts/` (66 errors), `app/` (28), `lib/` (27) and `tests/` (23) are not, and `lib/ats-checker` + `lib/resume-optimizer` are first-party, not vendored. **The rule still stands for code you touch:** leave every file you edit lint-clean. See `PROJECT_AUDIT.md` §4 for the full breakdown.
 - **Types:** `tsc --noEmit` — first-party clean; the only errors are in the vendored résumé toolkit (non-blocking, `ignoreBuildErrors` on).
 - **Security:** RLS on all tables; the one ERROR-level cross-user leak was closed; all `SECURITY DEFINER` functions hardened. Details in audit §5.
