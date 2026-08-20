@@ -112,10 +112,11 @@ export default async function InterviewHistoryPage() {
                   href={`/interview/${session.id}?persona=default`}
                   className="interview-card group bg-surface border border-outline-variant rounded-xl px-5 py-4 flex items-center gap-4 transition-all"
                 >
-                  {/* Score circle */}
+                  {/* Score circle — overall_score is a 0-5 value; show it as a
+                      percentage to match the report's /100 gauge. */}
                   <div className="w-12 h-12 shrink-0 rounded-full bg-primary-container flex items-center justify-center">
                     {typeof score === 'number' ? (
-                      <span className="text-lg font-bold text-primary">{Math.round(score)}</span>
+                      <span className="text-base font-bold text-primary">{Math.round(Math.max(0, Math.min(5, score)) * 20)}</span>
                     ) : (
                       <span className="material-symbols-outlined text-on-surface-variant/50 text-[20px]">
                         {session.status === 'completed' ? 'check' : 'schedule'}
