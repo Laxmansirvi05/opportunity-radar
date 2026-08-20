@@ -6,7 +6,6 @@ import {
   deleteConversationById,
   fetchConversations,
   fetchMessages,
-  MAX_QUICK_CONVERSATIONS,
 } from "../services/api";
 import type { ChatMessage } from "../types";
 

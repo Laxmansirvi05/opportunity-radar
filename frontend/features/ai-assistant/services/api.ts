@@ -203,10 +203,20 @@ export async function updateConversationTitle(id: string, title: string): Promis
   if (!(await checkTablesExist())) return false;
 
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  // RLS already restricts this to the caller's own rows. The explicit filter
+  // is this codebase's standing pattern for every mutation: an id-only write
+  // becomes an IDOR the moment a policy is loosened, and nothing about the
+  // call site would show it.
   const { error } = await supabase
     .from("chat_conversations")
     .update({ title, updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) {
     logSupabaseError("UPDATE", "chat_conversations", error, { id, title });
@@ -219,10 +229,17 @@ export async function deleteConversationById(id: string): Promise<boolean> {
   if (!(await checkTablesExist())) return false;
 
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  // Same belt-and-braces ownership filter as the update above.
   const { error } = await supabase
     .from("chat_conversations")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) {
     logSupabaseError("DELETE", "chat_conversations", error, { id });

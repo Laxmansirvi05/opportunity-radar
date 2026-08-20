@@ -11,7 +11,7 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ mobileOpen = false, onMobileClose }: RightPanelProps) {
-  const { conversations, activeId, isLoading, startNewChat, setActiveId, deleteChat } =
+  const { conversations, activeId, isLoading, setActiveId, deleteChat } =
     useChatStore();
 
   const formatConvoTime = (dateStr: string) => {
