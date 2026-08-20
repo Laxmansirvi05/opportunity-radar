@@ -2,6 +2,7 @@ import { calculateAtsV2Score } from '@/lib/ats-checker/scoring-v2'
 import type { AtsV2Score } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 import type { EvidenceMatrix, StructuredJD } from '@/features/resume-toolkit/lib/schema/resume/ats-v2'
 import type { ParsedResume } from '@/types/resume'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * The ATS Checker and the AI Optimiser both score a resume against a job
@@ -31,6 +32,26 @@ function normalizeJd(jd: string): string {
   return jd.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
+/** The two row shapes this reads, named rather than cast through `any[]`. */
+interface CachedEvaluationPayload {
+  structuredJd?: StructuredJD
+  evidenceMatrix?: EvidenceMatrix
+}
+
+interface AtsReportRow {
+  resume_id: string | null
+  target_job_description: string | null
+  report_data: { atsV2?: CachedEvaluationPayload } | null
+  created_at: string
+}
+
+interface OptimizationRow {
+  original_resume_id: string | null
+  job_description: string | null
+  baseline_report: CachedEvaluationPayload | null
+  created_at: string
+}
+
 interface Candidate {
   createdAt: string
   resumeId: string | null
@@ -47,7 +68,7 @@ interface Candidate {
  * resume the student has since changed is not a match).
  */
 export async function findRecentAtsV2Evaluation(
-  supabase: any,
+  supabase: SupabaseClient,
   userId: string,
   resumeId: string | null,
   jobDescription: string,
@@ -75,7 +96,7 @@ export async function findRecentAtsV2Evaluation(
 
   const candidates: Candidate[] = []
 
-  for (const r of (atsRes.data ?? []) as any[]) {
+  for (const r of (atsRes.data ?? []) as AtsReportRow[]) {
     const atsV2 = r.report_data?.atsV2
     if (atsV2?.structuredJd && atsV2?.evidenceMatrix) {
       candidates.push({
@@ -88,7 +109,7 @@ export async function findRecentAtsV2Evaluation(
     }
   }
 
-  for (const r of (optRes.data ?? []) as any[]) {
+  for (const r of (optRes.data ?? []) as OptimizationRow[]) {
     const baseline = r.baseline_report
     if (baseline?.structuredJd && baseline?.evidenceMatrix) {
       candidates.push({

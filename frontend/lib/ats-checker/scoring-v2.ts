@@ -7,6 +7,8 @@ import type {
   ScoreConfidence,
 } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 import type { ParsedResume } from '@/types/resume'
+import { getJdRequirements } from './jd-requirements'
+import { stringList } from '@/lib/resume-fields'
 import { scoreRequirement } from './evidence-scoring'
 
 export function calculateQualityScore(resume: ParsedResume): ResumeQualityScore {
@@ -20,7 +22,9 @@ export function calculateQualityScore(resume: ParsedResume): ResumeQualityScore 
   let hasQuantifiedBullets = false
   if (resume.experience) {
     for (const exp of resume.experience) {
-      const bullets = (exp as any).bullets || (exp as any).highlights || []
+      // `bullets` is the schema field; `highlights` is the older key that
+      // resumes parsed before the rename still carry.
+      const bullets = stringList(exp, 'bullets', 'highlights')
       if (Array.isArray(bullets)) {
         for (const h of bullets) {
           if (
@@ -61,14 +65,8 @@ export function evaluateHardRequirements(
   structuredJd: StructuredJD,
   resume: ParsedResume
 ): HardRequirementResult {
-  const reqs = Array.isArray(structuredJd?.requirements)
-    ? structuredJd.requirements
-    : Array.isArray((structuredJd as any)?.capabilities)
-      ? (structuredJd as any).capabilities
-      : []
-  const hardReqs = reqs.filter(
-    (r: any) => r.category === 'hard_requirement'
-  )
+  const reqs = getJdRequirements(structuredJd)
+  const hardReqs = reqs.filter((r) => r.category === 'hard_requirement')
   if (hardReqs.length === 0) {
     return { passed: true, cap: null, failedRequirements: [] }
   }
@@ -112,11 +110,7 @@ export function calculateAtsV2Score(
   let totalMaxWeight = 0
   let evaluatedCount = 0
   let confidenceSum = 0
-  const reqs = Array.isArray(structuredJd?.requirements)
-    ? structuredJd.requirements
-    : Array.isArray((structuredJd as any)?.capabilities)
-      ? (structuredJd as any).capabilities
-      : []
+  const reqs = getJdRequirements(structuredJd)
   const unevaluated: string[] = []
 
   for (const req of reqs) {

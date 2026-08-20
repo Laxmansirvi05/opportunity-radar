@@ -6,6 +6,12 @@ import { callAI } from '@/lib/ai-gateway'
 import { pdfParserSystemPrompt, pdfParserUserPrompt } from '@/features/resume-toolkit/services/ai/prompts'
 import { sanitizeAndParseResumeJson } from '@/features/resume-toolkit/services/ai/sanitize'
 
+/** Caught values are `unknown`; surface a message without assuming an Error. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+
 // ---------------------------------------------------------------------------
 // POST /api/resume/parse
 // Parses an uploaded PDF and returns structured ResumeData json.
@@ -21,7 +27,7 @@ export async function POST(req: NextRequest) {
     )
 
     // Auth check
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
     // Auth is required unconditionally. This previously skipped the check
     // whenever NODE_ENV was not 'production', which made every preview
     // deployment an open, unmetered door to the AI providers — and the
@@ -74,8 +80,8 @@ export async function POST(req: NextRequest) {
       try {
         sanitizeAndParseResumeJson(content)
         return { valid: true as const }
-      } catch (e: any) {
-        return { valid: false as const, reason: `Sanitization Error: ${e.message}` }
+      } catch (e: unknown) {
+        return { valid: false as const, reason: `Sanitization Error: ${errorMessage(e)}` }
       }
     }
 

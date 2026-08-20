@@ -10,6 +10,34 @@ import {
 import { buildJDExtractionPrompt, buildATSv2EvidenceMatrixPrompt } from './ats-v2-prompts'
 import { sanitizeEvidenceMatrix } from './ats-v2-hallucination-guard'
 
+/** Caught values are `unknown`; surface a message without assuming an Error. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+
+/**
+ * These two functions normalise raw model JSON, so their input genuinely has
+ * no guaranteed shape — which is why they were typed `any` throughout. Taking
+ * `unknown` and reading through these helpers keeps the same runtime
+ * behaviour (a property read on a loose record is identical) while stopping
+ * callers from passing an unchecked value straight in. Zod still validates the
+ * result at the end of each function; this only gets it there safely.
+ */
+type RawObject = Record<string, unknown>
+
+function toRawObject(value: unknown): RawObject {
+  return value && typeof value === 'object' ? (value as RawObject) : {}
+}
+
+/** The value when it is one of `allowed`, else `fallback`. */
+function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback
+}
+
+
 export interface IntelligenceResult<T> {
   success: boolean
   data?: T
@@ -17,13 +45,11 @@ export interface IntelligenceResult<T> {
   provider?: string
 }
 
-export function normalizeStructuredJd(parsed: any): StructuredJD {
-  if (Array.isArray(parsed)) {
-    parsed = { requirements: parsed }
-  }
-  if (!parsed || typeof parsed !== 'object') {
+export function normalizeStructuredJd(input: unknown): StructuredJD {
+  if (!input || typeof input !== 'object') {
     throw new Error('Invalid StructuredJD object')
   }
+  const parsed: RawObject = Array.isArray(input) ? { requirements: input } : (input as RawObject)
 
   if (!parsed.roleTitle) {
     parsed.roleTitle = parsed.title || parsed.role || 'Target Role'
@@ -43,11 +69,14 @@ export function normalizeStructuredJd(parsed: any): StructuredJD {
 
   const rawReqs = parsed.requirements || parsed.capabilities || parsed.reqs || parsed.jobRequirements || []
   if (Array.isArray(rawReqs)) {
-    parsed.requirements = rawReqs.map((r: any, idx: number) => ({
+    parsed.requirements = rawReqs.map((rawReq: unknown, idx: number) => {
+      const r = toRawObject(rawReq)
+      const provenance = toRawObject(r.provenance)
+      return {
       id: r.id || `req_${idx + 1}`,
       name: r.name || r.title || r.requirement || r.skill || null,
-      category:
-        r.category &&
+      category: pickEnum(
+        r.category,
         [
           'hard_requirement',
           'technical_capability',
@@ -61,52 +90,52 @@ export function normalizeStructuredJd(parsed: any): StructuredJD {
           'location_auth',
           'preferred_qualification',
           'other',
-        ].includes(r.category)
-          ? r.category
-          : 'technical_capability',
-      importance:
-        r.importance && ['critical', 'high', 'medium', 'low'].includes(r.importance)
-          ? r.importance
-          : 'medium',
+        ] as const,
+        'technical_capability'
+      ),
+      importance: pickEnum(r.importance, ['critical', 'high', 'medium', 'low'] as const, 'medium'),
       description: r.description || null,
       provenance: {
-        exactQuote: r.provenance?.exactQuote || r.exactQuote || r.name || null,
-        context: r.provenance?.context || r.context || null,
+        exactQuote: provenance.exactQuote || r.exactQuote || r.name || null,
+        context: provenance.context || r.context || null,
       },
-    }))
+      }
+    })
   } else {
     parsed.requirements = []
   }
   return structuredJDSchema.parse(parsed)
 }
 
-export function normalizeEvidenceMatrix(parsed: any): EvidenceMatrix {
-  if (!parsed) {
+export function normalizeEvidenceMatrix(input: unknown): EvidenceMatrix {
+  if (!input) {
     throw new Error('Invalid EvidenceMatrix object')
   }
-  if (Array.isArray(parsed)) {
-    parsed = { evaluations: parsed }
-  }
+  const parsed: RawObject = Array.isArray(input) ? { evaluations: input } : toRawObject(input)
   if (parsed.evaluations && Array.isArray(parsed.evaluations)) {
-    parsed.evaluations = parsed.evaluations.map((e: any, idx: number) => ({
+    parsed.evaluations = (parsed.evaluations as unknown[]).map((rawEval: unknown, idx: number) => {
+      const e = toRawObject(rawEval)
+      return {
       capabilityId: e.capabilityId || e.id || `req_${idx + 1}`,
-      satisfaction:
-        e.satisfaction &&
-        ['none', 'insufficient', 'partial', 'substantial', 'complete'].includes(e.satisfaction)
-          ? e.satisfaction
-          : 'none',
-      evidenceStrength:
-        e.evidenceStrength &&
-        ['none', 'weak', 'moderate', 'strong', 'exceptional'].includes(e.evidenceStrength)
-          ? e.evidenceStrength
-          : 'none',
+      satisfaction: pickEnum(
+        e.satisfaction,
+        ['none', 'insufficient', 'partial', 'substantial', 'complete'] as const,
+        'none'
+      ),
+      evidenceStrength: pickEnum(
+        e.evidenceStrength,
+        ['none', 'weak', 'moderate', 'strong', 'exceptional'] as const,
+        'none'
+      ),
       evidenceReferences: Array.isArray(e.evidenceReferences)
-        ? e.evidenceReferences.map((ref: any, refIdx: number) => ({
+        ? (e.evidenceReferences as unknown[]).map((rawRef: unknown, refIdx: number) => {
+            const ref = toRawObject(rawRef)
+            return {
             evidenceId: ref.evidenceId || `ref_${refIdx + 1}`,
             sourceSection: ref.sourceSection || 'skills',
             exactText: ref.exactText || ref.snippet || 'Evidence text',
-            evidenceType:
-              ref.evidenceType &&
+            evidenceType: pickEnum(
+              ref.evidenceType,
               [
                 'learning',
                 'listed_skill',
@@ -117,19 +146,21 @@ export function normalizeEvidenceMatrix(parsed: any): EvidenceMatrix {
                 'professional_experience',
                 'achievement',
                 'leadership',
-              ].includes(ref.evidenceType)
-                ? ref.evidenceType
-                : 'listed_skill',
+              ] as const,
+              'listed_skill'
+            ),
             quantifiedImpact: ref.quantifiedImpact || null,
             recency: ref.recency || null,
             confidence: typeof ref.confidence === 'number' ? ref.confidence : 0.8,
-          }))
+            }
+          })
         : [],
       confidence: typeof e.confidence === 'number' ? e.confidence : 0.8,
       semanticReasoning: e.semanticReasoning || e.reasoning || 'Evaluated requirement evidence.',
       gapReason: e.gapReason || null,
       uncertaintyReason: e.uncertaintyReason || null,
-    }))
+      }
+    })
   }
   return evidenceMatrixSchema.parse(parsed)
 }
@@ -179,8 +210,8 @@ export async function extractJDIntelligence(
       }
 
       return { valid: true as const }
-    } catch (e: any) {
-      return { valid: false as const, reason: `Validation Error: ${e.message}` }
+    } catch (e: unknown) {
+      return { valid: false as const, reason: `Validation Error: ${errorMessage(e)}` }
     }
   }
 
@@ -213,10 +244,10 @@ export async function extractJDIntelligence(
         data: structuredJd,
         provider: aiResult.provider,
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       return {
         success: false,
-        error: `Failed to parse structured JD: ${e.message}`,
+        error: `Failed to parse structured JD: ${errorMessage(e)}`,
       }
     }
   }
@@ -240,8 +271,8 @@ export async function evaluateResumeEvidence(
       const parsed = JSON.parse(repaired)
       normalizeEvidenceMatrix(parsed)
       return { valid: true as const }
-    } catch (e: any) {
-      return { valid: false as const, reason: `Validation Error: ${e.message}` }
+    } catch (e: unknown) {
+      return { valid: false as const, reason: `Validation Error: ${errorMessage(e)}` }
     }
   }
 
@@ -274,10 +305,10 @@ export async function evaluateResumeEvidence(
         data: sanitizedMatrix,
         provider: aiResult.provider,
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       return {
         success: false,
-        error: `Failed to parse evidence matrix: ${e.message}`,
+        error: `Failed to parse evidence matrix: ${errorMessage(e)}`,
       }
     }
   }

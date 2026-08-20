@@ -42,7 +42,7 @@ export async function parseResume(
   let rawText: string
   try {
     rawText = await extractTextFromPDF(buffer)
-  } catch (err) {
+  } catch {
     return {
       success: false,
       error:   'Failed to extract text from PDF. The file may be corrupted or image-based.',

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 /**
  * Keeps at most `keep` rows per user in a history table, deleting the
  * oldest beyond that — called right after a successful insert into either
@@ -7,7 +8,7 @@
  * next save.
  */
 export async function pruneHistoryTable(
-  supabase: any,
+  supabase: SupabaseClient,
   table: 'resume_ats_reports' | 'resume_optimizations',
   userId: string,
   keep = 6

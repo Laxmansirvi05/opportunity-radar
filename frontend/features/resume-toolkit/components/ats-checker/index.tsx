@@ -110,7 +110,7 @@ export function AtsCheckerDashboard() {
     setResult(null)
 
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         jobDescription: jobDescription.trim(),
         companyName: companyName.trim(),
         targetRole: targetRole.trim(),
@@ -163,9 +163,9 @@ export function AtsCheckerDashboard() {
       const data = await checkRes.json()
       setResult(data)
       toast.success("Analysis complete!", { id: "ats-progress" })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error)
-      toast.error(error.message || "An error occurred during analysis.", { id: "ats-progress" })
+      toast.error((error instanceof Error ? error.message : '') || "An error occurred during analysis.", { id: "ats-progress" })
     } finally {
       setIsAnalyzing(false)
     }

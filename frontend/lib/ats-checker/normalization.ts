@@ -1,3 +1,4 @@
+import type { ResumeEducation } from '@/types/resume'
 
 /**
  * The two resume shapes this converter accepts.
@@ -59,7 +60,15 @@ interface RawResumeData {
 
 interface AtsExperience { company: string; role: string; start_date: string; bullets: string[] }
 interface AtsProject { name: string; title: string; description: string; technologies: string[]; bullets: string[] }
-interface AtsEducation { institution: string; degree: string; degree_level: string }
+// degree_level mirrors the schema's union rather than a bare string: nothing
+// in the readiness calculation reads it today, but a loose `string` here was
+// enough to force an `as any` at the call site, which in turn hid whatever
+// else drifted.
+interface AtsEducation {
+  institution: string
+  degree: string
+  degree_level: ResumeEducation['degree_level']
+}
 interface AtsCertification { name: string; issuer: string; date: string }
 
 // ---------------------------------------------------------------------------

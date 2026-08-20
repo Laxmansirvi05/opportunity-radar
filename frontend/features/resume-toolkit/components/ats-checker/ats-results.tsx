@@ -6,12 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { RotateCcw, Lightbulb, Rocket, CheckCircle2, AlertTriangle, XCircle, ShieldAlert, GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { AtsCheckResponse, AtsCategoryScore } from "../../lib/schema/resume/ats-check"
+import type { AtsCheckResponse, AtsCategoryScore, AtsV2Score, RequirementScore } from "../../lib/schema/resume/ats-check"
 
 export function AtsResults({
   result,
   targetRole,
-  companyName,
   onReset,
 }: {
   result: AtsCheckResponse
@@ -171,8 +170,6 @@ export function AtsResults({
 
 function CategoryItem({ label, cat }: { label: string; cat: AtsCategoryScore }) {
   const percentage = (cat.score / cat.maxScore) * 100
-  const color = percentage >= 75 ? "bg-emerald-500" : percentage >= 50 ? "bg-amber-500" : "bg-red-500"
-
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
@@ -192,7 +189,23 @@ function CategoryItem({ label, cat }: { label: string; cat: AtsCategoryScore }) 
   )
 }
 
-function CompactScoreSummary({ title, score, band, capabilityScore, qualityScore, confidence }: any) {
+function CompactScoreSummary({
+  title,
+  score,
+  band,
+  capabilityScore,
+  qualityScore,
+  confidence,
+}: {
+  title: string
+  score: number
+  // Only the ATS v2 panel passes the breakdown; the readiness-only panel
+  // renders the same card with a score and nothing else.
+  band?: AtsV2Score["band"]
+  capabilityScore?: number
+  qualityScore?: number
+  confidence?: AtsV2Score["confidence"]
+}) {
   const colorText = score >= 75 ? "text-emerald-600 dark:text-emerald-400" : score >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
   const bgRing = score >= 75 ? "bg-emerald-500/10 border-emerald-500/20" : score >= 50 ? "bg-amber-500/10 border-amber-500/20" : "bg-red-500/10 border-red-500/20"
 
@@ -238,7 +251,7 @@ function CompactScoreSummary({ title, score, band, capabilityScore, qualityScore
   )
 }
 
-function RequirementsList({ title, type, icon, reqs }: { title: string, type: 'success' | 'warning' | 'error', icon: React.ReactNode, reqs: any[] }) {
+function RequirementsList({ title, type, icon, reqs }: { title: string, type: 'success' | 'warning' | 'error', icon: React.ReactNode, reqs: RequirementScore[] }) {
   const bgClasses = {
     success: 'bg-emerald-500/5 border-emerald-500/20',
     warning: 'bg-amber-500/5 border-amber-500/20',

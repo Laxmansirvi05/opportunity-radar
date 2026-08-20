@@ -6,6 +6,7 @@ import type { EvidenceMatrix, StructuredJD } from '@/features/resume-toolkit/lib
 import type { ParsedResume } from '@/types/resume'
 import { decideTier, tierPlan, deriveSuggestions, suggestionCountForScore, type OptimizationTier, type Suggestion } from './tiers'
 import { generatePolishedResume, generateTargetResume } from './generate'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Orchestrates a full optimisation run.
@@ -27,7 +28,7 @@ export interface StartRunInput {
    *  evaluation from either feature instead of re-running the AI — see
    *  shared-evaluation.ts. Optional so existing callers (and tests) that
    *  don't pass them simply always run a fresh evaluation. */
-  supabase?: any
+  supabase?: SupabaseClient
   resumeId?: string | null
   resumeUpdatedAt?: string | null
 }

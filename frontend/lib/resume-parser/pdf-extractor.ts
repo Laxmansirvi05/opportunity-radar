@@ -11,10 +11,16 @@ import PDFParser from 'pdf2json';
 // ---------------------------------------------------------------------------
 export async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
   return new Promise((resolve, reject) => {
-    // Instantiate with '1' to indicate we just want raw text
-    const pdfParser = new (PDFParser as any)(null, 1);
+    // Instantiate with '1' to indicate we just want raw text. pdf2json's
+    // published constructor type omits this second argument, so the cast is
+    // narrowed to that signature rather than opening the whole object to `any`.
+    const ParserCtor = PDFParser as unknown as new (context: null, textOnly: number) => PDFParser;
+    const pdfParser = new ParserCtor(null, 1);
 
-    pdfParser.on('pdfParser_dataError', (errData: any) => reject(new Error(errData.parserError)));
+    // pdf2json reports either a bare Error or a { parserError } wrapper.
+    pdfParser.on('pdfParser_dataError', (errData: Error | { parserError: Error }) =>
+      reject(errData instanceof Error ? errData : new Error(String(errData.parserError)))
+    );
     pdfParser.on('pdfParser_dataReady', () => {
       let text = pdfParser.getRawTextContent().replace(/\r\n/g, '\n');
 

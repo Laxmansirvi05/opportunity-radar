@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import { ParsedResumeSchema, type ParsedResume } from '@/types/resume'
 
 // ---------------------------------------------------------------------------

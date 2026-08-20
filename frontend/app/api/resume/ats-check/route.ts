@@ -17,6 +17,17 @@ import { pruneHistoryTable } from '@/lib/resume-optimizer/prune-history'
 import { jsonrepair } from 'jsonrepair'
 import type { ParsedResume } from '@/types/resume'
 
+/** Caught values are `unknown`; surface a message without assuming an Error. */
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+
+
+/** Shape of a Postgres jsonb column as far as the client is concerned. */
+type Json = Record<string, unknown>
+
+
 // Targeted mode makes up to 3 sequential AI-gateway calls (JD extraction,
 // evidence evaluation, coaching narration), each with its own multi-provider
 // fallback chain — the same shape of workload that previously needed an
@@ -34,7 +45,7 @@ export async function POST(req: NextRequest) {
       { cookies: { getAll: () => cookieStore.getAll() } }
     )
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
     // Auth is required unconditionally. This previously skipped the check
     // whenever NODE_ENV was not 'production', which made every preview
     // deployment an open, unmetered door to the AI providers — and the
@@ -130,6 +141,10 @@ export async function POST(req: NextRequest) {
         .from('resumes')
         .select('id, parsed_data, updated_at')
         .eq('id', resumeId)
+        // resumeId comes straight from the request body. RLS already blocks
+        // another user's row, but an id-only read is one policy change away
+        // from scoring — and storing — someone else's resume.
+        .eq('user_id', userId)
         .single()
 
       if (dbError || !resume || !resume.parsed_data) {
@@ -167,7 +182,11 @@ export async function POST(req: NextRequest) {
     const normalizedResume = normalizeToAtsResume(parsedResumeData)
 
     // Deterministic, JD-independent — always computed regardless of mode.
-    const readiness = calculateAtsReadiness(normalizedResume as any)
+    // normalizeToAtsResume returns the ATS-local shape, which differs from
+    // ParsedResume only in `certifications` (objects here, strings there) —
+    // a field the readiness calculation never reads. Narrowed through
+    // `unknown` rather than `any` so the rest of the object still type-checks.
+    const readiness = calculateAtsReadiness(normalizedResume as unknown as ParsedResume)
     const academicRecommendation = computeAcademicRecommendation(parsedResumeData.education)
 
     if (!hasJd) {
@@ -189,10 +208,10 @@ export async function POST(req: NextRequest) {
           // no resumeId) still saves to history instead of being silently
           // dropped for having nothing to attach to.
           resume_id: resumeId || null,
-          source_resume: parsedResumeData as any,
+          source_resume: parsedResumeData as unknown as Json,
           target_job_description: null,
           score: readiness.score,
-          report_data: finalResponse as any,
+          report_data: finalResponse as unknown as Json,
         })
         if (insertError) {
           console.error('[ATS] Failed to store resume-only report', insertError)
@@ -277,8 +296,8 @@ export async function POST(req: NextRequest) {
           const repaired = jsonrepair(content)
           atsCoachingSchema.parse(JSON.parse(repaired))
           return { valid: true as const }
-        } catch (e: any) {
-          return { valid: false as const, reason: e.message }
+        } catch (e: unknown) {
+          return { valid: false as const, reason: errorMessage(e) }
         }
       }
 
@@ -318,12 +337,12 @@ export async function POST(req: NextRequest) {
         // attach to, and previously never saved to history at all because
         // the insert was gated on resumeId being present.
         resume_id: resumeId || null,
-        source_resume: parsedResumeData as any,
+        source_resume: parsedResumeData as unknown as Json,
         target_job_description: jobDescription!.slice(0, 5000),
         // Always the same score the response actually carries — never a
         // second engine's number diverging from what's shown on screen.
         score: atsV2Data ? atsV2Data.score.overallScore : readiness.score,
-        report_data: finalResponse as any,
+        report_data: finalResponse as unknown as Json,
       })
 
       if (insertError) {

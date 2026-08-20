@@ -1,5 +1,6 @@
 import type { ParsedResume } from '@/types/resume'
 import type { EvidenceReference } from '../../lib/schema/resume/ats-v2'
+import { stringList, firstString } from '@/lib/resume-fields'
 
 export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] {
   const units: EvidenceReference[] = []
@@ -11,9 +12,9 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
       const company = exp.company || ''
       const role = exp.role || ''
       const title = role ? `${role} at ${company}` : company
-      const bullets = (exp as any).bullets || (exp as any).highlights || []
+      const bullets = stringList(exp, 'bullets', 'highlights')
 
-      if (Array.isArray(bullets)) {
+      {
         for (const highlight of bullets) {
           if (!highlight || !highlight.trim()) continue
 
@@ -28,7 +29,7 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
             context: title,
             technologiesDemonstrated: [],
             quantifiedImpact: hasMetric ? highlight.trim() : null,
-            recency: (exp as any).start_date || (exp as any).startDate || null,
+            recency: firstString(exp, 'start_date', 'startDate'),
             confidence: 0.95,
           })
         }
@@ -58,8 +59,8 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
         })
       }
 
-      const projHighlights = (proj as any).highlights || []
-      if (Array.isArray(projHighlights)) {
+      const projHighlights = stringList(proj, 'highlights')
+      {
         for (const highlight of projHighlights) {
           if (!highlight || !highlight.trim()) continue
           const hasMetric = /\b\d+(?:%|\+|k|M|B|x|\s?percent)?\b/i.test(highlight)
@@ -115,7 +116,7 @@ export function extractEvidenceUnits(resume: ParsedResume): EvidenceReference[] 
           context: institution,
           technologiesDemonstrated: [],
           quantifiedImpact: null,
-          recency: (edu as any).end_date || (edu as any).endDate || (edu as any).graduation_year?.toString() || null,
+          recency: firstString(edu, 'end_date', 'endDate', 'graduation_year'),
           confidence: 1.0,
         })
       }

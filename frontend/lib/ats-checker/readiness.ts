@@ -1,6 +1,9 @@
 import type { ParsedResume } from '@/types/resume'
 import type { AtsReadinessResult, AtsCategoryScore } from '@/features/resume-toolkit/lib/schema/resume/ats-check'
 import { normalizeText } from './normalization'
+import { stringList } from '@/lib/resume-fields'
+
+
 
 const ACTION_VERBS = new Set([
   'achieved', 'added', 'administered', 'advised', 'analyzed', 'architected', 'built',
@@ -153,7 +156,7 @@ function evaluateContentQuality(resume: ParsedResume): AtsCategoryScore {
   const allBullets = [
     ...(resume.experience || []).flatMap(e => e.bullets || []),
     ...(resume.projects || []).map(p => p.description || ''),
-    ...(resume.projects || []).flatMap(p => (p as any).bullets || [])
+    ...(resume.projects || []).flatMap((p) => stringList(p, 'bullets'))
   ].filter(b => b.trim().length > 0)
 
   if (allBullets.length === 0) {
@@ -224,7 +227,7 @@ function evaluateImpact(resume: ParsedResume): AtsCategoryScore {
   const allBullets = [
     ...(resume.experience || []).flatMap(e => e.bullets || []),
     ...(resume.projects || []).map(p => p.description || ''),
-    ...(resume.projects || []).flatMap(p => (p as any).bullets || [])
+    ...(resume.projects || []).flatMap((p) => stringList(p, 'bullets'))
   ].filter(b => b.trim().length > 0)
 
   if (allBullets.length < 3) {
@@ -356,7 +359,14 @@ function evaluateProfessionalQuality(resume: ParsedResume): AtsCategoryScore {
   const deductions: string[] = []
 
   // Summary quality
-  const summaryStr = typeof resume.summary === 'string' ? resume.summary : (typeof (resume.summary as any)?.content === 'string' ? (resume.summary as any).content : '')
+  // A summary is either a plain string or the builder's { content } object.
+  const summaryContent = (resume.summary as { content?: unknown } | null | undefined)?.content
+  const summaryStr =
+    typeof resume.summary === 'string'
+      ? resume.summary
+      : typeof summaryContent === 'string'
+        ? summaryContent
+        : ''
   if (summaryStr && summaryStr.trim().length > 0) {
     if (summaryStr.length < 40) {
       score -= 3
