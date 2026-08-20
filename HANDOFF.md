@@ -197,8 +197,11 @@ These are load-bearing — the codebase is consistent about them and reviewers/a
 - **Frontend → Vercel.** Project `opportunity-radar` (`prj_LZz1jTnQIBn2168AB2gjANBV98Yr`, team `team_ZoKBUzeivolBMQGdfcufbDXh`). Pushing to **`restore-june19-clean`** auto-builds. Framework: Next.js, bundler: Turbopack.
 - **Backends → Azure VM** `172.198.161.108` (systemd services + Caddy TLS). Not auto-deployed from this repo.
 
-> ⚠️ **Known deployment caveat (needs the owner's dashboard).** Pushes to `restore-june19-clean` currently produce **branch/preview deploys** (`target: null`) that update the **branch-alias URL**, not the pretty `opportunity-radar-six.vercel.app` production alias — that alias is still pinned to an older *promoted* build. **To fix once:** Vercel → Project → Settings → Git → set **Production Branch = `restore-june19-clean`** and save (or promote the newest build). After that, pushes go straight to production. Until then, **the always-current demo URL is the branch alias:**
-> `https://opportunity-radar-git-restore-ju-6faa4e-laxman-sirvi-s-projects.vercel.app`
+> ⚠️ **Known deployment caveat (needs the owner's dashboard).** The Vercel **Production Branch is `restore-june19`**, but the working branch is **`restore-june19-clean`** — off by the `-clean` suffix, so no push ever matches and every deploy lands as a **Preview** while the production alias goes stale. Production was promoted manually on 21 Aug 2026 and is current, but **the setting is what keeps it current**: until it is fixed, the next push is a Preview again.
+>
+> **Fix once:** Vercel → Project → Settings → Git → **Production Branch → `restore-june19-clean`** → Save. This cannot be done from the API — `productionBranch` is settable only at project creation (checked against Vercel's OpenAPI spec), and `vercel project update` does not expose it.
+>
+> **Note:** Vercel crons only run against the *production* deployment, so while production is stale the nightly jobs run old code.
 
 ### Cron jobs (`vercel.json`, Hobby tier = max once/day each)
 Ingestion refreshers (Unstop, Internshala, providers, employers) run nightly; `link-sweep` + `certification-link-sweep` prune dead links; `notifications`, `maintenance`, `sweep-interviews`, `purge-interviews`, `refresh-certifications` (weekly). All gated by `CRON_SECRET`.

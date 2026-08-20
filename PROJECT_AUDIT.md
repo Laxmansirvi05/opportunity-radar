@@ -27,7 +27,7 @@
 | Component | Where | Status |
 |---|---|---|
 | Frontend (Next.js) | Vercel | ✅ Live. Latest build on the branch alias `…git-restore-ju-6faa4e….vercel.app` |
-| **Production URL** (`opportunity-radar-six.vercel.app`) | Vercel | ⚠️ **Still points to an older build (`64b1d31`).** Every "Promote to Production" re-selected the same old deployment. **Fix:** Settings → Git → **Production Branch → `restore-june19-clean`** → save. Then all pushes auto-deploy to production (no more manual promotes). |
+| **Production URL** (`opportunity-radar-six.vercel.app`) | Vercel | ✅ **Now current** (promoted 21 Aug 2026 — verified serving the new build). ⚠️ **But the underlying setting is still wrong.** Root cause found: **Production Branch is `restore-june19`, while the working branch is `restore-june19-clean`** — off by the `-clean` suffix, so no push ever matched and every deploy became a Preview. **This is dashboard-only:** `productionBranch` cannot be set on an existing project through the API (verified against Vercel's OpenAPI spec — it exists only on project *creation*), and `vercel project update` does not expose it. **Until you change it in Settings → Git, the next push is a Preview again and production goes stale.** |
 | AI Search agent stack | Azure VM `172.198.161.108` | ✅ `https://agent.laxmansirvi.me` (TLS, secret-gated, HTTP 403 without secret) |
 | Voice Interview agent + worker | same Azure VM | ✅ `https://interview.laxmansirvi.me` healthy; LiveKit worker registered; **Kokoro TTS** self-hosted (no rate limits) |
 | Databases | Supabase (cloud) + Postgres/Redis (VM) | ✅ |
@@ -119,7 +119,7 @@ Reviewed because Notes is the largest un-audited surface (4,590 lines, 11 API ro
 ## 7. Prioritised to-do before submission
 
 **High (reviewer-visible):**
-1. **Point production at the right build** — set Production Branch to `restore-june19-clean` (Section 2). *(still needs your Vercel dashboard)*
+1. **Fix the Production Branch setting** — it reads `restore-june19`, one suffix off from `restore-june19-clean` (§2). Production itself was promoted and is current, but **this setting is what makes it stay current**; until it is changed, every push lands as a Preview. *(dashboard-only — not settable via the API)*
 2. ~~Fix or remove the 4 dead footer links~~ — ✅ **done** (real GitHub repo; dead LinkedIn/Twitter/Instagram removed; Privacy/Terms wired).
 3. **Enable leaked-password protection** (one click, Supabase Auth — dashboard-only). *(still pending your action — now the **only** outstanding auth item)*
 
@@ -171,6 +171,9 @@ Reviewed because Notes is the largest un-audited surface (4,590 lines, 11 API ro
   3. **All 47 first-party lint errors typed away.** Two shared helpers replace patterns that had been copy-pasted with `as any`: `lib/resume-fields.ts` (fields arriving under more than one key, returning **only strings** — those arrays feed straight into `.trim()`, so a malformed parse would have thrown) and `lib/ats-checker/jd-requirements.ts` (the legacy `capabilities` key, now named in one place). The AI normalisers take `unknown` instead of `any`. Removing one cast surfaced two real shape mismatches — `degree_level` as a bare string, and `AtsCertification` objects where `ParsedResume` has strings. **ATS scoring verified unchanged: 58 tests.**
   4. Two résumé reads ownership-filtered (RLS already scoped them; not exploitable).
   - **Not exercised live:** an ATS check, an optimiser run, a PDF upload/parse, or the builder — all need real résumés and LLM calls.
+- 🔧 **Deployment: five routes would have been killed by Vercel's function timeout in production** while working locally, where no such limit exists. `/api/assistant` declared no `maxDuration` at all and a single reply was **measured at 23s**; `/api/resume/parse` runs a PDF extraction *and* a gateway call; three PDF download routes render server-side. This is the same failure already recorded twice in this codebase — `/api/resume/optimization` and `/api/resume/ats-check` both carry comments saying every run silently failed until an explicit `maxDuration` was added. These were the routes that still had none.
+- 🔧 **Deployment: root cause of the stale production URL identified and production brought current.** The Production Branch was `restore-june19` against a working branch of `restore-june19-clean`. 23 commits — every fix from all five audits — were also sitting unpushed, so nothing had been deployed at all. Pushed, promoted, and verified live: all 7 public pages 200, and the auth deep-link fix confirmed in production (`/notes` → `/login?next=%2Fnotes`). **Also worth knowing: Vercel crons only run against the production deployment**, so all 11 nightly jobs had been executing the old build.
+- ✅ **Env/secret config verified, no action needed:** every `process.env.*` in the code diffed against Vercel production — the three that looked missing are fine (`GEMINI_API_KEY` is an alternative to `GOOGLE_GENERATIVE_AI_API_KEY`, `OLLAMA_BASE_URL` has a default, `NODE_ENV` is Vercel-provided). All 11 crons registered. Only `.env.example` is tracked by git.
 - ✅ **Test suite: 502 → 590** (56 → 64 files) across the résumé-builder, auth, notes, assistant and résumé-toolkit passes.
 - 🔧 **Security (ERROR): closed the `v_student_ats_inputs` cross-user résumé-data leak** (set `security_invoker`, revoked anon) — ATS feature verified still working.
 - 🔧 Security: pinned `search_path` on 13 DB functions (cleared 11 warnings).
