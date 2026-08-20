@@ -34,6 +34,11 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
 
+  // Desktop-only: collapses the sections panel and the editor column so the
+  // preview gets the full width. Small screens already have the Edit/Preview
+  // tab switcher below, so the toggle itself is md-and-up only.
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
+
   // Mobile view mode
   const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit')
 
@@ -190,9 +195,18 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
             </Button>
           </div>
           
-          <Button variant="outline" size="sm" className="h-8 hidden md:flex" disabled title="Preview Mode (Coming Soon)">
-            <span className="material-symbols-outlined text-sm mr-1.5">visibility</span>
-            Preview Mode
+          <Button
+            variant={isPreviewMode ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 hidden md:flex"
+            onClick={() => setIsPreviewMode((on) => !on)}
+            aria-pressed={isPreviewMode}
+            title={isPreviewMode ? 'Back to editing' : 'Preview Mode'}
+          >
+            <span className="material-symbols-outlined text-sm mr-1.5">
+              {isPreviewMode ? 'edit' : 'visibility'}
+            </span>
+            {isPreviewMode ? 'Exit Preview' : 'Preview Mode'}
           </Button>
 
           <Button
@@ -245,9 +259,19 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
       {/* ─── Three-Panel Layout ─── */}
       <div className="flex-1 flex overflow-hidden">
         {/* 1. Left Panel (Sections) */}
+        {/*
+          The visibility classes below are written as one mutually exclusive
+          string per state rather than layered conditionals: `cn` is twMerge,
+          which treats `hidden` and `md:flex` as different responsive groups,
+          so appending `hidden` to a panel that already carries `md:flex`
+          would still leave it visible from md up — exactly the widths preview
+          mode needs to collapse.
+        */}
         <aside className={cn(
           'w-56 shrink-0 border-r border-outline-variant bg-surface overflow-hidden flex-col',
-          mobileView === 'preview' ? 'hidden md:flex' : 'hidden sm:flex'
+          isPreviewMode
+            ? 'hidden'
+            : mobileView === 'preview' ? 'hidden md:flex' : 'hidden sm:flex'
         )}>
           <SectionsPanel
             activeSection={activeSection}
@@ -268,8 +292,10 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
           
           {/* Editor Column */}
           <div className={cn(
-            'w-full md:w-[350px] lg:w-[400px] xl:w-[450px] overflow-y-auto shrink-0 bg-surface flex flex-col',
-            mobileView === 'preview' && 'hidden md:flex'
+            'w-full md:w-[350px] lg:w-[400px] xl:w-[450px] overflow-y-auto shrink-0 bg-surface flex-col',
+            isPreviewMode
+              ? 'hidden'
+              : mobileView === 'preview' ? 'hidden md:flex' : 'flex'
           )}>
             <div className="sm:hidden overflow-x-auto border-b border-outline-variant bg-surface px-2 py-1.5 flex gap-1 shrink-0">
               {SECTION_CONFIG.map((s) => (
@@ -303,8 +329,14 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
 
           {/* Preview Column */}
           <div className={cn(
-            'flex-1 bg-surface-container-low overflow-y-auto border-l border-outline-variant relative flex items-start justify-center p-4 lg:p-8',
-            mobileView === 'edit' ? 'hidden md:flex' : 'flex'
+            'flex-1 bg-surface-container-low overflow-y-auto relative items-start justify-center p-4 lg:p-8',
+            // No divider in preview mode — there is nothing to its left.
+            isPreviewMode
+              ? 'flex'
+              : cn(
+                  'border-l border-outline-variant',
+                  mobileView === 'edit' ? 'hidden md:flex' : 'flex'
+                )
           )}>
             <ResumePreview data={resumeData} />
           </div>
