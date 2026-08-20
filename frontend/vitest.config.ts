@@ -29,7 +29,6 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       'libs/resume/section.test.tsx',
-      'libs/resume/section-title-locale.test.tsx',
       'features/command-palette/pages/preferences/index.test.tsx',
       'features/command-palette/pages/preferences/language.test.tsx',
       'features/command-palette/pages/preferences/theme.test.tsx',

@@ -1,15 +1,15 @@
 import { t } from "@lingui/core/macro";
 import { GithubLogoIcon, StarIcon } from "@phosphor-icons/react";
 import { Button } from "@reactive-resume/ui/components/button";
-import { CountUp } from "../animation/count-up";
 
+/**
+ * The live star count was removed with the API call that fetched it, leaving
+ * `starCount` hard-coded to null — so both the count badge and the
+ * "currently N stars" label were unreachable, and TypeScript flagged the
+ * narrowed `never`. Rendering the plain link is what this already did.
+ */
 export function GithubStarsButton() {
-	const starCount: number | null = null;
-
-	const ariaLabel =
-		starCount != null
-			? t`Star us on GitHub, currently ${starCount.toLocaleString()} stars (opens in new tab)`
-			: t`Star us on GitHub (opens in new tab)`;
+	const ariaLabel = t`Star us on GitHub (opens in new tab)`;
 
 	return (
 		<Button
@@ -18,9 +18,6 @@ export function GithubStarsButton() {
 			render={
 				<a target="_blank" href="https://github.com/amruthpillai/reactive-resume" aria-label={ariaLabel} rel="noopener">
 					<GithubLogoIcon aria-hidden="true" />
-					{starCount != null ? (
-						<CountUp to={starCount} duration={0.5} separator="," className="font-bold" aria-hidden="true" />
-					) : null}
 					<StarIcon aria-hidden="true" />
 				</a>
 			}
