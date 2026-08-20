@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useAnimationFrame, useMotionValue } from 'framer-motion'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 
 const OPPORTUNITIES = [
   { title: 'Google SWE Internship', type: 'Internship', color: '#3b82f6', angle: 0, distance: 220 },

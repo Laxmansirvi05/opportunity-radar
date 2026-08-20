@@ -44,7 +44,7 @@ function ForgotPasswordContent() {
       } else {
         setIsSuccess(true)
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('A network error occurred. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
@@ -79,7 +79,7 @@ function ForgotPasswordContent() {
       } else {
         setIsSuccess(true) // Reusing success state for the final confirmation
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('A network error occurred. Please check your connection and try again.')
     } finally {
       setIsLoading(false)

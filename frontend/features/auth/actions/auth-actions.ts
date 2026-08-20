@@ -3,14 +3,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { validateLoginInput, validateSignupInput } from '@/lib/auth/credentials'
 
 export async function loginAction(formData: FormData) {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-
-  if (!email || !password) {
-    return { error: 'Email and password are required' }
+  const parsed = validateLoginInput({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  })
+  if (!parsed.ok) {
+    return { error: parsed.error }
   }
+  const { email, password } = parsed.value
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({
@@ -32,13 +35,15 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function signupAction(formData: FormData) {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-  const name = formData.get('name') as string
-
-  if (!email || !password || !name) {
-    return { error: 'Name, email, and password are required' }
+  const parsed = validateSignupInput({
+    email: formData.get('email'),
+    password: formData.get('password'),
+    name: formData.get('name'),
+  })
+  if (!parsed.ok) {
+    return { error: parsed.error }
   }
+  const { email, password, name } = parsed.value
 
   const supabase = await createClient()
   const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
