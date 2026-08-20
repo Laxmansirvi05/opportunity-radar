@@ -287,7 +287,16 @@ export async function startPrep(params: StartPrepParams): Promise<string> {
 export interface ScoreCard {
   overall_score?: number | null
   summary?: string | null
-  competency_scores?: { name: string; score: number; comment?: string | null }[]
+  // The agent emits each competency as { competency, score, evidence, level }.
+  // `name`/`comment` are kept as fallbacks for older payloads.
+  competency_scores?: {
+    competency?: string | null
+    name?: string | null
+    score: number
+    evidence?: string | null
+    comment?: string | null
+    level?: string | null
+  }[]
   strengths?: string[]
   weaknesses?: string[]
   model_answers?: { question_id: string; answer: string }[]

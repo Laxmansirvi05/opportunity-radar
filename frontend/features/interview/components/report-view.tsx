@@ -90,15 +90,26 @@ export function ReportView({
         <div>
           <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Competencies</h2>
           <div className="flex flex-col gap-2">
-            {scorecard.competency_scores!.map((c) => (
-              <div key={c.name} className="bg-surface border border-outline-variant rounded-lg px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-on-background">{c.name}</span>
-                  <span className="text-sm font-bold text-primary">{c.score}/5</span>
+            {scorecard.competency_scores!.map((c, i) => {
+              // The agent names the field `competency` (with `evidence`/`level`);
+              // fall back to name/comment for older payloads.
+              const label = c.competency || c.name || `Competency ${i + 1}`
+              const detail = c.evidence || c.comment
+              return (
+                <div key={label + i} className="bg-surface border border-outline-variant rounded-lg px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-on-background">
+                      {label}
+                      {c.level && (
+                        <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-on-surface-variant/70">{c.level}</span>
+                      )}
+                    </span>
+                    <span className="text-sm font-bold text-primary shrink-0">{c.score}/5</span>
+                  </div>
+                  {detail && <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{detail}</p>}
                 </div>
-                {c.comment && <p className="text-xs text-on-surface-variant mt-1">{c.comment}</p>}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
