@@ -136,19 +136,6 @@ export default async function ResumeToolkitPrototype() {
           </div>
         </Link>
 
-        {/* Resumes List */}
-        <div className="mt-6 flex flex-col gap-4">
-          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-            Your Resumes
-          </h2>
-          {resumes.length > 0 ? (
-            <ResumeListClient initialResumes={resumes} />
-          ) : (
-            <div className="text-sm text-on-surface-variant p-4 border border-outline-variant rounded-xl bg-surface">
-              No resumes created yet. Click &quot;Build from Scratch&quot; to get started.
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
@@ -336,6 +323,25 @@ export default async function ResumeToolkitPrototype() {
             </Link>
           </div>
         )}
+
+        {/* Resumes List — moved out of the 280px left rail. Its rows lay
+            themselves out horizontally from `sm:` upwards (a *viewport*
+            breakpoint), so in a 280px column the name, the date and six
+            icon buttons all collided and the resume's own name was the
+            part that got squeezed out. Here it has the full centre width,
+            which is also the space that was sitting empty. */}
+        <div className="mt-8 flex flex-col gap-4">
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#191b23', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+            Your Resumes
+          </h2>
+          {resumes.length > 0 ? (
+            <ResumeListClient initialResumes={resumes} />
+          ) : (
+            <div className="text-sm text-on-surface-variant p-4 border border-outline-variant rounded-xl bg-surface">
+              No resumes created yet. Click &quot;Build from Scratch&quot; to get started.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════

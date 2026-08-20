@@ -11,9 +11,18 @@ interface ResumeRow {
   id: string
   title: string
   slug: string
+  created_at: string
   updated_at: string
   parsedResume: ParsedResume | null
 }
+
+/**
+ * Two rows fit before the list starts scrolling. The window grows when a
+ * resume is expanded so its details aren't read through a 130px slot —
+ * without that, opening one turns the whole list into a scrollbar.
+ */
+const COLLAPSED_MAX_HEIGHT = 132
+const EXPANDED_MAX_HEIGHT = 440
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
@@ -29,132 +38,197 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function formatFullDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** One labelled action. Icons alone are what made the old row unreadable. */
+function ActionLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <Link href={href}>
+      <Button variant="outline" size="sm" className="h-9 gap-2 px-3.5 text-[13px] font-semibold">
+        <span className="material-symbols-outlined text-[16px]">{icon}</span>
+        {label}
+      </Button>
+    </Link>
+  )
+}
+
 export function ResumeListClient({ initialResumes }: { initialResumes: ResumeRow[] }) {
   const [resumes, setResumes] = useState<ResumeRow[]>(initialResumes)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [previewResume, setPreviewResume] = useState<ResumeRow | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
     const result = await deleteResume(id)
     if (result.success) {
       setResumes(prev => prev.filter(r => r.id !== id))
+      if (expandedId === id) setExpandedId(null)
     }
     setDeleteConfirmId(null)
     setIsDeleting(false)
   }
 
   return (
-    <div className="divide-y divide-outline-variant rounded-xl border border-outline-variant bg-surface overflow-hidden">
-      {resumes.map((resume) => (
-        <div key={resume.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <span className="material-symbols-outlined text-primary shrink-0">description</span>
-            <div className="flex-1 min-w-0">
-              <Link
-                href={`/resume/builder/${resume.id}`}
-                className="text-sm font-medium text-on-background hover:text-primary transition-colors truncate block"
+    <div className="rounded-xl border border-outline-variant bg-surface overflow-hidden">
+
+      {/* Column headings — turn a pile of icons into something readable */}
+      <div className="flex items-center gap-4 px-4 py-2.5 bg-surface-container-low border-b border-outline-variant">
+        <div className="w-9 shrink-0" aria-hidden="true" />
+        <div className="flex-1 min-w-0 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+          Resume
+        </div>
+        <div className="hidden sm:block w-32 shrink-0 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+          Last edited
+        </div>
+        <div className="w-6 shrink-0" aria-hidden="true" />
+      </div>
+
+      <div
+        className="divide-y divide-outline-variant overflow-y-auto transition-[max-height] duration-200 ease-out"
+        style={{ maxHeight: expandedId ? EXPANDED_MAX_HEIGHT : COLLAPSED_MAX_HEIGHT }}
+      >
+        {resumes.map((resume) => {
+          const isExpanded = expandedId === resume.id
+          return (
+            <div key={resume.id}>
+              {/* The row: the resume's own name first, and nothing competing
+                  with it. Everything else moved into the panel below. */}
+              <button
+                type="button"
+                aria-expanded={isExpanded}
+                onClick={() => setExpandedId(isExpanded ? null : resume.id)}
+                className={`w-full flex items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-container ${isExpanded ? 'bg-surface-container-low' : ''}`}
               >
-                {resume.title}
-              </Link>
-              <p className="text-xs text-on-surface-variant">
-                Edited {formatRelativeTime(resume.updated_at)}
-              </p>
-            </div>
-          </div>
+                <span className="w-9 h-9 shrink-0 rounded-lg bg-primary-container/60 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[18px]">description</span>
+                </span>
 
-          <div className="flex items-center gap-1 sm:shrink-0 mt-2 sm:mt-0">
-            {/* Preview — scroll through the actual extracted/saved content
-                without leaving this page or navigating into the full editor. */}
-            {resume.parsedResume && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                title="Preview Resume"
-                onClick={() => setPreviewResume(resume)}
-              >
-                <span className="material-symbols-outlined text-sm">visibility</span>
-                <span className="sr-only">Preview</span>
-              </Button>
-            )}
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[15px] font-semibold text-on-background truncate">
+                    {resume.title}
+                  </span>
+                  <span className="block sm:hidden text-xs text-on-surface-variant">
+                    Edited {formatRelativeTime(resume.updated_at)}
+                  </span>
+                </span>
 
-            {/* Download — a PDF of exactly what was saved, without opening
-                the preview modal first. */}
-            {resume.parsedResume && (
-              <a href={`/api/resume/${resume.id}/download`} title="Download PDF">
-                <Button variant="ghost" size="sm" className="h-8 px-2">
-                  <span className="material-symbols-outlined text-sm">download</span>
-                  <span className="sr-only">Download</span>
-                </Button>
-              </a>
-            )}
+                <span className="hidden sm:block w-32 shrink-0 text-[13px] text-on-surface-variant">
+                  {formatRelativeTime(resume.updated_at)}
+                </span>
 
-            {/* Edit */}
-            <Link href={`/resume/builder/${resume.id}`}>
-              <Button variant="ghost" size="sm" className="h-8 px-2" title="Edit Resume">
-                <span className="material-symbols-outlined text-sm">edit</span>
-                <span className="sr-only">Edit</span>
-              </Button>
-            </Link>
-
-            {/* ATS Check */}
-            <Link href={`/resume/ats?resume=${resume.id}`}>
-              <Button variant="ghost" size="sm" className="h-8 px-2" title="ATS Check">
-                <span className="material-symbols-outlined text-sm">fact_check</span>
-                <span className="sr-only">ATS Check</span>
-              </Button>
-            </Link>
-
-            {/* Optimiser */}
-            <Link href={`/resume/copilot?resume=${resume.id}`}>
-              <Button variant="ghost" size="sm" className="h-8 px-2" title="Resume Optimiser">
-                <span className="material-symbols-outlined text-sm">auto_fix_high</span>
-                <span className="sr-only">Resume Optimiser</span>
-              </Button>
-            </Link>
-
-            {/* Delete */}
-            <div className="relative">
-              {deleteConfirmId === resume.id ? (
-                <div className="absolute right-0 top-0 flex items-center gap-1 bg-surface-container p-1 rounded-md shadow-sm z-10 border border-outline-variant">
-                  <span className="text-xs font-medium px-2 whitespace-nowrap text-on-surface-variant">Delete?</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(resume.id)}
-                    disabled={isDeleting}
-                  >
-                    Yes
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2"
-                    onClick={() => setDeleteConfirmId(null)}
-                    disabled={isDeleting}
-                  >
-                    No
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-2 text-on-surface-variant hover:text-destructive transition-colors" 
-                  title="Delete"
-                  onClick={() => setDeleteConfirmId(resume.id)}
+                <span
+                  className={`w-6 shrink-0 flex justify-end text-on-surface-variant transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
                 >
-                  <span className="material-symbols-outlined text-sm">delete</span>
-                  <span className="sr-only">Delete</span>
-                </Button>
+                  <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                </span>
+              </button>
+
+              {/* Details + every action spelled out in words */}
+              {isExpanded && (
+                <div className="px-4 pb-4 pt-1 sm:pl-[68px] bg-surface-container-low border-t border-outline-variant flex flex-col gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-3">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Created</span>
+                      <span className="text-[13px] text-on-background">{formatFullDate(resume.created_at)}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Last edited</span>
+                      <span className="text-[13px] text-on-background">{formatFullDate(resume.updated_at)}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Status</span>
+                      <span className="text-[13px] text-on-background">
+                        {resume.parsedResume ? 'Ready to preview & download' : 'Not parsed yet'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Preview — scroll through the actual extracted/saved
+                        content without leaving this page. */}
+                    {resume.parsedResume && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-2 px-3.5 text-[13px] font-semibold"
+                        onClick={() => setPreviewResume(resume)}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                        Preview
+                      </Button>
+                    )}
+
+                    {/* Download — a PDF of exactly what was saved. */}
+                    {resume.parsedResume && (
+                      <a href={`/api/resume/${resume.id}/download`}>
+                        <Button size="sm" className="h-9 gap-2 px-3.5 text-[13px] font-semibold">
+                          <span className="material-symbols-outlined text-[16px]">download</span>
+                          Download PDF
+                        </Button>
+                      </a>
+                    )}
+
+                    <ActionLink href={`/resume/builder/${resume.id}`} icon="edit" label="Edit" />
+                    <ActionLink href={`/resume/ats?resume=${resume.id}`} icon="fact_check" label="ATS check" />
+                    <ActionLink href={`/resume/copilot?resume=${resume.id}`} icon="auto_fix_high" label="Optimise" />
+
+                    <div className="grow" />
+
+                    {deleteConfirmId === resume.id ? (
+                      <div className="flex items-center gap-1 rounded-lg border border-outline-variant bg-surface p-1">
+                        <span className="px-2 text-xs font-medium text-on-surface-variant whitespace-nowrap">Delete?</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(resume.id)}
+                          disabled={isDeleting}
+                        >
+                          Yes
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setDeleteConfirmId(null)}
+                          disabled={isDeleting}
+                        >
+                          No
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 gap-2 px-3.5 text-[13px] font-semibold text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteConfirmId(resume.id)}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-          </div>
+          )
+        })}
+      </div>
+
+      {/* Only shown when the list actually scrolls, so it never claims
+          there is more when there isn't. */}
+      {resumes.length > 2 && (
+        <div className="px-4 py-2 border-t border-outline-variant bg-surface-container-low text-[12px] text-on-surface-variant">
+          Showing 2 of {resumes.length} — scroll for more
         </div>
-      ))}
+      )}
 
       {previewResume?.parsedResume && (
         <ResumePreviewModal
