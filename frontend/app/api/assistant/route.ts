@@ -3,6 +3,11 @@ import { callAI } from "@/lib/ai-gateway";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { sanitizeFilterTerm } from "@/features/opportunities/services/opportunity-service";
+import { isOpportunityQuery, extractSearchTerms } from "@/features/ai-assistant/lib/opportunity-query";
+
+// Re-exported so the routing logic stays importable from the route it governs
+// (and so existing tests keep their import path).
+export { isOpportunityQuery, extractSearchTerms };
 
 interface OpportunitySearchRow {
   id: string;
@@ -15,105 +20,94 @@ interface OpportunitySearchRow {
   opportunity_tags: { tag_name: string }[] | null;
 }
 
-export function isOpportunityQuery(message: string): boolean {
-  const lower = message.toLowerCase();
-  // "match(es)/matching", "suit(s)/suited", "fit(s)" cover the natural
-  // "what internships match/suit a React developer?" phrasing — found live
-  // 16 Aug 2026: that exact question skipped the DB search entirely (none of
-  // the original trigger verbs matched), yet the model still said "Here are
-  // some opportunities that match your criteria:" with nothing attached —
-  // a real fabrication instance, not just a missed search.
-  const asksToSearch = /\b(find|search|show|list|look|recommend|available|open|match|matches|matching|suit|suits|suited|fit|fits)\b/.test(lower);
-  const namesAnOpportunity = /\b(internship|internships|job|jobs|hackathon|hackathons|scholarship|scholarships|competition|competitions|workshop|workshops|opportunity|opportunities|opening|openings|position|positions|role|roles)\b/.test(lower);
-
-  // "Internships for frontend" is a natural short-form search, while a
-  // question such as "what is an internship?" should remain a learning query.
-  return (asksToSearch && namesAnOpportunity) || /^(internships?|jobs?|hackathons?|scholarships?|competitions?|workshops?|opportunities|openings)\b/.test(lower.trim());
-}
-
-export function extractSearchTerms(message: string): { query: string; category: string | null } {
-  const lower = message.toLowerCase();
-
-  // Detect category
-  let category: string | null = null;
-  if (lower.includes("internship")) category = "Internship";
-  else if (lower.includes("job") || lower.includes("position") || lower.includes("role")) category = "Job";
-  else if (lower.includes("hackathon")) category = "Hackathon";
-  else if (lower.includes("scholarship")) category = "Scholarship";
-  else if (lower.includes("competition")) category = "Competition";
-  else if (lower.includes("workshop")) category = "Workshop";
-
-  // Extract meaningful search terms (remove filler words)
-  const fillerWords = new Set([
-    "find", "search", "show", "get", "list", "look", "recommend", "me",
-    "some", "the", "a", "an", "for", "in", "at", "to", "of", "and",
-    "or", "my", "i", "want", "need", "help", "please", "can", "you",
-    "with", "about", "related", "matching", "best", "top", "good",
-    "relevant", "interesting", "available", "open", "current", "latest",
-    "internship", "internships", "job", "jobs", "hackathon", "hackathons",
-    "scholarship", "scholarships", "competition", "competitions",
-    "workshop", "workshops", "opportunity", "opportunities",
-    "openings", "positions", "roles",
-  ]);
-
-  const terms = message
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .split(/\s+/)
-    .filter((w) => w.length > 2 && !fillerWords.has(w));
-
-  return { query: terms.join(" "), category };
-}
-
 // ── Search opportunities from database ──────────────────────────────
 async function searchOpportunitiesFromDB(
-  query: string,
+  terms: string[],
   category: string | null,
   limit: number = 5
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return [];
+  if (!url || !key) return { opportunities: [], broadened: false };
 
   const supabase = createAdminClient(url, key);
 
-  let dbQuery = supabase
-    .from("opportunities")
-    .select(
-      `id, title, company_name, location, category, deadline, apply_url,
-       companies (id, name, logo_url),
-       opportunity_tags (tag_name)`
-    )
-    // The assistant has no web-search path. Results are constrained to active
-    // rows in Opportunity Radar and ordered by their nearest valid deadline.
-    .in("status", ["Published", "Closing Soon"])
-    .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`);
-
-  if (category) {
-    dbQuery = dbQuery.eq("category", category);
-  }
-
   // The assistant passes free text straight from the user's message, so the
   // same PostgREST filter-injection risk applies here.
-  const safeQuery = sanitizeFilterTerm(query ?? '');
-  if (safeQuery.length > 0) {
-    dbQuery = dbQuery.or(
-      `title.ilike.%${safeQuery}%,location.ilike.%${safeQuery}%`
-    );
+  const safeTerms = terms
+    .map((term) => sanitizeFilterTerm(term))
+    .filter((term) => term.length > 0);
+
+  /**
+   * Built fresh per attempt rather than shared. PostgREST query builders
+   * mutate and return themselves, so reusing one across both attempts below
+   * ANDs the loose filter onto the strict one that just failed — the fallback
+   * silently could not widen anything.
+   *
+   * Each term must appear in the title or the location. That is a different
+   * query from the one this used to build: it joined every term into a single
+   * phrase and matched it as one substring, so "remote machine learning" asked
+   * for a title literally containing that phrase and found nothing while five
+   * machine-learning listings sat in the table. One `.or()` per term gives OR
+   * across the columns and AND across the terms.
+   */
+  const buildQuery = (mode: "all" | "any") => {
+    let query = supabase
+      .from("opportunities")
+      .select(
+        `id, title, company_name, location, category, deadline, apply_url,
+       companies (id, name, logo_url),
+       opportunity_tags (tag_name)`
+      )
+      // The assistant has no web-search path. Results are constrained to active
+      // rows in Opportunity Radar and ordered by their nearest valid deadline.
+      .in("status", ["Published", "Closing Soon"])
+      .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`);
+
+    if (category) {
+      query = query.eq("category", category);
+    }
+
+    if (safeTerms.length > 0) {
+      if (mode === "all") {
+        for (const term of safeTerms) {
+          query = query.or(`title.ilike.%${term}%,location.ilike.%${term}%`);
+        }
+      } else {
+        query = query.or(
+          safeTerms
+            .flatMap((term) => [`title.ilike.%${term}%`, `location.ilike.%${term}%`])
+            .join(",")
+        );
+      }
+    }
+
+    return query
+      .order("deadline", { ascending: true, nullsFirst: false })
+      .limit(limit);
+  };
+
+  const run = async (mode: "all" | "any") => {
+    const { data, error } = await buildQuery(mode);
+    if (error) {
+      console.error("[API/Assistant] Opportunity search error:", error);
+      return null;
+    }
+    return (data ?? []) as unknown as OpportunitySearchRow[];
+  };
+
+  // Narrow first. If every term together matches nothing, fall back to any of
+  // them rather than reporting an empty database — a long question should
+  // degrade to fewer, looser results, never to none.
+  let broadened = false;
+  let rows = await run("all");
+  if (rows !== null && rows.length === 0 && safeTerms.length > 1) {
+    rows = await run("any");
+    broadened = rows !== null && rows.length > 0;
   }
+  if (rows === null) return { opportunities: [], broadened: false };
 
-  dbQuery = dbQuery
-    .order("deadline", { ascending: true, nullsFirst: false })
-    .limit(limit);
-
-  const { data, error } = await dbQuery;
-
-  if (error) {
-    console.error("[API/Assistant] Opportunity search error:", error);
-    return [];
-  }
-
-  return ((data ?? []) as unknown as OpportunitySearchRow[]).map((row) => ({
+  const opportunities = rows.map((row) => ({
     id: row.id,
     title: row.title,
     company: row.companies?.name || row.company_name || "Opportunity Radar",
@@ -124,6 +118,8 @@ async function searchOpportunitiesFromDB(
     applyUrl: row.apply_url || `/opportunities/${row.id}`,
     matchLabel: category ? "Match" : undefined,
   }));
+
+  return { opportunities, broadened };
 }
 
 // ── Main handler ────────────────────────────────────────────────────
@@ -186,11 +182,14 @@ export async function POST(req: NextRequest) {
     const userText = lastUserMessage?.content || "";
 
     // ── Check if this is an opportunity search ──────────────────
-    let opportunities: Awaited<ReturnType<typeof searchOpportunitiesFromDB>> = [];
+    let opportunities: Awaited<ReturnType<typeof searchOpportunitiesFromDB>>["opportunities"] = [];
+    let wasBroadened = false;
     const wasSearchAttempted = isOpportunityQuery(userText);
     if (wasSearchAttempted) {
-      const { query, category } = extractSearchTerms(userText);
-      opportunities = await searchOpportunitiesFromDB(query, category, 5);
+      const { terms, category } = extractSearchTerms(userText);
+      const found = await searchOpportunitiesFromDB(terms, category, 5);
+      opportunities = found.opportunities;
+      wasBroadened = found.broadened;
     }
 
     // ── Call AI Gateway ─────────────────────────────────────────
@@ -218,9 +217,11 @@ final line: "Ask in the AI Assistant for the full version."`
     : ""
 }${
   opportunities.length > 0
-    ? `\nThe system found ${opportunities.length} matching opportunities from the database. They will be displayed as interactive cards after your message. Briefly introduce them.`
+    ? wasBroadened
+      ? `\nThe system found NO opportunity matching all of the user's criteria, so it broadened the search and is attaching ${opportunities.length} related ones instead. They will be displayed as interactive cards after your message. Say clearly that nothing matched their exact request — naming the part that did not match, such as the location — and introduce these as broader or related results. Do NOT describe them as matching their criteria.`
+      : `\nThe system found ${opportunities.length} matching opportunities from the database. They will be displayed as interactive cards after your message. Briefly introduce them.`
     : wasSearchAttempted
-      ? `\nThe system searched the database for this request and found NO matching opportunities. Do not say you found or are showing any — tell the user plainly that nothing matched right now and suggest trying the Search page or broadening their criteria.`
+      ? `\nThe system searched the database for this request and found NO matching opportunities. Do not say you found or are showing any. If the user was asking for listings, tell them plainly that nothing matched right now and suggest the Search page or broader criteria. If they were really asking for advice rather than listings, just answer the question — do not announce an empty search they did not ask for.`
       : ""
 }`;
 
