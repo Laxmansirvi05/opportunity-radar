@@ -1,6 +1,7 @@
 'use client'
 
 import { useSearchFilters } from '@/features/opportunities/hooks/use-search-filters'
+import type { SearchFilters } from '@/types/opportunity'
 
 /**
  * Results count text and sort dropdown.
@@ -34,7 +35,7 @@ export function SearchResultsHeader({ totalCount, query }: SearchResultsHeaderPr
           <select
             className="appearance-none bg-transparent border-none text-on-background text-xs font-semibold cursor-pointer focus:ring-0 p-0 pr-6 hover:text-primary transition-colors outline-none"
             value={filters.sort ?? 'relevance'}
-            onChange={(e) => setFilter('sort', e.target.value as any)}
+            onChange={(e) => setFilter('sort', e.target.value as SearchFilters['sort'])}
           >
             <option value="relevance">Relevance</option>
             <option value="newest">Newest</option>

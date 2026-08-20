@@ -46,8 +46,8 @@ export function useOpportunities(filters: SearchFilters): UseOpportunitiesResult
       ])
 
       const now = new Date().getTime()
-      const activeOpps = searchResult.data.filter((opp: any) => {
-        if (['Closed', 'Expired'].includes(opp.status)) return false
+      const activeOpps = searchResult.data.filter((opp) => {
+        if (opp.status && ['Closed', 'Expired'].includes(opp.status)) return false
         if (!opp.deadline) return true
         return new Date(opp.deadline).getTime() >= now
       })

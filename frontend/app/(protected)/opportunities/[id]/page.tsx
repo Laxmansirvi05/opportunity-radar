@@ -241,7 +241,6 @@ export default async function OpportunityDetailsPage({
                 alt={`${company?.name ?? 'Company'} logo`}
                 containerClassName="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 shadow-sm shrink-0"
                 imageClassName="w-10 h-10 md:w-12 md:h-12 object-contain"
-                fallbackIconClassName="material-symbols-outlined text-on-surface-variant text-[32px]"
               />
               <div className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-3">

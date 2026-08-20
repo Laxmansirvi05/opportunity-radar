@@ -8,7 +8,6 @@ interface CompanyLogoProps {
   name?: string
   containerClassName?: string
   imageClassName?: string
-  fallbackIconClassName?: string
 }
 
 /**
@@ -90,7 +89,6 @@ export const CompanyLogo = React.memo(function CompanyLogo({
   name,
   containerClassName = "w-14 h-14 rounded-xl bg-surface-container-lowest flex items-center justify-center border border-outline-variant/60 shadow-sm overflow-hidden shrink-0",
   imageClassName = "w-8 h-8 object-contain",
-  fallbackIconClassName = "material-symbols-outlined text-on-surface-variant text-[24px]"
 }: CompanyLogoProps) {
   const companyName = name || alt.replace(/ logo$/i, '').trim();
   const mappedLogo = getMappedLogo(companyName);
@@ -108,9 +106,14 @@ export const CompanyLogo = React.memo(function CompanyLogo({
   }, [src, mappedLogo])
 
   useEffect(() => {
+    // Catches a logo that failed between render and hydration (onError won't
+    // fire for an <img> that was already broken in the SSR markup). handleError
+    // is intentionally not a dep — it only reads state and would re-run this on
+    // every state change; currentSrc changing is the signal that matters.
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth === 0) {
       handleError()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSrc])
 
   const handleError = () => {
@@ -128,6 +131,7 @@ export const CompanyLogo = React.memo(function CompanyLogo({
   return (
     <div className={containerClassName}>
       {imgState !== 'initials' && currentSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- external favicon/logo URLs with a JS onError → initials fallback chain that next/image can't express
         <img
           ref={imgRef}
           src={currentSrc}

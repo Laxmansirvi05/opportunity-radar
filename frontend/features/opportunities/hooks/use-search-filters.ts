@@ -34,7 +34,6 @@ export function useSearchFilters() {
     const category = searchParams.getAll('category')
     const mode = searchParams.getAll('mode')
     const is_paid_raw = searchParams.get('is_paid')
-    const experience_level = searchParams.getAll('experience_level')
     const fresh = searchParams.get('fresh') || undefined
     const deadline = searchParams.get('deadline') || undefined
     const location = searchParams.get('location') || undefined

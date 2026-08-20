@@ -21,6 +21,10 @@ export const SearchInput = React.memo(function SearchInput() {
     } else if (filters.q && localValue === '') {
       setLocalValue(filters.q)
     }
+    // localValue is intentionally NOT a dep: this syncs only when the URL's q
+    // changes (back button, cleared filter). Adding localValue would re-run it
+    // on every keystroke and fight the user's active typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.q])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
