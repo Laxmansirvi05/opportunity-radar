@@ -20,7 +20,7 @@ export default async function AssistantPage() {
   }
 
   const userName =
-    user.user_metadata?.full_name?.split(" ")[0] ||
+    user.user_metadata?.full_name ||
     user.email?.split("@")[0] ||
     "there";
 
