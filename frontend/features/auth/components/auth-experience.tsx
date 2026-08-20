@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { loginAction, signupAction, oauthLoginAction } from '@/features/auth/actions/auth-actions'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { safeNextPath } from '@/lib/auth/safe-next-path'
+import { setPendingVerificationEmail } from '@/features/auth/lib/pending-verification'
 import Link from 'next/link'
 import { AuthRadar } from './auth-radar'
 
@@ -14,14 +16,7 @@ export function AuthExperience() {
   // Where Proxy wanted to send the user before it bounced them to /login.
   // Only same-origin relative paths are honoured, so a crafted ?next= cannot
   // turn the login screen into an open redirect.
-  const requestedNext = searchParams.get('next')
-  const nextUrl =
-    requestedNext &&
-    requestedNext.startsWith('/') &&
-    !requestedNext.startsWith('//') &&
-    !requestedNext.startsWith('/\\')
-      ? requestedNext
-      : '/dashboard'
+  const nextUrl = safeNextPath(searchParams.get('next'))
 
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>(
     pathname === '/signup' ? 'signup' : 'login'
@@ -61,9 +56,10 @@ export function AuthExperience() {
       if (result?.error) {
         setError(result.error)
       } else if (result?.needsEmailConfirmation) {
-        setSuccessMessage('Account created! Please check your email to verify your account.')
-        setActiveTab('login')
-        ;(document.getElementById('signup-form') as HTMLFormElement)?.reset()
+        // Hand the address to /verify-email so it can offer a real resend,
+        // via storage rather than the URL — see pending-verification.ts.
+        setPendingVerificationEmail((formData.get('email') as string) ?? '')
+        router.push('/verify-email')
       } else {
         router.push(nextUrl)
       }
