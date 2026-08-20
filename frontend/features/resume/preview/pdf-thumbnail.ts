@@ -59,10 +59,10 @@ export const createPdfFirstPageImageUrl = async (file: Blob) => {
 			page.cleanup();
 		}
 	} finally {
-		if (pdfDocument) {
-			void pdfDocument.destroy();
-		} else {
-			void loadingTask.destroy();
-		}
+		// Destroying the loading task also tears down the document it produced.
+		// This used to call pdfDocument.destroy(), which does not exist — and
+		// being inside `finally`, the TypeError replaced whatever the caller
+		// was about to receive.
+		void loadingTask.destroy();
 	}
 };

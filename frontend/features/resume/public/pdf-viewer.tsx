@@ -164,7 +164,7 @@ export function PdfViewer({ className, data }: PdfViewerProps) {
 				const nextDocument = await loadingTask.promise;
 
 				if (isCancelled) {
-					void nextDocument.destroy();
+					void nextDocument.loadingTask.destroy();
 				} else {
 					pdfDocument = nextDocument;
 					const pdfViewerOptions = {
@@ -203,7 +203,10 @@ export function PdfViewer({ className, data }: PdfViewerProps) {
 			window.cancelAnimationFrame(animationFrameId);
 			resizeObserver?.disconnect();
 			if (pdfViewer) clearPdfViewerDocument(pdfViewer);
-			void pdfDocument?.destroy();
+			// One call: the loading task owns the document. This previously ran
+			// pdfDocument.destroy() first, which does not exist, so every
+			// unmount of this viewer threw before reaching the line that
+			// actually released the worker.
 			void loadingTask?.destroy();
 			viewer.replaceChildren();
 		};

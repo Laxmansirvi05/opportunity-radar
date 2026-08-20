@@ -58,7 +58,10 @@ export function PdfCanvasDocument({ children, file, onLoadSuccess }: PdfCanvasDo
 				const pdfDocument = await loadingTask.promise;
 
 				if (isCancelled) {
-					void pdfDocument.destroy();
+					// PDFDocumentProxy has no destroy() — only cleanup() and a
+					// loadingTask. Calling it threw a TypeError, so a cancelled
+					// load never tore down its worker.
+					void pdfDocument.loadingTask.destroy();
 				} else {
 					loadedDocument = pdfDocument;
 					setDocument(pdfDocument);
@@ -76,9 +79,13 @@ export function PdfCanvasDocument({ children, file, onLoadSuccess }: PdfCanvasDo
 		return () => {
 			isCancelled = true;
 
-			if (loadedDocument && typeof (loadedDocument as any).destroy === "function") {
-				void (loadedDocument as any).destroy();
-			} else if (loadingTask && typeof loadingTask.destroy === "function") {
+			// Destroying the loading task tears down the document with it, so
+			// this covers both the loaded and still-loading cases. The previous
+			// `typeof (doc as any).destroy === "function"` guard could never be
+			// true, which is why the first branch silently did nothing.
+			if (loadedDocument) {
+				void loadedDocument.loadingTask.destroy();
+			} else if (loadingTask) {
 				void loadingTask.destroy();
 			}
 		};
