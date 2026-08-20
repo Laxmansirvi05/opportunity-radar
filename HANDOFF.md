@@ -15,7 +15,7 @@ A unified web platform for students to **discover opportunities, manage applicat
 
 Plus the standard surface: search + filters, an application tracker (kanban), a résumé toolkit (builder/ATS/optimiser), certifications catalogue, a global community chat ("Hub"), an AI assistant, notes, notifications, and profile/settings.
 
-**Audience:** students. **Stage:** substantial, submission-ready MVP (~90% complete overall). Two AI features are live and working end-to-end.
+**Audience:** students. **Stage:** substantial, submission-ready MVP (~92% complete overall). Two AI features are live and working end-to-end.
 
 ---
 
@@ -92,7 +92,7 @@ Opportunity radar/
 │  │  ├─ notes/, assistant/, profile/, …
 │  ├─ lib/                        ← supabase clients, cron-auth, ingestion, agent-client
 │  ├─ types/                      ← shared types (opportunity.ts, database.types.ts, …)
-│  ├─ tests/                      ← Vitest suite (58 files, 523 tests)
+│  ├─ tests/                      ← Vitest suite (61 files, 551 tests)
 │  └─ next.config.ts              ← CSP, image domains, headers
 ├─ supabase/migrations/          ← SQL migrations (source of truth for DB changes)
 ├─ PROJECT_AUDIT.md              ← the detailed audit
@@ -115,9 +115,9 @@ Scores are from `PROJECT_AUDIT.md` (✅ verified live · 🟡 built, spot-checke
 | **Opportunities / Search** | `/search`, `/opportunities/[id]` | ✅ audited this pass | 97% |
 | **Community Hub** | `/hub` | ✅ audited this pass | 97% |
 | **Certifications** | `/certifications` | ✅ audited this pass | 95% |
-| **Auth** | `/(auth)/*` | 🟡 Supabase Auth, double-gated | 90% |
+| **Auth** | `/(auth)/*`, `/auth/callback`, `proxy.ts` | ✅ fully audited this pass | 100% |
 | **AI Assistant** | `/assistant` | 🟡 chat w/ opportunity attaching | 85% |
-| **Notes** | `/notes` (+11 API routes) | 🟡 rich (folders, sharing, links) | 85% |
+| **Notes** | `/notes` (+11 API routes) | 🟡 security audited clean; behaviour untested | 88% |
 | **Résumé toolkit** | `/resume/*` | ✅ all 4 dead builder buttons implemented this pass | 90% |
 | **Certifications/Tracker/Notifications/Profile/Settings/Support/Dashboard** | respective | 🟡 built & wired | 80% |
 
@@ -166,7 +166,7 @@ cd frontend
 npm install
 # create .env.local with the vars in §7 (ask the owner for values)
 npm run dev          # Next dev server (Turbopack)
-npm run test         # Vitest — 523 tests
+npm run test         # Vitest — 551 tests
 npm run lint         # ESLint
 npx tsc --noEmit     # typecheck (see caveat below)
 ```
@@ -219,7 +219,9 @@ Ingestion refreshers (Unstop, Internshala, providers, employers) run nightly; `l
 5. **AI Assistant / Notes** — built and wired but not exhaustively tested end-to-end; do a full pass (attach flows, sharing, link targets). **This is the biggest remaining surface and the natural next feature audit.**
 
    > **Notes' security layer was already audited clean (20 Aug 2026) — don't redo it, start from behaviour.** All 11 API routes authenticate; `assertOwned()` gates every share operation; the public `app/notes/shared/[slug]/page.tsx` correctly checks `link_access === 'view'`, excludes trashed notes, re-sanitises HTML on output, forces `dynamic`, and sets `noindex`. Service-role use is narrow and documented. No defects found. What remains untested is the *behaviour*: folders, link targets, attachments/uploads, bulk ops, and the share dialog's UX.
-6. **Auth flows** — spot-checked, not exhaustively exercised (password reset, email verification edge cases).
+6. ~~**Auth flows**~~ — ✅ **done (100%).** Fully audited: 8 defects fixed, redirect behaviour verified live, 28 tests added. See audit §8. Untested only: real email delivery for resend/recovery.
+
+   > **If you add a route group directory, add it to `lib/auth/protected-routes.ts`** — a test walks `(protected)` and `(protected-fullscreen)` on disk and fails if any directory is unlisted. Missing one degrades the login redirect (no `?next=`), it does not expose data: the layouts are the authoritative gate.
 
 ### 🟢 Low (post-submission / perf)
 7. **DB perf advisors** (216, all low-impact at this scale): wrap `auth.uid()` as `(select auth.uid())` in RLS policies (78×), consolidate overlapping permissive policies (87×), drop unused indexes. See audit §6.
@@ -239,7 +241,7 @@ Real "People also viewed" (there's a `recently_viewed` table to back it), richer
 
 ## 12. Testing & quality gates
 
-- **Vitest:** `npm run test` → **523 tests / 58 files, all passing.** Tests live in `frontend/tests/`.
+- **Vitest:** `npm run test` → **551 tests / 61 files, all passing.** Tests live in `frontend/tests/`.
 - **Lint:** ⚠️ *corrected 20 Aug 2026 — this previously claimed all first-party code was ESLint-clean; it is not.* `npm run lint` reports **362 problems (216 errors, 146 warnings)**. The **audited features are** clean (`opportunities`, `search`, `hub`, `tracker`, `certifications` produce zero output) — but `scripts/` (66 errors), `app/` (28), `lib/` (27) and `tests/` (23) are not, and `lib/ats-checker` + `lib/resume-optimizer` are first-party, not vendored. **The rule still stands for code you touch:** leave every file you edit lint-clean. See `PROJECT_AUDIT.md` §4 for the full breakdown.
 - **Types:** `tsc --noEmit` — first-party clean; the only errors are in the vendored résumé toolkit (non-blocking, `ignoreBuildErrors` on).
 - **Security:** RLS on all tables; the one ERROR-level cross-user leak was closed; all `SECURITY DEFINER` functions hardened. Details in audit §5.

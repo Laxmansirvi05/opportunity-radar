@@ -12,13 +12,13 @@
 
 | Area | Score | Note |
 |---|---|---|
-| **Overall completion** | **~88%** | Two flagship AI features fully deployed & working; core CRUD features built; polish + a few dead controls remain |
+| **Overall completion** | **~92%** | Two flagship AI features fully deployed & working; core CRUD features built; **no dead/fake controls remain** (all 5 found have been implemented). Auth, tracker, opportunities/search/hub, certifications and the résumé builder are audited; Notes behaviour and the AI Assistant are the main un-audited surfaces |
 | **Security** | **96%** (strong) | RLS on **all 38 tables**; the one ERROR-level leak fixed + all `SECURITY DEFINER` functions hardened (`delete_user`/triggers/internal locked down, `search_path` pinned); only dashboard-only items remain (leaked-password toggle, drop backup tables) |
-| **Code health** | **85%** | 19 type errors, all inside the vendored résumé toolkit (build still passes); no hardcoded secrets |
+| **Code health** | **85%** | 19 type errors, all inside the vendored résumé toolkit (build still passes); no hardcoded secrets; 551 tests passing. ⚠️ Lint is **not** clean outside the audited features — see §4 |
 | **Deployment** | **80%** | Everything is live on Vercel + Azure; production URL alias needs one settings change (below) |
 | **Performance** | **75%** | Page TTFB ~1–1.7s (Hobby tier); 216 DB perf advisories, all low-impact at this scale |
 
-**Bottom line:** This is a genuinely substantial, submission-ready project. The two hardest pieces — an agentic **AI Search** and a real-time **voice Mock Interview** — are both **live and working end-to-end**. The remaining items are polish (a few "Coming soon" buttons, dead footer links), non-blocking type errors in third-party résumé code, and standard database hardening.
+**Bottom line:** This is a genuinely substantial, submission-ready project. The two hardest pieces — an agentic **AI Search** and a real-time **voice Mock Interview** — are both **live and working end-to-end**. Every fake or non-functional control found has since been *implemented* rather than hidden, including a `/verify-email` page that was entirely simulated. What remains is third-party type errors, lint debt outside the audited features, standard database hardening, and two dashboard settings only the owner can change (§7).
 
 ---
 
@@ -42,7 +42,7 @@
 |---|---|---|---|
 | **AI Search** (resume → matched internships) | `/ai-search` + agent | **95%** | ✅ Fully deployed & tested: real results, 0 junk/reels, rate-limited, RLS-proven. Limited only by free-tier LLM/Tavily quotas. |
 | **Voice Mock Interview** | `/interview`, `/interview/[id]`, `/interview/history` + agent + worker | **90%** | ✅ Live voice (STT Deepgram, LLM Gemini, TTS Kokoro, LiveKit), scoring, /100 report, model answers, history. 🔧 Fixed this session: TTS silence, score timeout, /100 display, history→report. |
-| **Auth** (login/signup/forgot/verify) | `/(auth)/*` | **90%** | 🟡 Built, Supabase Auth, double-gated protected routes. ⚠️ Enable leaked-password protection (below). |
+| **Auth** (login/signup/forgot/verify) | `/(auth)/*`, `/auth/callback`, `proxy.ts` | **100%** | ✅ **Fully audited this pass** — every flow read end-to-end, 8 defects fixed (§8), redirect behaviour verified live against the running app. Supabase Auth, double-gated (Proxy optimistically + layout authoritatively). 28 new tests. ⚠️ Only remaining item is the leaked-password toggle, which is dashboard-only (below). |
 | **Résumé toolkit** (builder/ATS/optimise/upload) | `/resume/*` | **90%** | ✅ Reactive Resume integrated. 🔧 This pass: **all 4 dead builder buttons now work** — Download PDF, Preview Mode, Undo and Redo (all implemented, none relabelled) — plus a duplicate-résumé save bug fixed. ⚠️ 19 type errors remain in the vendored code. |
 | **AI Assistant** | `/assistant` + `/api/assistant` | **85%** | 🟡 Chat with opportunity-attaching; explicitly guards against fabricating listings. |
 | **Notes** | `/notes` + 11 API routes | **88%** | 🟡 Rich: folders, links, sharing, attachments, templates, bulk. ✅ **Security layer audited clean this pass** (see §5) — the *behaviour* is what remains untested. Largest remaining surface; the natural next feature audit. |
@@ -59,8 +59,10 @@
 - **Secrets:** ✅ No hardcoded API keys/secrets in source — everything reads `process.env`.
 - **Debug leftovers:** 15 `console.log` calls — **verified none leak secrets or cross-user data** (the AI Gateway one logs only a key *label* like `…default`, not the key; the rest are server cron logs or client-side résumé-import/AI-debug of the user's own data). Cleanup, not a security issue. Heaviest is `[AI_DEBUG]` in `features/resume-toolkit/services/ai/sanitize.ts` (logs résumé content to the console).
 - **Lint:** `npm run lint` reports **362 problems (216 errors, 146 warnings)** — the audited features (`opportunities`, `search`, `hub`, `tracker`, `certifications`) are genuinely clean and produce **zero** output, but the rest of first-party code is not. Breakdown: `scripts/` 66 errors (one-off ops scripts, low value), `app/` 28 (dashboard 6, profile/saved 3, notifications, crons), `lib/` 27 (**ATS engine 11**, resume-optimizer 5, ai-gateway 8), `tests/` 23; the remainder (`src/`, `packages/`, `libs/`, `features/resume*`) is vendored. Note `lib/ats-checker` + `lib/resume-optimizer` are **first-party**, not vendored — that debt is ours. *(`HANDOFF.md` §12 previously claimed first-party code was lint-clean; corrected there.)*
-- **Fake / non-functional controls:** ✅ **none left.**
+- **Fake / non-functional controls:** ✅ **none left** — but this list was twice as long as originally recorded, and the second entry was only found by auditing a feature this section had already passed as fine.
   - `features/resume-toolkit/…/resume-builder.tsx` — there were **4**, not 3 as previously recorded: Undo, Redo, Preview Mode and Download PDF. 🔧 **All four are now implemented** (see §8). None were relabelled or removed — each turned out to be genuinely buildable, and one (Download PDF) already had a working endpoint behind it.
+  - `app/(auth)/verify-email/page.tsx` — 🔧 **the whole page was a simulation** and this section had missed it entirely. "Resend Email" called a local `simulateVerification()` that sent nothing and showed **"Email verified successfully"** — a success message for something that never happened; "Change email" had no handler; and it advertised a fabricated **"Join 2,400+ students"** figure. Nothing linked to it, which is likely why it went unnoticed. Now fully implemented (§8).
+  - **Lesson recorded:** "no fake controls" had been asserted from the pages that were *linked*. An orphaned route is exactly where a mock survives, so unreferenced pages need checking too.
   - `components/landing/hover-footer.tsx` — **LinkedIn / GitHub / Twitter / Instagram** footer links are all `href="#"` (dead). Point them at real profiles or remove them before submitting.
 
 ---
@@ -74,6 +76,14 @@
 - Pinned `search_path = public` on **13 functions** — this **cleared all 11 `function_search_path_mutable` warnings**, with no behavior change (signup/triggers still work).
 - **`delete_user()` fully locked down (the earlier follow-up — now done):** ran `REVOKE EXECUTE … FROM PUBLIC` + `FROM anon`, `GRANT EXECUTE … TO authenticated`. Verified: `anon_can_exec=false`, `auth_can_exec=true`. The account-deletion flow (`app/actions/settings.ts`, runs as the signed-in user) still works; anonymous callers can no longer reach the destructive function.
 - **Trigger / internal `SECURITY DEFINER` functions revoked from all client roles:** `handle_new_user`, `protect_profile_fields` (both are triggers — they still fire on signup / profile-update because Postgres does not gate trigger execution on the EXECUTE grant), and `rls_auto_enable` (internal admin helper, never called by the app). Verified: `anon_can_exec=false`, `auth_can_exec=false` on all three. No RPC surface remains.
+
+**✅ Auth surface — fully audited this pass (see §8 for the fixes):**
+- **Route protection is genuinely double-gated.** `proxy.ts` redirects optimistically; each protected route group's `layout.tsx` re-runs `getUser()` and is the authoritative gate, per the Next.js docs. The proxy list had drifted (`/interview`, `/notes` missing) — that degraded the redirect, never the protection — and is now covered by a test that walks the route-group directories on disk.
+- **Open redirect:** `?next=` is honoured on both `/login` and `/auth/callback`. The two had separate, disagreeing checks; now one tested helper rejecting absolute URLs, `//host`, backslash variants and control characters.
+- **`verifyOtp` no longer takes an unvalidated `type`** straight from the query string.
+- **Password recovery is correctly excluded from the "bounce signed-in users" list** — completing a recovery link authenticates the user *before* they set the new password, so redirecting `/forgot-password` would make it unresettable. Verified live.
+- **Credentials are validated server-side**, not only by the browser's `minLength`. Login deliberately does not apply password rules — "too short" on a login form leaks a fact about the stored credential.
+- Verified live with cookie-less requests: `/notes`, `/interview`, `/interview/history` → `/login?next=<path>`; `/privacy` stays public; `/login` while signed in → `/dashboard`.
 
 **✅ Notes security layer — audited this pass, no defects found:**
 Reviewed because Notes is the largest un-audited surface (4,590 lines, 11 API routes) and carries the riskiest primitives in the app: public sharing, service-role reads, and HTML rendered to signed-out visitors.
@@ -111,7 +121,7 @@ Reviewed because Notes is the largest un-audited surface (4,590 lines, 11 API ro
 **High (reviewer-visible):**
 1. **Point production at the right build** — set Production Branch to `restore-june19-clean` (Section 2). *(still needs your Vercel dashboard)*
 2. ~~Fix or remove the 4 dead footer links~~ — ✅ **done** (real GitHub repo; dead LinkedIn/Twitter/Instagram removed; Privacy/Terms wired).
-3. **Enable leaked-password protection** (one click, Supabase Auth — dashboard-only). *(still pending your action)*
+3. **Enable leaked-password protection** (one click, Supabase Auth — dashboard-only). *(still pending your action — now the **only** outstanding auth item)*
 
 **Medium:**
 4. ~~Address the `SECURITY DEFINER` view (`v_student_ats_inputs`)~~ — ✅ **done** (`security_invoker`, anon revoked).
@@ -132,7 +142,18 @@ Reviewed because Notes is the largest un-audited surface (4,590 lines, 11 API ro
 - 🔧 **Résumé builder: Preview Mode implemented.** Collapses the sections panel and editor column on desktop so the preview takes the full width; the button flips to a secondary "Exit Preview" and carries `aria-pressed`. The trap here was `cn` being **twMerge**, which keeps `hidden` and `md:flex` in *separate* responsive groups — so the obvious implementation (appending `hidden` to panels that already carry `md:flex`) silently does nothing from `md` up, which is exactly the width preview mode has to collapse. Verified against the real tailwind-merge: `cn('flex flex-col', 'hidden md:flex', 'hidden')` → `"flex-col md:flex hidden"`. Each panel therefore gets one mutually exclusive class string per state, with a comment recording why so it doesn't get "simplified" back into the bug.
 - 🔧 **Résumé builder: Undo/Redo implemented.** Résumé content now lives in an undo/redo timeline, extracted as a **pure module** (`features/resume-toolkit/lib/edit-history.ts`) that takes time as an argument rather than reading a clock — the `createTapCounter` precedent — so every window-dependent case is testable without fake timers. Edits within **600 ms coalesce into one step** (`updateSection` fires per keystroke, so without this undo would walk back letter by letter); undo/redo autosave; opening a résumé starts a fresh timeline; history caps at 50 snapshots. Title is deliberately excluded, and there is **no Cmd+Z binding on purpose** — a global handler would hijack the browser's native undo inside focused text inputs. **16 tests** (11 pure, 5 through the hook); the coalescing tests were confirmed load-bearing by setting the window to 0 and watching both fail.
 - 📋 **Corrected two doc claims** (verification pass over this audit + `HANDOFF.md`): the résumé builder had **4** dead controls, not 3; and first-party code is **not** ESLint-clean (§4) — only the audited features are.
-- ✅ **Test suite: 502 → 523** across the three résumé-builder steps (56 → 58 files).
+- 🔧 **Auth: fully audited and completed (90% → 100%) — 8 defects fixed.**
+  1. **`/verify-email` was a simulation** — fake resend that displayed "Email verified successfully" without sending anything, a dead "Change email" button, and a fabricated "2,400+ students" statistic. Rebuilt with a real `supabase.auth.resend()`, a 60s cooldown, honest states, and signup now routing to it. No "verified" state, deliberately: verification completes in `/auth/callback`, which that tab never observes. The address moves via `sessionStorage`, not the URL.
+  2. **`/interview` and `/notes` were missing from the protected-route list** — signed-out deep links lost their destination (redirected with no `?next=`). Data was never exposed; the layouts are the real gate.
+  3. **`/submit`** listed a route that no longer exists.
+  4. **Two disagreeing open-redirect checks** — the callback accepted `/\evil.example` where the login screen refused it, and carried a `startsWith('\\')` clause that could never fire. Unified into one tested helper.
+  5. **A stale `x-forwarded-host` allowlist** naming three domains never deployed to; its branch could never fire.
+  6. **`verifyOtp` took an unvalidated `type`** cast from the query string.
+  7. **Dead auth model removed** — `AuthProvider`/`useAuth` had zero consumers and read state via `getSession()`, which Supabase warns is not an auth check.
+  8. **Server-side credential validation** — password length had been enforced only by the browser.
+  - **Tests: +28.** The route-coverage guard was confirmed load-bearing (reintroducing all three route bugs fails 4 tests). Auth surface is lint-clean.
+  - **Not verified:** actual email delivery for resend/recovery — that needs a real signup, which was out of scope for this pass.
+- ✅ **Test suite: 502 → 551** (56 → 61 files) across the résumé-builder and auth passes.
 - 🔧 **Security (ERROR): closed the `v_student_ats_inputs` cross-user résumé-data leak** (set `security_invoker`, revoked anon) — ATS feature verified still working.
 - 🔧 Security: pinned `search_path` on 13 DB functions (cleared 11 warnings).
 - 🔧 **Security (auth hardening, this pass): fully locked down `delete_user()`** (revoked PUBLIC + anon, granted authenticated — verified `anon_can_exec=false`), and **revoked all client EXECUTE on the trigger/internal `SECURITY DEFINER` functions** `handle_new_user`, `protect_profile_fields`, `rls_auto_enable` (triggers still fire; no RPC surface left). Reviewed `get_user_role` and deliberately kept it callable by `authenticated` (used in 11 RLS policies; only returns the caller's own role). All verified with `has_function_privilege`.
