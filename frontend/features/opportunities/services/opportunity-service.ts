@@ -8,6 +8,27 @@ import {
 
 type SupabaseClientType = SupabaseClient<Database>
 
+/** One row returned by the search_opportunities_rpc Postgres function. */
+interface SearchRpcRow {
+  id: string
+  title: string
+  location: string | null
+  category: string | null
+  mode: string | null
+  experience_level: string | null
+  is_paid: boolean | null
+  status: string | null
+  posted_at: string | null
+  deadline: string | null
+  company_id: string | null
+  apply_url: string | null
+  company_name: string | null
+  company_logo_url: string | null
+  company_website_url: string | null
+  tag_names: string[] | null
+  total_count: number | string
+}
+
 /**
  * Make a user-supplied term safe to embed in a PostgREST `.or()` filter string.
  *
@@ -52,13 +73,21 @@ export async function searchOpportunities(
     sort_by: filters.sort || 'relevance',
     page_offset: from,
     page_limit: PAGE_SIZE,
+    // Dedicated sidebar filters — distinct from the free-text `search_query`.
+    filter_company: filters.company?.trim() || null,
+    filter_tags: filters.tags?.length ? filters.tags : null,
   };
 
-  const { data: rpcData, error: rpcError } = await supabase.rpc('search_opportunities_rpc' as any, rpcArgs);
+  // The RPC name isn't in the generated Database types (it's a hand-written
+  // migration), so the call is untyped at the boundary and its rows are shaped
+  // by SearchRpcRow above.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rpcDataRaw, error: rpcError } = await supabase.rpc('search_opportunities_rpc' as any, rpcArgs);
+  const rpcData = rpcDataRaw as SearchRpcRow[] | null
 
   if (!rpcError && rpcData) {
     // Transform RPC result to match the OpportunityWithDetails structure
-    const formattedData = rpcData.map((row: any) => ({
+    const formattedData = rpcData.map((row) => ({
       id: row.id,
       title: row.title,
       location: row.location,
@@ -90,9 +119,11 @@ export async function searchOpportunities(
   }
 
   // FALLBACK: Old sequential OR-based search (if migration hasn't been applied yet)
-  const [compIds, tagOpps] = await Promise.all([
+  const [compIds, tagOpps, companyFilterIds, tagFilterOppIds] = await Promise.all([
     getMatchingCompanyIds(supabase, filters.q),
     getMatchingTagOpps(supabase, filters.q),
+    getMatchingCompanyIds(supabase, filters.company),
+    getOppIdsForTags(supabase, filters.tags),
   ])
 
   let query = supabase
@@ -108,7 +139,7 @@ export async function searchOpportunities(
     .in('status', ['Published', 'Closing Soon'])
     .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
 
-  query = applyAllFilters(query, filters, compIds, tagOpps)
+  query = applyAllFilters(query, filters, compIds, tagOpps, companyFilterIds, tagFilterOppIds)
 
   if (filters.sort === 'newest') {
     query = query.order('posted_at', { ascending: false })
@@ -144,9 +175,11 @@ export async function getSearchStats(
   supabase: SupabaseClientType,
   filters: SearchFilters
 ): Promise<{ totalJobs: number; totalCompanies: number; newToday: number; postedToday: number; importedToday: number }> {
-  const [compIds, tagOpps] = await Promise.all([
+  const [compIds, tagOpps, companyFilterIds, tagFilterOppIds] = await Promise.all([
     getMatchingCompanyIds(supabase, filters.q),
     getMatchingTagOpps(supabase, filters.q),
+    getMatchingCompanyIds(supabase, filters.company),
+    getOppIdsForTags(supabase, filters.tags),
   ])
 
   // Distinct company count
@@ -157,7 +190,7 @@ export async function getSearchStats(
     .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
     .not('company_id', 'is', null)
 
-  companyQuery = applyAllFilters(companyQuery, filters, compIds, tagOpps)
+  companyQuery = applyAllFilters(companyQuery, filters, compIds, tagOpps, companyFilterIds, tagFilterOppIds)
 
   // Posted today count
   const todayStart = new Date()
@@ -170,7 +203,7 @@ export async function getSearchStats(
     .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
     .gte('posted_at', todayStart.toISOString())
 
-  postedTodayQuery = applyAllFilters(postedTodayQuery, filters, compIds, tagOpps)
+  postedTodayQuery = applyAllFilters(postedTodayQuery, filters, compIds, tagOpps, companyFilterIds, tagFilterOppIds)
 
   // Imported today count
   let importedTodayQuery = supabase
@@ -180,7 +213,7 @@ export async function getSearchStats(
     .or(`deadline.is.null,deadline.gte.${new Date().toISOString()}`)
     .gte('ingested_at', todayStart.toISOString())
 
-  importedTodayQuery = applyAllFilters(importedTodayQuery, filters, compIds, tagOpps)
+  importedTodayQuery = applyAllFilters(importedTodayQuery, filters, compIds, tagOpps, companyFilterIds, tagFilterOppIds)
 
   const [companyResult, postedTodayResult, importedTodayResult] = await Promise.all([
     companyQuery,
@@ -189,7 +222,7 @@ export async function getSearchStats(
   ])
 
   // Count distinct companies manually
-  const distinctCompanies = new Set(companyResult.data?.map((row: any) => row.company_id))
+  const distinctCompanies = new Set((companyResult.data as { company_id: string | null }[] | null)?.map((row) => row.company_id))
 
   return {
     totalJobs: 0, // Filled by caller from main query count
@@ -256,11 +289,45 @@ async function getMatchingTagOpps(
   return tags?.map((t) => t.opportunity_id) || []
 }
 
+/**
+ * Opportunity IDs carrying ANY of the given skill tags — powers the fallback
+ * path's "Skills" filter (the RPC path filters on tags directly in SQL).
+ */
+async function getOppIdsForTags(
+  supabase: SupabaseClientType,
+  tags: string[] | undefined
+): Promise<string[]> {
+  if (!tags || tags.length === 0) return []
+  const patterns = tags
+    .map((t) => sanitizeFilterTerm(t))
+    .filter((t) => t.length > 0)
+    .map((t) => `tag_name.ilike.%${t}%`)
+  if (patterns.length === 0) return []
+  const { data } = await supabase
+    .from('opportunity_tags')
+    .select('opportunity_id')
+    .or(patterns.join(','))
+    .limit(2000)
+  return [...new Set((data ?? []).map((t) => t.opportunity_id))]
+}
+
+// A sentinel UUID that matches no row — used to force an empty result when a
+// dedicated filter is active but nothing matched it (an empty `.in([])` list
+// is otherwise treated by PostgREST as "no constraint", which would wrongly
+// widen the results instead of narrowing them to zero).
+const NO_MATCH_UUID = '00000000-0000-0000-0000-000000000000'
+
 function applyAllFilters(
+  // The Supabase PostgrestFilterBuilder type is parameterised by the whole
+  // schema and is impractical to name here; every branch returns the same
+  // builder, so the shape is preserved regardless.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: any,
   filters: SearchFilters,
   compIds: string[],
-  tagOpps: string[]
+  tagOpps: string[],
+  companyFilterIds?: string[],
+  tagFilterOppIds?: string[]
 ) {
   let q = query
 
@@ -323,6 +390,20 @@ function applyAllFilters(
 
   if (filters.location && filters.location.trim().length > 0) {
     q = q.ilike('location', `%${filters.location.trim()}%`)
+  }
+
+  // Dedicated "Company" sidebar filter (companyFilterIds are the companies
+  // whose name matched filters.company).
+  if (filters.company && filters.company.trim().length > 0) {
+    const ids = companyFilterIds && companyFilterIds.length > 0 ? companyFilterIds : [NO_MATCH_UUID]
+    q = q.in('company_id', ids)
+  }
+
+  // Dedicated "Skills" sidebar filter (tagFilterOppIds are opportunities
+  // carrying any of the selected skill tags).
+  if (filters.tags && filters.tags.length > 0) {
+    const ids = tagFilterOppIds && tagFilterOppIds.length > 0 ? tagFilterOppIds : [NO_MATCH_UUID]
+    q = q.in('id', ids)
   }
 
   return q
