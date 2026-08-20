@@ -93,6 +93,14 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
         if (body.status === 'completed' && body.report) {
           setReport({ scorecard: body.report.scorecard, degraded: body.report.degraded })
           setPhase('report')
+        } else if (body.status === 'completed') {
+          // Completed but the report hasn't arrived on this response (e.g. it is
+          // being re-fetched/finalized server-side). NEVER drop into 'preflight'
+          // here — that re-opens the live interview and loses the score. Poll for
+          // the report instead, exactly like the post-interview path.
+          scorePollStarted.current = Date.now()
+          scorePollInterval.current = SCORE_POLL_INITIAL_MS
+          setPhase('scoring')
         } else if (body.status === 'abandoned') {
           setPhase('abandoned')
         } else if (body.status === 'failed') {

@@ -59,6 +59,14 @@ export async function GET(
   }
 
   // Terminal already — serve the stored report, don't bother the agent again.
+  //
+  // Exception (self-heal): a session marked 'completed' with NO stored report
+  // row must NOT return report:null. That happens when an earlier build (or a
+  // dead browser tab) set the status but never persisted the card, and the UI
+  // then reads status='completed' + report=null and bounces the user back into
+  // the live interview instead of showing their score. When the report row is
+  // missing but the session is completed, fall through to re-fetch the
+  // scorecard from the agent (which still holds it) and finalize it properly.
   if (TERMINAL_LOCAL.has(session.status)) {
     const { data: report } = await supabase
       .from('interview_reports')
@@ -66,13 +74,16 @@ export async function GET(
       .eq('session_id', session.id)
       .maybeSingle()
 
-    return NextResponse.json({
-      session_id: session.id,
-      status: session.status,
-      role_title: session.role_title,
-      company: session.company,
-      report: report ?? null,
-    })
+    if (report || session.status !== 'completed') {
+      return NextResponse.json({
+        session_id: session.id,
+        status: session.status,
+        role_title: session.role_title,
+        company: session.company,
+        report: report ?? null,
+      })
+    }
+    // completed but no report row — fall through to re-fetch + finalize below.
   }
 
   if (!session.external_session_id) {
