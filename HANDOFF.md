@@ -92,7 +92,7 @@ Opportunity radar/
 │  │  ├─ notes/, assistant/, profile/, …
 │  ├─ lib/                        ← supabase clients, cron-auth, ingestion, agent-client
 │  ├─ types/                      ← shared types (opportunity.ts, database.types.ts, …)
-│  ├─ tests/                      ← Vitest suite (63 files, 579 tests)
+│  ├─ tests/                      ← Vitest suite (64 files, 590 tests)
 │  └─ next.config.ts              ← CSP, image domains, headers
 ├─ supabase/migrations/          ← SQL migrations (source of truth for DB changes)
 ├─ PROJECT_AUDIT.md              ← the detailed audit
@@ -118,7 +118,7 @@ Scores are from `PROJECT_AUDIT.md` (✅ verified live · 🟡 built, spot-checke
 | **Auth** | `/(auth)/*`, `/auth/callback`, `proxy.ts` | ✅ fully audited this pass | 100% |
 | **AI Assistant** | `/assistant` | ✅ audited this pass; search repaired | 95% |
 | **Notes** | `/notes` (+11 API routes) | ✅ security + behaviour audited this pass | 97% |
-| **Résumé toolkit** | `/resume/*` | ✅ all 4 dead builder buttons implemented this pass | 90% |
+| **Résumé toolkit** | `/resume/*` (15 API routes) | ✅ audited; type-clean, lint-clean | 95% |
 | **Certifications/Tracker/Notifications/Profile/Settings/Support/Dashboard** | respective | 🟡 built & wired | 80% |
 
 ---
@@ -166,7 +166,7 @@ cd frontend
 npm install
 # create .env.local with the vars in §7 (ask the owner for values)
 npm run dev          # Next dev server (Turbopack)
-npm run test         # Vitest — 579 tests
+npm run test         # Vitest — 590 tests
 npm run lint         # ESLint
 npx tsc --noEmit     # typecheck (see caveat below)
 ```
@@ -213,7 +213,7 @@ Ingestion refreshers (Unstop, Internshala, providers, employers) run nightly; `l
 3. **Drop 4 stale `opportunities_backup*` tables** — SQL is in `PROJECT_AUDIT.md` §5; the `DROP` was blocked by a safety classifier in tooling, so run it in the Supabase SQL editor. *(declutter + clears 8 advisories)*
 
 ### 🟡 Medium (finish the polish)
-4. ~~**Résumé toolkit** — dead buttons~~ — ✅ **done.** There were **4**, not 3; all are implemented (Download PDF, Preview Mode, Undo, Redo), none relabelled. See audit §8. **Still open here:** the 19 TS errors in the vendored code — worth clearing for a polished submission.
+4. ~~**Résumé toolkit**~~ — ✅ **done (95%).** All 4 dead buttons implemented; **all 19 TS errors cleared** (4 were a live runtime bug, not a typing nicety — see audit §8); all 47 first-party lint errors typed away. **Left for a follow-up:** exercising an ATS check, an optimiser run, a PDF upload/parse and the builder itself against real résumés.
 
    > **If you touch the builder layout:** panel visibility is written as one mutually exclusive class string per state, not layered conditionals. `cn` is twMerge, which keeps `hidden` and `md:flex` in separate responsive groups, so appending `hidden` to a panel that already carries `md:flex` leaves it visible from `md` up. There's a comment in the file — don't "simplify" it away.
 5. ~~**AI Assistant / Notes**~~ — ✅ **both audited.** Notes 97%, Assistant 95%; see audit §8. Left for a follow-up: the notes rich-editor toolbar and file upload, the assistant's chat UI components, and the conversation rename/delete paths.
@@ -241,9 +241,9 @@ Real "People also viewed" (there's a `recently_viewed` table to back it), richer
 
 ## 12. Testing & quality gates
 
-- **Vitest:** `npm run test` → **579 tests / 63 files, all passing.** Tests live in `frontend/tests/`.
+- **Vitest:** `npm run test` → **590 tests / 64 files, all passing.** Tests live in `frontend/tests/`.
 - **Lint:** ⚠️ *corrected 20 Aug 2026 — this previously claimed all first-party code was ESLint-clean; it is not.* `npm run lint` reports **362 problems (216 errors, 146 warnings)**. The **audited features are** clean (`opportunities`, `search`, `hub`, `tracker`, `certifications` produce zero output) — but `scripts/` (66 errors), `app/` (28), `lib/` (27) and `tests/` (23) are not, and `lib/ats-checker` + `lib/resume-optimizer` are first-party, not vendored. **The rule still stands for code you touch:** leave every file you edit lint-clean. See `PROJECT_AUDIT.md` §4 for the full breakdown.
-- **Types:** `tsc --noEmit` — first-party clean; the only errors are in the vendored résumé toolkit (non-blocking, `ignoreBuildErrors` on).
+- **Types:** ✅ `tsc --noEmit` is **clean across the whole project** (was 19 errors). `typescript.ignoreBuildErrors` is still on in `next.config.ts`, so nothing enforces this at build time — keep it clean deliberately.
 - **Security:** RLS on all tables; the one ERROR-level cross-user leak was closed; all `SECURITY DEFINER` functions hardened. Details in audit §5.
 
 ---
