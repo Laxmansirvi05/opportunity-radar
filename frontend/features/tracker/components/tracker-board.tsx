@@ -24,6 +24,7 @@ import {
   updateTrackerNotes,
 } from '../actions/tracker-actions'
 import { TRACKER_STAGES, type TrackerStage } from '../stages'
+import { computeTrackerStats } from '../stats'
 
 export interface TrackerItem {
   id: string
@@ -303,20 +304,9 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
     return map
   }, [data])
 
-  const stats = useMemo(() => {
-    const count = (s: TrackerStage) => byStage.get(s)?.length ?? 0
-    const applied = count('Applied') + count('Interview Scheduled') + count('Selected') + count('Rejected')
-    const responses = count('Interview Scheduled') + count('Selected') + count('Rejected')
-    return {
-      total: data.length,
-      applied,
-      interviewing: count('Interview Scheduled'),
-      offers: count('Selected'),
-      // Share of applications that got any reply — the number a student
-      // actually wants to watch.
-      responseRate: applied > 0 ? Math.round((responses / applied) * 100) : null,
-    }
-  }, [data, byStage])
+  // Recomputed from `data` on every change (drag, remove, note) — so the
+  // header numbers, response rate included, are live, never static.
+  const stats = useMemo(() => computeTrackerStats(data), [data])
 
   const move = useCallback((id: string, next: TrackerStage) => {
     const previous = data
@@ -394,13 +384,37 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Stat label="Tracked" value={stats.total} />
-            <Stat label="Applied" value={stats.applied} />
-            <Stat label="Interviewing" value={stats.interviewing} tone="text-tertiary" />
-            <Stat label="Offers" value={stats.offers} tone="text-secondary" />
-            {stats.responseRate !== null && (
-              <Stat label="Response rate" value={`${stats.responseRate}%`} tone="text-primary" />
-            )}
+            <Stat
+              label="Tracked"
+              value={stats.total}
+              hint="Everything on your board, including saved opportunities you haven't applied to yet."
+            />
+            <Stat
+              label="Applications"
+              value={stats.applied}
+              hint="Opportunities you've applied to — every card that has moved past the Saved column (applied, interviewing, offers and rejections all count)."
+            />
+            <Stat
+              label="Interviewing"
+              value={stats.interviewing}
+              tone="text-tertiary"
+              hint="Applications currently in the interview stage."
+            />
+            <Stat
+              label="Offers"
+              value={stats.offers}
+              tone="text-secondary"
+              hint="Offers received."
+            />
+            {/* Always shown — a live metric that visibly moves as you drag cards
+                past Applied, so it never reads as a static/decorative number.
+                "—" until there's at least one application to measure. */}
+            <Stat
+              label="Response rate"
+              value={stats.responseRate === null ? '—' : `${stats.responseRate}%`}
+              tone="text-primary"
+              hint="Share of your applications that got any employer response — an interview, an offer, or a rejection. Recalculates automatically as you move cards."
+            />
           </div>
         </div>
       </div>
@@ -511,9 +525,22 @@ export function TrackerBoard({ initialData }: { initialData: TrackerItem[] }) {
   )
 }
 
-function Stat({ label, value, tone = 'text-on-surface' }: { label: string; value: number | string; tone?: string }) {
+function Stat({
+  label,
+  value,
+  tone = 'text-on-surface',
+  hint,
+}: {
+  label: string
+  value: number | string
+  tone?: string
+  hint?: string
+}) {
   return (
-    <div className="px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/60 min-w-[86px]">
+    <div
+      title={hint}
+      className={`px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/60 min-w-[86px] ${hint ? 'cursor-help' : ''}`}
+    >
       <div className={`text-lg font-bold leading-none ${tone}`}>{value}</div>
       <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mt-1 font-semibold">{label}</div>
     </div>

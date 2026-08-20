@@ -29,6 +29,9 @@ export async function markAsApplied(opportunityId: string) {
         updated_at: new Date().toISOString()
       })
       .eq('id', existing.id)
+      // Explicit ownership filter alongside RLS — same defense-in-depth
+      // convention as features/tracker/actions/tracker-actions.ts.
+      .eq('user_id', user.id)
 
     if (error) {
       console.error('Error updating tracker:', error)
