@@ -123,6 +123,14 @@ async function searchOpportunitiesFromDB(
 }
 
 // ── Main handler ────────────────────────────────────────────────────
+// The assistant makes one AI-gateway call whose provider chain can fall
+// through several providers, each with its own timeout. A single reply was
+// measured at 23s against a healthy provider — already past Vercel's default
+// function timeout, which would kill it in production while it succeeds
+// locally where no such limit applies. Same failure this project already hit
+// on /api/resume/optimization and /api/resume/ats-check.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     // Auth checked first, before any request-body validation — matches

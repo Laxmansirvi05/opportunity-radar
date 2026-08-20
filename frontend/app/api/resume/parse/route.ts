@@ -17,6 +17,13 @@ function errorMessage(error: unknown): string {
 // Parses an uploaded PDF and returns structured ResumeData json.
 // This replaces the old OR async pipeline with RR's synchronous JSON extraction.
 // ---------------------------------------------------------------------------
+// Extracts text from an uploaded PDF and then runs it through the AI gateway
+// to structure it — the same two-stage shape as
+// /api/resume/optimization/extract, which carries 120 for exactly this
+// reason. Neither stage is fast, and the default timeout would cut the parse
+// off mid-run.
+export const maxDuration = 120;
+
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies()

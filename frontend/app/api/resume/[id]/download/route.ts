@@ -11,6 +11,10 @@ import type { ParsedResume } from '@/types/resume'
 // previously had no way to get a saved resume out as a file without opening
 // the full builder and using its own export.
 // ---------------------------------------------------------------------------
+// Renders a PDF server-side. Usually quick, but a long resume with many
+// sections is not, and the default timeout gives no headroom for one.
+export const maxDuration = 60;
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()

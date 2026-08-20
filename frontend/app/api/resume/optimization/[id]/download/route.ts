@@ -12,6 +12,9 @@ import type { ParsedResume } from '@/types/resume'
 // checklist is confirmed).
 // ---------------------------------------------------------------------------
 
+// Renders a PDF server-side — same headroom as the other download routes.
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const variant = req.nextUrl.searchParams.get('variant')

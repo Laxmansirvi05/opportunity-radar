@@ -9,6 +9,9 @@ import type { ParsedResume } from '@/types/resume'
 // even for a check run via "Upload PDF" with no saved resume row, since the
 // full ParsedResume is snapshotted inline on every report.
 // ---------------------------------------------------------------------------
+// Renders a PDF server-side — same headroom as the other download routes.
+export const maxDuration = 60;
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
