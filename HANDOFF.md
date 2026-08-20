@@ -92,7 +92,7 @@ Opportunity radar/
 │  │  ├─ notes/, assistant/, profile/, …
 │  ├─ lib/                        ← supabase clients, cron-auth, ingestion, agent-client
 │  ├─ types/                      ← shared types (opportunity.ts, database.types.ts, …)
-│  ├─ tests/                      ← Vitest suite (57 files, 507 tests)
+│  ├─ tests/                      ← Vitest suite (58 files, 523 tests)
 │  └─ next.config.ts              ← CSP, image domains, headers
 ├─ supabase/migrations/          ← SQL migrations (source of truth for DB changes)
 ├─ PROJECT_AUDIT.md              ← the detailed audit
@@ -118,7 +118,7 @@ Scores are from `PROJECT_AUDIT.md` (✅ verified live · 🟡 built, spot-checke
 | **Auth** | `/(auth)/*` | 🟡 Supabase Auth, double-gated | 90% |
 | **AI Assistant** | `/assistant` | 🟡 chat w/ opportunity attaching | 85% |
 | **Notes** | `/notes` (+11 API routes) | 🟡 rich (folders, sharing, links) | 85% |
-| **Résumé toolkit** | `/resume/*` | 🟡 vendored Reactive Resume · 🔧 Download PDF wired this pass | 85% |
+| **Résumé toolkit** | `/resume/*` | ✅ all 4 dead builder buttons implemented this pass | 90% |
 | **Certifications/Tracker/Notifications/Profile/Settings/Support/Dashboard** | respective | 🟡 built & wired | 80% |
 
 ---
@@ -166,7 +166,7 @@ cd frontend
 npm install
 # create .env.local with the vars in §7 (ask the owner for values)
 npm run dev          # Next dev server (Turbopack)
-npm run test         # Vitest — 507 tests
+npm run test         # Vitest — 523 tests
 npm run lint         # ESLint
 npx tsc --noEmit     # typecheck (see caveat below)
 ```
@@ -213,8 +213,12 @@ Ingestion refreshers (Unstop, Internshala, providers, employers) run nightly; `l
 3. **Drop 4 stale `opportunities_backup*` tables** — SQL is in `PROJECT_AUDIT.md` §5; the `DROP` was blocked by a safety classifier in tooling, so run it in the Supabase SQL editor. *(declutter + clears 8 advisories)*
 
 ### 🟡 Medium (finish the polish)
-4. **Résumé toolkit** — there were **4** dead buttons, not 3. **Download PDF is done** (implemented against the endpoint that already existed, not relabelled — see audit §8). **Preview Mode** is in progress; **Undo/Redo** still to do (needs a history stack in `useResume` + unit tests). All were confirmed implementable — none need relabelling. 19 TS errors live here (vendored) — clean for a polished submission.
-5. **AI Assistant / Notes** — built and wired but not exhaustively tested end-to-end; do a full pass (attach flows, sharing, link targets).
+4. ~~**Résumé toolkit** — dead buttons~~ — ✅ **done.** There were **4**, not 3; all are implemented (Download PDF, Preview Mode, Undo, Redo), none relabelled. See audit §8. **Still open here:** the 19 TS errors in the vendored code — worth clearing for a polished submission.
+
+   > **If you touch the builder layout:** panel visibility is written as one mutually exclusive class string per state, not layered conditionals. `cn` is twMerge, which keeps `hidden` and `md:flex` in separate responsive groups, so appending `hidden` to a panel that already carries `md:flex` leaves it visible from `md` up. There's a comment in the file — don't "simplify" it away.
+5. **AI Assistant / Notes** — built and wired but not exhaustively tested end-to-end; do a full pass (attach flows, sharing, link targets). **This is the biggest remaining surface and the natural next feature audit.**
+
+   > **Notes' security layer was already audited clean (20 Aug 2026) — don't redo it, start from behaviour.** All 11 API routes authenticate; `assertOwned()` gates every share operation; the public `app/notes/shared/[slug]/page.tsx` correctly checks `link_access === 'view'`, excludes trashed notes, re-sanitises HTML on output, forces `dynamic`, and sets `noindex`. Service-role use is narrow and documented. No defects found. What remains untested is the *behaviour*: folders, link targets, attachments/uploads, bulk ops, and the share dialog's UX.
 6. **Auth flows** — spot-checked, not exhaustively exercised (password reset, email verification edge cases).
 
 ### 🟢 Low (post-submission / perf)
@@ -235,7 +239,7 @@ Real "People also viewed" (there's a `recently_viewed` table to back it), richer
 
 ## 12. Testing & quality gates
 
-- **Vitest:** `npm run test` → **507 tests / 57 files, all passing.** Tests live in `frontend/tests/`.
+- **Vitest:** `npm run test` → **523 tests / 58 files, all passing.** Tests live in `frontend/tests/`.
 - **Lint:** ⚠️ *corrected 20 Aug 2026 — this previously claimed all first-party code was ESLint-clean; it is not.* `npm run lint` reports **362 problems (216 errors, 146 warnings)**. The **audited features are** clean (`opportunities`, `search`, `hub`, `tracker`, `certifications` produce zero output) — but `scripts/` (66 errors), `app/` (28), `lib/` (27) and `tests/` (23) are not, and `lib/ats-checker` + `lib/resume-optimizer` are first-party, not vendored. **The rule still stands for code you touch:** leave every file you edit lint-clean. See `PROJECT_AUDIT.md` §4 for the full breakdown.
 - **Types:** `tsc --noEmit` — first-party clean; the only errors are in the vendored résumé toolkit (non-blocking, `ignoreBuildErrors` on).
 - **Security:** RLS on all tables; the one ERROR-level cross-user leak was closed; all `SECURITY DEFINER` functions hardened. Details in audit §5.
