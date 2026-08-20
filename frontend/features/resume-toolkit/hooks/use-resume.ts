@@ -52,7 +52,21 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
     return () => { cancelled = true }
   }, [slug, initialData])
 
-  const save = useCallback(async () => {
+  /**
+   * Persists the resume and resolves with its id, or null if the save failed.
+   *
+   * The id is returned rather than read from `resumeId` because a brand-new
+   * resume only gets one at insert time, and callers that need to act on the
+   * saved row straight away (Download PDF) cannot wait for a re-render.
+   */
+  const save = useCallback(async (): Promise<string | null> => {
+    // An explicit save supersedes a debounced one — drop the pending timer so
+    // it doesn't fire a second, redundant write moments later.
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+
     setSaveStatus('saving')
     try {
       if (idRef.current) {
@@ -62,23 +76,31 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
           data: dataRef.current,
         })
         setSaveStatus(result.success ? 'saved' : 'error')
-      } else {
-        // Create new
-        const result = await createResume(titleRef.current, dataRef.current)
-        if (result.success && result.id) {
-          setResumeId(result.id)
-          setResumeSlug(result.slug ?? null)
-          setSaveStatus('saved')
-          // Update URL to reflect the slug without a full navigation
-          if (result.slug) {
-            window.history.replaceState(null, '', `/resume/builder/${result.slug}`)
-          }
-        } else {
-          setSaveStatus('error')
-        }
+        return result.success ? idRef.current : null
       }
+
+      // Create new
+      const result = await createResume(titleRef.current, dataRef.current)
+      if (result.success && result.id) {
+        // Written straight to the ref as well as to state: the useEffect that
+        // normally syncs it only runs after a render, and a save queued before
+        // then would still see a null id and insert a *second* resume.
+        idRef.current = result.id
+        setResumeId(result.id)
+        setResumeSlug(result.slug ?? null)
+        setSaveStatus('saved')
+        // Update URL to reflect the slug without a full navigation
+        if (result.slug) {
+          window.history.replaceState(null, '', `/resume/builder/${result.slug}`)
+        }
+        return result.id
+      }
+
+      setSaveStatus('error')
+      return null
     } catch {
       setSaveStatus('error')
+      return null
     }
   }, [])
 

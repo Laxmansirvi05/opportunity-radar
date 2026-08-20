@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { useResume } from '@/features/resume-toolkit/hooks/use-resume'
 import { SectionsPanel } from './sections-panel'
 import { SectionEditor, SECTION_CONFIG, type SectionKey } from './section-editor'
@@ -31,9 +32,55 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
 
   const [activeSection, setActiveSection] = useState<SectionKey>('basics')
   const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // Mobile view mode
   const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit')
+
+  /**
+   * The PDF is rendered server-side from the saved `resumes.parsed_data` row,
+   * so any pending edits are flushed first — otherwise the file would silently
+   * miss whatever was typed inside the 2s autosave debounce, and a resume that
+   * had never been saved would have no row to render at all.
+   *
+   * The rest of the toolkit downloads through a plain `<a href>`, which can't
+   * express that save-then-fetch ordering (or surface a failure), so this one
+   * goes through fetch and a blob.
+   */
+  const handleDownloadPdf = useCallback(async () => {
+    setIsDownloading(true)
+    try {
+      const id = await save()
+      if (!id) {
+        toast.error("Couldn't save your resume, so the PDF wasn't created.")
+        return
+      }
+
+      const response = await fetch(`/api/resume/${id}/download`)
+      if (!response.ok) {
+        toast.error("Couldn't create the PDF. Please try again.")
+        return
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      // Name the file after the resume the user named, not the generic
+      // server-side fallback; same sanitising the download route applies.
+      const safeName =
+        title.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'resume'
+      link.download = `${safeName}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error("Couldn't create the PDF. Please try again.")
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [save, title])
 
   // Compute section item counts for the left panel badges
   const sectionCounts = useMemo(() => {
@@ -148,9 +195,23 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
             Preview Mode
           </Button>
 
-          <Button variant="default" size="sm" className="h-8" disabled title="PDF Download available in Phase 2B">
-            <span className="material-symbols-outlined text-sm mr-1.5">picture_as_pdf</span>
-            Download PDF
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8"
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            title="Download PDF"
+          >
+            <span
+              className={cn(
+                'material-symbols-outlined text-sm mr-1.5',
+                isDownloading && 'animate-spin'
+              )}
+            >
+              {isDownloading ? 'progress_activity' : 'picture_as_pdf'}
+            </span>
+            {isDownloading ? 'Preparing…' : 'Download PDF'}
           </Button>
         </div>
       </div>
