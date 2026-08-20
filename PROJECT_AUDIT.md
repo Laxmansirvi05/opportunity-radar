@@ -46,7 +46,7 @@
 | **Résumé toolkit** (builder/ATS/optimise/upload) | `/resume/*` | **80%** | 🟡 Reactive Resume integrated. ⚠️ 3 disabled "Coming soon" buttons (Undo/Redo/Preview); 19 type errors live in this vendored code. |
 | **AI Assistant** | `/assistant` + `/api/assistant` | **85%** | 🟡 Chat with opportunity-attaching; explicitly guards against fabricating listings. |
 | **Notes** | `/notes` + 11 API routes | **85%** | 🟡 Rich: folders, links, sharing, attachments, templates, bulk. Large surface — spot-checked, not exhaustively tested. |
-| **Certifications** | `/certifications` | **80%** | 🟡 Built; backed by cron refresh + link-sweep. |
+| **Certifications** | `/certifications` | **95%** | ✅ 20,753 certs (138 providers, all with URLs+logos), weekly refresh + daily link-sweep (37 dead links hidden), price/level/duration/provider filters, infinite scroll, error-state handling. 🔧 Fixed this pass: **search now uses the `fts` GIN index** (title+provider+description+topics) instead of title/provider ilike only — "kubernetes" went from 174 → 381 results. Clean lint + types. |
 | **Application Tracker** | `/tracker` | **80%** | 🟡 Built (RLS on `application_tracker`). |
 | **Opportunities / Search / Hub** | `/search`, `/opportunities/[id]`, `/hub` | **85%** | 🟡 Core discovery + messaging. Uses native `alert()` in 2 spots (report-broken-link, bookmark) — should be a toast. |
 | **Notifications / Profile / Settings / Support / Dashboard** | respective | **80%** | 🟡 Built and wired. |
@@ -125,6 +125,7 @@
 - 🔧 **Opportunities:** replaced blocking native `alert()` dialogs with the app's toast (report-broken-link button).
 
 **All fixes are LIVE** at the auto-updating deployment URL: `https://opportunity-radar-git-restore-ju-6faa4e-laxman-sirvi-s-projects.vercel.app` (this is a real Vercel production-grade deployment of the latest commit). The only thing not done is pointing the prettier `opportunity-radar-six.vercel.app` alias at it — that requires your Vercel dashboard (set Production Branch → `restore-june19-clean`, or promote the newest build), which cannot be done via API.
+- 🔧 **Certifications: search coverage fixed** — the query matched only `title`+`provider` via `ilike` and ignored the purpose-built `idx_certifications_fts` GIN index, so terms appearing only in a cert's topics/description were unfindable. Added an `fts.plfts(english)` branch OR-ed with the existing ilike (partial as-you-type words still match). Verified against the live DB: "kubernetes" 174 → 381 matches. Audited the rest of the feature (data health, filters, crons, error states, lint, types) — all clean.
 - 🔧 (earlier this session) Interview: TTS silence → Kokoro; report timeout 3→8 min; score shown /100 (list + report); History click now opens the report instead of the live room; backfilled missing report rows.
 - 🔧 (earlier) AI Search: reel/junk filter (`new URL` sandbox bug), rate-limit recording, Vercel cron fix.
 
