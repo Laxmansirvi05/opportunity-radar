@@ -11,6 +11,31 @@ import { getDeadlineInfo } from '@/features/opportunities/utils/deadline'
 import { extractSkillsFromDescription, sanitizeAndFormatDescription } from '@/utils/skills-parser'
 import { CompanyLogo } from '@/features/opportunities/components/company-logo'
 import { OpportunityNotes } from '@/features/notes/components/opportunity-notes'
+import type { OpportunityWithDetails } from '@/types/opportunity'
+
+/** The company row joined onto an opportunity (Supabase types embedded joins loosely). */
+interface CompanyRow {
+  id?: string
+  name?: string | null
+  logo_url?: string | null
+  website_url?: string | null
+  description?: string | null
+  industry?: string | null
+  founded_year?: number | null
+  headquarters?: string | null
+}
+
+/** A lightweight related-opportunity row used by the "more roles" rails. */
+interface RelatedOpp {
+  id: string
+  title?: string | null
+  location?: string | null
+  mode?: string | null
+  is_paid?: boolean | null
+  status?: string | null
+  deadline?: string | null
+  companies?: { name?: string | null } | null
+}
 
 export default async function OpportunityDetailsPage({
   params,
@@ -30,7 +55,7 @@ export default async function OpportunityDetailsPage({
       .from('opportunities')
       .select(`
         *,
-        companies (id, name, logo_url, website_url, description, industry, created_at),
+        companies (id, name, logo_url, website_url, description, industry, founded_year, headquarters, created_at),
         opportunity_tags (tag_name)
       `)
       .eq('id', id)
@@ -69,8 +94,8 @@ export default async function OpportunityDetailsPage({
     notFound()
   }
 
-  const company = opp.companies as any
-  const tags = opp.opportunity_tags || []
+  const company = opp.companies as CompanyRow | null
+  const tags = (opp.opportunity_tags || []) as { tag_name: string }[]
   
   const deadlineInfo = getDeadlineInfo(opp.deadline)
   const isExpired = deadlineInfo?.expired ?? false
@@ -116,19 +141,19 @@ export default async function OpportunityDetailsPage({
     peopleAlsoViewedPromise
   ])
 
-  const filterActive = (opps: any[]) => {
+  const filterActive = (opps: RelatedOpp[] | null): RelatedOpp[] => {
     if (!opps) return []
     const nowMs = new Date().getTime()
     return opps.filter(o => {
-      if (['Closed', 'Expired'].includes(o.status)) return false
+      if (o.status && ['Closed', 'Expired'].includes(o.status)) return false
       if (!o.deadline) return true
       return new Date(o.deadline).getTime() >= nowMs
     })
   }
 
-  const similarOpps = filterActive(similarOppsData || [])
-  const moreFromCompany = filterActive(moreFromCompanyData || [])
-  const peopleAlsoViewed = filterActive(peopleAlsoViewedData || [])
+  const similarOpps = filterActive((similarOppsData ?? []) as unknown as RelatedOpp[])
+  const moreFromCompany = filterActive((moreFromCompanyData ?? []) as unknown as RelatedOpp[])
+  const peopleAlsoViewed = filterActive((peopleAlsoViewedData ?? []) as unknown as RelatedOpp[])
 
   /**
    * Compensation, labelled for the kind of opportunity.
@@ -175,7 +200,7 @@ export default async function OpportunityDetailsPage({
   const industry = company?.industry || opp.category || 'Technology'
   
   const responsibilities = opp.responsibilities || []
-  const oppSkills = opp.skills && opp.skills.length > 0 ? opp.skills : tags.map((t: any) => t.tag_name)
+  const oppSkills = opp.skills && opp.skills.length > 0 ? opp.skills : tags.map((t) => t.tag_name)
   
   const finalSkills = oppSkills.length > 0 ? oppSkills : extractSkillsFromDescription(opp.description)
   const cleanDescription = sanitizeAndFormatDescription(opp.description)
@@ -187,8 +212,17 @@ export default async function OpportunityDetailsPage({
       <div className="py-6 px-4 md:px-8 max-w-[1600px] mx-auto w-full">
         <div className="flex items-center text-sm font-medium text-on-surface-variant gap-2">
           <Link href="/search" className="hover:text-primary transition-colors">Search</Link>
-          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <span className="hover:text-primary transition-colors cursor-pointer">{opp.category}</span>
+          {opp.category && (
+            <>
+              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              <Link
+                href={`/search?category=${encodeURIComponent(opp.category)}`}
+                className="hover:text-primary transition-colors"
+              >
+                {opp.category}
+              </Link>
+            </>
+          )}
           <span className="material-symbols-outlined text-[16px]">chevron_right</span>
           <span className="text-on-surface">{opp.title}</span>
         </div>
@@ -291,26 +325,31 @@ export default async function OpportunityDetailsPage({
                 <h2 className="text-lg font-bold text-on-background">More from {company?.name}</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {moreFromCompany.map((item: any, idx: number) => (
+                {moreFromCompany.map((item, idx) => (
                   <Link key={item.id || idx} href={`/opportunities/${item.id}`} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer block">
                     <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title}</h4>
-                    <p className="text-xs text-on-surface-variant truncate">{item.location || 'Remote'} • {item.mode === 'Remote' ? 'Remote' : 'Full-time'}</p>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {[item.location, item.mode].filter(Boolean).join(' • ') || 'Location TBD'}
+                    </p>
                   </Link>
                 ))}
               </div>
             </section>
           )}
 
-          {/* People also viewed */}
+          {/* More opportunities — other active listings. Deliberately NOT
+              labelled "People also viewed": there is no view-tracking behind
+              this, it's a sample of live roles, and the project's rule is to
+              never present fabricated signals as data. */}
           {peopleAlsoViewed && peopleAlsoViewed.length > 0 && (
             <section className="flex flex-col gap-4 mt-2">
-              <h2 className="text-lg font-bold text-on-background">People also viewed</h2>
+              <h2 className="text-lg font-bold text-on-background">More opportunities</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {peopleAlsoViewed.map((item: any, idx: number) => (
+                {peopleAlsoViewed.map((item, idx) => (
                   <Link key={item.id || idx} href={`/opportunities/${item.id}`} className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm hover:border-primary/30 transition-colors cursor-pointer block">
                     <h4 className="font-bold text-sm text-on-surface mb-1 truncate">{item.title}</h4>
                     {item.companies?.name && (
-                      <p className="text-xs text-on-surface-variant truncate">{item.companies.name} • Remote</p>
+                      <p className="text-xs text-on-surface-variant truncate">{item.companies.name}</p>
                     )}
                   </Link>
                 ))}
@@ -439,7 +478,7 @@ export default async function OpportunityDetailsPage({
                   </div>
                 )}
               </div>
-              <Link href={`/search?q=${encodeURIComponent(company.name)}`} className="mt-2 text-sm font-bold text-primary hover:underline flex items-center gap-1 w-fit">
+              <Link href={`/search?q=${encodeURIComponent(company.name ?? '')}`} className="mt-2 text-sm font-bold text-primary hover:underline flex items-center gap-1 w-fit">
                 View all roles at {company.name}
                 <span className="material-symbols-outlined text-[16px]">arrow_right_alt</span>
               </Link>
@@ -482,8 +521,8 @@ export default async function OpportunityDetailsPage({
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {similarOpps && similarOpps.length > 0 && (
-              similarOpps.map((opp: any) => (
-                <OpportunitySearchCard key={opp.id} opportunity={opp as any} />
+              similarOpps.map((related) => (
+                <OpportunitySearchCard key={related.id} opportunity={related as unknown as OpportunityWithDetails} />
               ))
             )}
           </div>
