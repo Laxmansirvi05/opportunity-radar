@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
 interface ReportBrokenLinkButtonProps {
@@ -16,7 +17,7 @@ export function ReportBrokenLinkButton({ opportunityId }: ReportBrokenLinkButton
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      alert('Please sign in to report a broken link.')
+      toast.error('Please sign in to report a broken link.')
       return
     }
 
@@ -30,7 +31,7 @@ export function ReportBrokenLinkButton({ opportunityId }: ReportBrokenLinkButton
     if (!error || error.code === '23505') {
       setIsReported(true)
     } else {
-      alert('Failed to submit report. Please try again later.')
+      toast.error('Failed to submit report. Please try again later.')
     }
 
     setIsLoading(false)
