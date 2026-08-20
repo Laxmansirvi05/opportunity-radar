@@ -5,6 +5,7 @@ import { NOTE_SELECT_COLUMNS, toNote, type NoteRow } from '@/features/notes/lib/
 import { sanitizeNoteContent } from '@/features/notes/lib/sanitize-note-content'
 import { hasAttachmentMarkup } from '@/features/notes/lib/note-preview'
 import { resolveQuickNotesFolder } from '@/features/notes/lib/quick-notes-folder'
+import { buildNoteSearchFilter } from '@/features/notes/lib/note-search-filter'
 
 export const runtime = 'nodejs'
 
@@ -111,9 +112,9 @@ export async function GET(req: NextRequest) {
   if (tag) {
     query = query.contains('tags', [tag])
   }
-  if (q) {
-    const escaped = q.replace(/[%_]/g, (c) => `\\${c}`)
-    query = query.or(`title.ilike.%${escaped}%,content.ilike.%${escaped}%`)
+  const searchFilter = buildNoteSearchFilter(q)
+  if (searchFilter) {
+    query = query.or(searchFilter)
   }
 
   const { data, error } = await query
@@ -172,9 +173,9 @@ async function listSharedWithMe(
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
-  if (q) {
-    const escaped = q.replace(/[%_]/g, (c) => `\\${c}`)
-    query = query.or(`title.ilike.%${escaped}%,content.ilike.%${escaped}%`)
+  const searchFilter = buildNoteSearchFilter(q)
+  if (searchFilter) {
+    query = query.or(searchFilter)
   }
 
   const { data, error } = await query
