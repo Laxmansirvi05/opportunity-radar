@@ -19,9 +19,13 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // RLS already restricts this to the caller's own rows; the explicit filter
+  // is this codebase's standing pattern, so a loosened policy cannot silently
+  // turn "your resumes" into everyone's.
   const { data: resumes, error } = await supabase
     .from('resumes')
     .select('id, file_name, updated_at')
+    .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
 
   if (error) {
