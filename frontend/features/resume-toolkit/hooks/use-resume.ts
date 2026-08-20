@@ -4,6 +4,15 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { createResume, updateResume, getResumeBySlug } from '@/features/resume-toolkit/services/resume-actions'
 import type { ResumeData } from '@/features/resume-toolkit/lib/schema/resume/data'
 import { defaultResumeData } from '@/features/resume-toolkit/lib/schema/resume/default'
+import {
+  type EditHistory,
+  createEditHistory,
+  recordEdit,
+  undoEdit,
+  redoEdit,
+  canUndo,
+  canRedo,
+} from '@/features/resume-toolkit/lib/edit-history'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -15,7 +24,12 @@ interface UseResumeOptions {
 }
 
 export function useResume({ slug, initialData, initialTitle, initialId }: UseResumeOptions = {}) {
-  const [resumeData, setResumeData] = useState<ResumeData>(initialData ?? defaultResumeData)
+  // Resume content lives inside an undo/redo timeline rather than plain state;
+  // `history.present` is the document as currently shown.
+  const [history, setHistory] = useState<EditHistory<ResumeData>>(() =>
+    createEditHistory(initialData ?? defaultResumeData)
+  )
+  const resumeData = history.present
   const [title, setTitle] = useState(initialTitle ?? 'Untitled Resume')
   const [resumeId, setResumeId] = useState<string | null>(initialId ?? null)
   const [resumeSlug, setResumeSlug] = useState<string | null>(slug ?? null)
@@ -42,7 +56,9 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
     getResumeBySlug(slug).then((result) => {
       if (cancelled) return
       if (result.success && result.resume) {
-        setResumeData(result.resume.data as ResumeData)
+        // Loading a document starts a fresh timeline — there is nothing
+        // meaningful to undo "past" the resume as it was opened.
+        setHistory(createEditHistory(result.resume.data as ResumeData))
         setTitle(result.resume.title)
         setResumeId(result.resume.id)
         setResumeSlug(result.resume.slug)
@@ -117,7 +133,7 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
     key: K,
     value: ResumeData[K]
   ) => {
-    setResumeData(prev => ({ ...prev, [key]: value }))
+    setHistory(prev => recordEdit(prev, { ...prev.present, [key]: value }, Date.now()))
     scheduleAutosave()
   }, [scheduleAutosave])
 
@@ -125,16 +141,28 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
     sectionKey: string,
     items: unknown[]
   ) => {
-    setResumeData(prev => ({
-      ...prev,
+    setHistory(prev => recordEdit(prev, {
+      ...prev.present,
       sections: {
-        ...prev.sections,
+        ...prev.present.sections,
         [sectionKey]: {
-          ...prev.sections[sectionKey as keyof typeof prev.sections],
+          ...prev.present.sections[sectionKey as keyof typeof prev.present.sections],
           items,
         }
       }
-    }))
+    }, Date.now()))
+    scheduleAutosave()
+  }, [scheduleAutosave])
+
+  // Undo/redo autosave like any other edit — a reverted document is the
+  // document now, and leaving it unsaved would resurrect on the next load.
+  const undo = useCallback(() => {
+    setHistory(prev => undoEdit(prev))
+    scheduleAutosave()
+  }, [scheduleAutosave])
+
+  const redo = useCallback(() => {
+    setHistory(prev => redoEdit(prev))
     scheduleAutosave()
   }, [scheduleAutosave])
 
@@ -154,7 +182,6 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
 
   return {
     resumeData,
-    setResumeData,
     title,
     updateTitle,
     resumeId,
@@ -164,5 +191,9 @@ export function useResume({ slug, initialData, initialTitle, initialId }: UseRes
     save,
     updateSection,
     updateSectionItems,
+    undo,
+    redo,
+    canUndo: canUndo(history),
+    canRedo: canRedo(history),
   }
 }

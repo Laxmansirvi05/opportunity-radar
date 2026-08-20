@@ -28,6 +28,10 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
     save,
     updateSection,
     updateSectionItems,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useResume({ slug, initialData, initialTitle, initialId })
 
   const [activeSection, setActiveSection] = useState<SectionKey>('basics')
@@ -187,10 +191,26 @@ export function ResumeBuilder({ slug, initialData, initialTitle, initialId }: Re
         {/* Right Side: Tools & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div className="flex items-center gap-0.5 bg-surface-container-low rounded-md p-0.5 border border-outline-variant mr-1">
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-on-surface-variant" disabled title="Undo (Coming Soon)">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-on-surface-variant"
+              onClick={undo}
+              disabled={!canUndo}
+              title={canUndo ? 'Undo' : 'Nothing to undo'}
+              aria-label="Undo"
+            >
               <span className="material-symbols-outlined text-sm">undo</span>
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-on-surface-variant" disabled title="Redo (Coming Soon)">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-on-surface-variant"
+              onClick={redo}
+              disabled={!canRedo}
+              title={canRedo ? 'Redo' : 'Nothing to redo'}
+              aria-label="Redo"
+            >
               <span className="material-symbols-outlined text-sm">redo</span>
             </Button>
           </div>

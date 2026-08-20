@@ -100,3 +100,74 @@ describe('useResume().save()', () => {
     expect(result.current.saveStatus).toBe('error')
   })
 })
+
+/**
+ * The timeline logic itself is covered in edit-history.test.ts; these cover
+ * the wiring — that edits actually reach the history, and that undo/redo
+ * surface through the hook the toolbar buttons read from.
+ */
+describe('useResume() undo/redo', () => {
+  const nameOf = (r: { resumeData: { basics: { name: string } } }) => r.resumeData.basics.name
+
+  const setName = (
+    result: { current: ReturnType<typeof useResume> },
+    name: string
+  ) => {
+    act(() => {
+      result.current.updateSection('basics', { ...result.current.resumeData.basics, name })
+    })
+  }
+
+  it('starts with nothing to undo or redo', () => {
+    const { result } = renderHook(() => useResume())
+    expect(result.current.canUndo).toBe(false)
+    expect(result.current.canRedo).toBe(false)
+  })
+
+  it('undoes an edit back to the previous value', () => {
+    const { result } = renderHook(() => useResume())
+    const original = nameOf(result.current)
+
+    setName(result, 'Aarav')
+    expect(nameOf(result.current)).toBe('Aarav')
+    expect(result.current.canUndo).toBe(true)
+
+    act(() => result.current.undo())
+    expect(nameOf(result.current)).toBe(original)
+    expect(result.current.canRedo).toBe(true)
+  })
+
+  it('redoes back to the undone value', () => {
+    const { result } = renderHook(() => useResume())
+
+    setName(result, 'Aarav')
+    act(() => result.current.undo())
+    act(() => result.current.redo())
+
+    expect(nameOf(result.current)).toBe('Aarav')
+    expect(result.current.canRedo).toBe(false)
+  })
+
+  it('collapses a burst of edits into one undo step', () => {
+    const { result } = renderHook(() => useResume())
+    const original = nameOf(result.current)
+
+    // Successive keystrokes, well inside the coalesce window.
+    setName(result, 'A')
+    setName(result, 'Aa')
+    setName(result, 'Aar')
+
+    act(() => result.current.undo())
+
+    // One undo returns to where typing started, not to 'Aa'.
+    expect(nameOf(result.current)).toBe(original)
+    expect(result.current.canUndo).toBe(false)
+  })
+
+  it('does not undo past the resume as it was opened', () => {
+    const { result } = renderHook(() =>
+      useResume({ initialId: 'resume-3', initialTitle: 'Loaded' })
+    )
+    expect(result.current.canUndo).toBe(false)
+  })
+})
