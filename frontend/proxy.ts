@@ -1,53 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-/**
- * Protected route prefixes — any route starting with these paths
- * requires an authenticated session. Matches the (protected) and
- * (protected-fullscreen) route groups.
- *
- * NOTE: This is an *optimistic* check only. Per the Next.js docs, Proxy must
- * never be the sole authorization boundary. Every protected route group also
- * re-verifies the session in its layout (the real gate); this exists purely so
- * logged-out visitors get a clean redirect instead of an empty shell.
- */
-const PROTECTED_ROUTES = [
-  '/dashboard',
-  '/profile',
-  '/tracker',
-  '/notifications',
-  '/submit',
-  '/hub',
-  '/search',
-  '/ai-search',
-  '/opportunities',
-  '/resume',
-  '/certifications',
-  '/settings',
-  '/support',
-  '/assistant',
-]
-
-/**
- * Auth route prefixes — authenticated users should be redirected
- * to /dashboard instead of seeing login/signup pages.
- */
-const AUTH_ROUTES = [
-  '/login',
-  '/signup',
-]
-
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + '/')
-  )
-}
-
-function isAuthRoute(pathname: string): boolean {
-  return AUTH_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + '/')
-  )
-}
+import { isProtectedRoute, isAuthRoute } from '@/lib/auth/protected-routes'
 
 export async function proxy(request: NextRequest) {
   // Bypass completely for the auth callback route to prevent
