@@ -43,7 +43,7 @@
 | **AI Search** (resume → matched internships) | `/ai-search` + agent | **95%** | ✅ Fully deployed & tested: real results, 0 junk/reels, rate-limited, RLS-proven. Limited only by free-tier LLM/Tavily quotas. |
 | **Voice Mock Interview** | `/interview`, `/interview/[id]`, `/interview/history` + agent + worker | **90%** | ✅ Live voice (STT Deepgram, LLM Gemini, TTS Kokoro, LiveKit), scoring, /100 report, model answers, history. 🔧 Fixed this session: TTS silence, score timeout, /100 display, history→report. |
 | **Auth** (login/signup/forgot/verify) | `/(auth)/*` | **90%** | 🟡 Built, Supabase Auth, double-gated protected routes. ⚠️ Enable leaked-password protection (below). |
-| **Résumé toolkit** (builder/ATS/optimise/upload) | `/resume/*` | **80%** | 🟡 Reactive Resume integrated. ⚠️ 3 disabled "Coming soon" buttons (Undo/Redo/Preview); 19 type errors live in this vendored code. |
+| **Résumé toolkit** (builder/ATS/optimise/upload) | `/resume/*` | **85%** | 🟡 Reactive Resume integrated. 🔧 This pass: **Download PDF now actually works** in the builder (was disabled behind a "Phase 2B" tooltip while a working endpoint already existed) + fixed a duplicate-résumé save bug. ⚠️ 3 disabled buttons remain (Undo/Redo/Preview Mode); 19 type errors live in this vendored code. |
 | **AI Assistant** | `/assistant` + `/api/assistant` | **85%** | 🟡 Chat with opportunity-attaching; explicitly guards against fabricating listings. |
 | **Notes** | `/notes` + 11 API routes | **85%** | 🟡 Rich: folders, links, sharing, attachments, templates, bulk. Large surface — spot-checked, not exhaustively tested. |
 | **Certifications** | `/certifications` | **95%** | ✅ 20,753 certs (138 providers, all with URLs+logos), weekly refresh + daily link-sweep (37 dead links hidden), price/level/duration/provider filters, infinite scroll, error-state handling. 🔧 Fixed this pass: **search now uses the `fts` GIN index** (title+provider+description+topics) instead of title/provider ilike only — "kubernetes" went from 174 → 381 results. Clean lint + types. |
@@ -58,8 +58,9 @@
 - **TypeScript:** 19 errors total — **100% inside the vendored Reactive Resume toolkit** (`features/resume/dialogs`, `libs/resume`, `features/resume/preview|public`, `components/input`). **None in the core Opportunity Radar features** (AI Search, Interview, Notes, Assistant are clean). Next.js/SWC builds successfully through them, so they are **non-blocking**, but worth cleaning for a polished submission.
 - **Secrets:** ✅ No hardcoded API keys/secrets in source — everything reads `process.env`.
 - **Debug leftovers:** 15 `console.log` calls — **verified none leak secrets or cross-user data** (the AI Gateway one logs only a key *label* like `…default`, not the key; the rest are server cron logs or client-side résumé-import/AI-debug of the user's own data). Cleanup, not a security issue. Heaviest is `[AI_DEBUG]` in `features/resume-toolkit/services/ai/sanitize.ts` (logs résumé content to the console).
+- **Lint:** `npm run lint` reports **362 problems (216 errors, 146 warnings)** — the audited features (`opportunities`, `search`, `hub`, `tracker`, `certifications`) are genuinely clean and produce **zero** output, but the rest of first-party code is not. Breakdown: `scripts/` 66 errors (one-off ops scripts, low value), `app/` 28 (dashboard 6, profile/saved 3, notifications, crons), `lib/` 27 (**ATS engine 11**, resume-optimizer 5, ai-gateway 8), `tests/` 23; the remainder (`src/`, `packages/`, `libs/`, `features/resume*`) is vendored. Note `lib/ats-checker` + `lib/resume-optimizer` are **first-party**, not vendored — that debt is ours. *(`HANDOFF.md` §12 previously claimed first-party code was lint-clean; corrected there.)*
 - **Fake / non-functional controls (⚠️ visible to reviewers):**
-  - `features/resume-toolkit/…/resume-builder.tsx` — **Undo, Redo, Preview** buttons are `disabled` with "Coming soon" tooltips.
+  - `features/resume-toolkit/…/resume-builder.tsx` — there were **4**, not 3: Undo, Redo, Preview Mode, and Download PDF. 🔧 **Download PDF is now wired and working** (see §8). **Undo, Redo, Preview Mode** remain `disabled` with "Coming Soon" tooltips.
   - `components/landing/hover-footer.tsx` — **LinkedIn / GitHub / Twitter / Instagram** footer links are all `href="#"` (dead). Point them at real profiles or remove them before submitting.
 
 ---
@@ -107,7 +108,7 @@
 
 **Medium:**
 4. ~~Address the `SECURITY DEFINER` view (`v_student_ats_inputs`)~~ — ✅ **done** (`security_invoker`, anon revoked).
-5. Remove/replace the 3 "Coming soon" résumé-builder buttons (or leave them clearly labelled).
+5. ~~Remove/replace the "Coming soon" résumé-builder buttons~~ — **in progress.** Download PDF ✅ **done** (implemented, not relabelled). Preview Mode **in progress**; Undo/Redo still to do (needs a history stack in `useResume` + unit tests). All three were confirmed implementable — none need relabelling.
 6. ~~Replace native `alert()` calls with the app's toast~~ — ✅ **done** (report-broken-link button).
 
 **Low (polish / post-submission):**
@@ -118,6 +119,10 @@
 ---
 
 ## 8. What I fixed during this audit
+
+- 🔧 **Résumé builder: Download PDF implemented (was a dead button).** The control was `disabled` behind a "PDF Download available in Phase 2B" tooltip — yet `GET /api/resume/[id]/download` already existed, was authenticated and `user_id`-filtered, and the builder already saved to the exact column it reads (`resumes.parsed_data`); the shape conversion was even already unit-tested against the builder's format. Meanwhile the Support FAQ told users every résumé could be downloaded as an ATS-safe PDF — so the docs were ahead of the UI. Wired the button to that endpoint: it flushes pending edits first (the PDF renders server-side from the saved row, so a straight download would silently miss anything typed inside the 2s autosave debounce, and a never-saved résumé would have no row at all), then downloads a file named after the résumé title, with a spinner and a toast on failure.
+- 🔧 **Fixed a duplicate-résumé save bug** found while doing the above: the id of a newly created résumé was only copied into `idRef` by a `useEffect`, which does not run until after a render — so a save queued before then still saw a `null` id and **inserted a second résumé**. Now written to the ref synchronously. An explicit save also cancels the pending autosave timer instead of letting it fire a redundant second write. **5 unit tests** added for `save()`; the duplicate-insert case was verified to fail without the fix (`createResume` called twice). Suite: **502 → 507 tests**.
+- 📋 **Corrected two doc claims** (verification pass over this audit + `HANDOFF.md`): the résumé builder had **4** dead controls, not 3; and first-party code is **not** ESLint-clean (§4) — only the audited features are.
 - 🔧 **Security (ERROR): closed the `v_student_ats_inputs` cross-user résumé-data leak** (set `security_invoker`, revoked anon) — ATS feature verified still working.
 - 🔧 Security: pinned `search_path` on 13 DB functions (cleared 11 warnings).
 - 🔧 **Security (auth hardening, this pass): fully locked down `delete_user()`** (revoked PUBLIC + anon, granted authenticated — verified `anon_can_exec=false`), and **revoked all client EXECUTE on the trigger/internal `SECURITY DEFINER` functions** `handle_new_user`, `protect_profile_fields`, `rls_auto_enable` (triggers still fire; no RPC surface left). Reviewed `get_user_role` and deliberately kept it callable by `authenticated` (used in 11 RLS policies; only returns the caller's own role). All verified with `has_function_privilege`.
