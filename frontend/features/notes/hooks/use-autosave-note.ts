@@ -71,7 +71,16 @@ export function useAutosaveNote({
     }
   }, [])
 
-  const persist = useCallback(
+  // Persists run one at a time. `noteIdRef` is written synchronously the
+  // moment a draft row exists, which is enough for *sequential* saves — but
+  // not for overlapping ones: a debounce tick that has already called
+  // createNote is still awaiting the network when flush() runs on close, and
+  // both would see a null id and create their own row. Chaining means the
+  // second save starts only once the first has recorded the id, and so
+  // updates that row instead of duplicating the note.
+  const queueRef = useRef<Promise<void>>(Promise.resolve())
+
+  const runPersist = useCallback(
     async (nextTitle: string, nextContent: string) => {
       const trimmedEmpty = !nextTitle.trim() && !nextContent.trim()
 
@@ -126,6 +135,19 @@ export function useAutosaveNote({
       }
     },
     [source, opportunityId, applicationId, folderId, onSaved, onDeleted, setNoteId]
+  )
+
+  /** Queues a save behind any still-running one, and resolves when it is done. */
+  const persist = useCallback(
+    (nextTitle: string, nextContent: string) => {
+      const queued = queueRef.current.then(() => runPersist(nextTitle, nextContent))
+      // Swallowed on the shared chain only: runPersist already reports failure
+      // through `status`, and a rejection left here would break every later
+      // save queued behind it.
+      queueRef.current = queued.catch(() => {})
+      return queued
+    },
+    [runPersist]
   )
 
   const scheduleSave = useCallback(
