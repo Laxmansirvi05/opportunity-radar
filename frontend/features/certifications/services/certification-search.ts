@@ -55,6 +55,14 @@ function stripLinkStatus(c: Certification & { link_status: number | null }): Cer
  * is safe to call straight from the browser client like the existing
  * opportunities search does.
  *
+ * Search matches the `fts` tsvector (title + provider + description + topics,
+ * backed by `idx_certifications_fts`) so a term that only appears in a cert's
+ * topics/description — e.g. searching "kubernetes" and surfacing an Azure
+ * course that teaches it — is found, not just title/provider hits. The `fts`
+ * branch is OR-ed with `title`/`provider` ilike so typing a partial word
+ * ("kube") still matches as-you-type, which stemmed full-text alone would
+ * not. Mirrors the opportunities search (opportunity-service.ts).
+ *
  * Duration is NOT filtered here — there is no stored numeric/bucket column
  * for it (see features/certifications/lib/duration.ts) — callers apply that
  * client-side to whatever page comes back.
@@ -67,9 +75,19 @@ export async function fetchCertificationsPage(
 ): Promise<CertificationPageResult> {
   let q = supabase.from('certifications').select(SELECT_COLUMNS, { count: 'exact' }).or(DEAD_LINK_FILTER)
 
-  const term = sanitizeFilterTerm(filters.query)
-  if (term) {
-    q = q.or(`title.ilike.%${term}%,provider.ilike.%${term}%`)
+  const rawTerm = filters.query.trim()
+  if (rawTerm) {
+    // Full-text value is quoted inside the .or() expression, so doubling any
+    // embedded quotes is enough there; the ilike patterns are unquoted and
+    // cannot be escaped, so their separators are stripped by sanitizeFilterTerm.
+    const safeQ = rawTerm.replace(/"/g, '""')
+    const safeTerm = sanitizeFilterTerm(filters.query)
+    const conditions = [`fts.plfts(english)."${safeQ}"`]
+    if (safeTerm.length > 0) {
+      conditions.push(`title.ilike.%${safeTerm}%`)
+      conditions.push(`provider.ilike.%${safeTerm}%`)
+    }
+    q = q.or(conditions.join(','))
   }
   if (filters.price === 'free') q = q.eq('is_free', true)
   if (filters.price === 'paid') q = q.eq('is_free', false)
