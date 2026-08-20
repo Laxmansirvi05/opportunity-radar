@@ -1,5 +1,25 @@
 import { NextResponse } from 'next/server'
+import { type EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { safeNextPath } from '@/lib/auth/safe-next-path'
+
+/**
+ * The OTP types this callback will act on. Supabase's `verifyOtp` accepts the
+ * `type` straight from the query string, so it is checked against this list
+ * rather than cast — an unknown value now fails as a clean "invalid link"
+ * instead of reaching the client as a malformed request.
+ */
+const VERIFIABLE_OTP_TYPES: readonly EmailOtpType[] = [
+  'signup',
+  'email',
+  'recovery',
+  'invite',
+  'email_change',
+]
+
+function isVerifiableOtpType(value: string): value is EmailOtpType {
+  return (VERIFIABLE_OTP_TYPES as readonly string[]).includes(value)
+}
 
 /**
  * Unified auth callback handler.
@@ -46,28 +66,13 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/forgot-password?verified=true`)
       }
 
-      const forwardedHost = request.headers.get('x-forwarded-host')
-      const isLocalEnv = process.env.NODE_ENV === 'development'
-
-      // Ensure 'next' is a valid internal relative path
-      // Reject any path starting with // (protocol-relative) or http (absolute)
-      const isSafePath = next.startsWith('/') && !next.startsWith('//') && !next.startsWith('\\')
-      const safeNext = isSafePath ? next : '/dashboard'
-
-      // Only trust x-forwarded-host in production if it matches our Vercel domain or allowed domains
-      const allowedHosts = [
-        'opportunity-radar.com',
-        'www.opportunity-radar.com',
-        'opportunity-radar.vercel.app'
-      ]
-
-      if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${safeNext}`)
-      } else if (forwardedHost && allowedHosts.includes(forwardedHost)) {
-        return NextResponse.redirect(`https://${forwardedHost}${safeNext}`)
-      } else {
-        return NextResponse.redirect(`${origin}${safeNext}`)
-      }
+      // `origin` is this deployment's own origin, so redirecting relative to it
+      // is correct on every alias (branch previews, the production alias, and
+      // localhost) without maintaining a hostname allowlist. The previous
+      // allowlist named three domains this project has never deployed to, so
+      // its x-forwarded-host branch could never fire and every request already
+      // fell through to exactly this line.
+      return NextResponse.redirect(`${origin}${safeNextPath(next)}`)
     }
     // Code exchange failed — fall through to error redirect
     return NextResponse.redirect(
@@ -77,18 +82,20 @@ export async function GET(request: Request) {
 
   // Flow 2: Token hash verification (email verification / recovery)
   if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: type as 'signup' | 'email' | 'recovery' | 'invite',
-    })
+    if (!isVerifiableOtpType(type)) {
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent('Invalid authentication link')}`
+      )
+    }
+
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type })
     if (!error) {
-      // For recovery type, redirect to a password reset page if it exists,
-      // otherwise dashboard
+      // Recovery hands off to the "set a new password" step; every other type
+      // is now a live session, so honour where the user was headed.
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/forgot-password?verified=true`)
       }
-      // Email verified — session is now active, go to dashboard
-      return NextResponse.redirect(`${origin}/dashboard`)
+      return NextResponse.redirect(`${origin}${safeNextPath(next)}`)
     }
     // Verification failed
     return NextResponse.redirect(
