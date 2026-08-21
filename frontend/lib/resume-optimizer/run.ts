@@ -7,6 +7,7 @@ import type { ParsedResume } from '@/types/resume'
 import { decideTier, tierPlan, deriveSuggestions, suggestionCountForScore, type OptimizationTier, type Suggestion } from './tiers'
 import { generatePolishedResume, generateTargetResume } from './generate'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { floorPolishedScore, floorTargetScore } from './variant-score'
 
 /**
  * Orchestrates a full optimisation run.
@@ -122,7 +123,7 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
         const polishedReport = calculateAtsV2Score(structuredJd, polishedEval.data, gen.resume)
         result.polishedResume = gen.resume
         result.polishedReport = polishedReport
-        result.polishedScore = Math.round(polishedReport.overallScore)
+        result.polishedScore = floorPolishedScore(baselineScore, polishedReport.overallScore) ?? undefined
       } else {
         result.warning = 'A polished resume was generated but could not be scored, so it is not shown. Your baseline score above is still accurate.'
       }
@@ -148,7 +149,7 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
     })
     if (targetOutcome.success) {
       result.targetResume = targetOutcome.resume
-      result.targetScore = targetOutcome.score
+      result.targetScore = floorTargetScore(baselineScore, result.polishedScore, targetOutcome.score) ?? undefined
       result.targetReport = targetOutcome.report
     } else if (!result.warning) {
       result.warning = targetOutcome.error

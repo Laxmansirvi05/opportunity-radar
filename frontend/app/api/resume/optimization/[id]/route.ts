@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { runTargetGeneration } from '@/lib/resume-optimizer/run'
 import { targetResumeUnlocked, tierPlan, type Suggestion, type OptimizationTier } from '@/lib/resume-optimizer/tiers'
 import type { ParsedResume } from '@/types/resume'
+import { floorTargetScore } from '@/lib/resume-optimizer/variant-score'
 
 // ---------------------------------------------------------------------------
 // GET /api/resume/optimization/[id]
@@ -112,7 +113,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (outcome.success) {
       update.target_resume = outcome.resume
-      update.target_score = outcome.score
+      // Same floor as the run that created this record — Resume B is unlocked
+      // here, after the checklist is confirmed, so it must not be scored by a
+      // different rule than the one applied at creation time.
+      update.target_score = floorTargetScore(
+        run.baseline_score as number,
+        run.polished_score as number | null,
+        outcome.score
+      )
     } else {
       warning = outcome.error
       if (outcome.partialResume) {
