@@ -49,18 +49,24 @@ describe('selectCertificationTargets', () => {
     expect(selectCertificationTargets(many, 10).length).toBe(MAX_CERTIFICATION_CARDS)
   })
 
-  /** A project gap is closed by building something, not by enrolling. */
-  it('ignores gaps a course cannot close', () => {
+  /**
+   * Regression: `project` was excluded at first, on the reasoning that
+   * building closes it rather than enrolling. But typeForCategory maps
+   * technical_capability and tooling_environment — most of a backend job
+   * description — onto `project`, so a real backend resume produced no
+   * certifications at all.
+   */
+  it('includes technical gaps, which arrive typed as project', () => {
     const targets = selectCertificationTargets(
       [
-        gap({ type: 'project', requirement: 'Portfolio project' }),
-        gap({ type: 'course', requirement: 'Docker' }),
+        gap({ type: 'project', requirement: 'Docker' }),
+        gap({ type: 'project', requirement: 'MongoDB' }),
         gap({ type: 'certification', requirement: 'AWS' }),
         gap({ type: 'education', requirement: 'Statistics' }),
       ],
       50
     )
-    expect(targets).toEqual(['Docker', 'AWS', 'Statistics'])
+    expect(targets).toEqual(['Docker', 'MongoDB', 'AWS', 'Statistics'])
   })
 
   it('skips gaps the student has already ticked off', () => {
@@ -94,7 +100,12 @@ describe('selectCertificationTargets', () => {
 
   it('returns nothing when there are no gaps at all', () => {
     expect(selectCertificationTargets([], 50)).toEqual([])
-    expect(selectCertificationTargets([gap({ type: 'project' })], 50)).toEqual([])
+  })
+
+  it('returns nothing when every gap is already completed', () => {
+    expect(
+      selectCertificationTargets([gap({ completed: true }), gap({ completed: true })], 50)
+    ).toEqual([])
   })
 })
 

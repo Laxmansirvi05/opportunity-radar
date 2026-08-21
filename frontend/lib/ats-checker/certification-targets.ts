@@ -16,16 +16,18 @@ import type { GapSuggestion } from '@/features/resume-toolkit/lib/schema/resume/
 export const MAX_CERTIFICATION_CARDS = 4
 
 /**
- * Gap types a course or certification can actually close. A `project` gap is
- * closed by building something, not by enrolling in anything, so it is
- * deliberately absent.
+ * Every suggestion type is a candidate for a certification.
+ *
+ * `project` was excluded at first, on the reasoning that building something
+ * closes it rather than enrolling in something. That was wrong in practice:
+ * typeForCategory maps `technical_capability` and `tooling_environment` — most
+ * of a technical job description, things like Docker, MongoDB, JWT — onto
+ * `project`, so excluding it meant a backend resume produced no certifications
+ * at all. The two routes are complementary: the checklist above suggests
+ * building it, this offers a course on it. Requirements a student cannot act
+ * on (experience level, work authorisation) never become suggestions in the
+ * first place, so there is nothing further to filter out here.
  */
-const LEARNABLE_TYPES = new Set<GapSuggestion['type']>([
-  'course',
-  'certification',
-  'skill',
-  'education',
-])
 
 export function selectCertificationTargets(
   suggestions: GapSuggestion[],
@@ -38,7 +40,6 @@ export function selectCertificationTargets(
   const targets: string[] = []
 
   for (const suggestion of suggestions) {
-    if (!LEARNABLE_TYPES.has(suggestion.type)) continue
     // An item the student has already ticked off is not a gap any more.
     if (suggestion.completed) continue
 
