@@ -34,6 +34,8 @@ export default function HoverFooter() {
                 { name: "Tracker", href: "#feature-tracker" },
                 { name: "Global Chat", href: "#feature-global-chat" },
                 { name: "Command Ctr", href: "#feature-command-center" },
+                { name: "Resume", href: "#feature-resume" },
+                { name: "Notes", href: "#feature-notes" },
               ].map((link) => (
                 <Link key={link.name} href={link.href} className="text-sm text-slate-400 hover:text-blue-500 transition-colors duration-200">
                   {link.name}

@@ -10,23 +10,36 @@ if (typeof window !== "undefined") {
 }
 
 const features: {
+  /** Footer deep-link target. Lives on the feature so reordering the list
+   *  cannot silently point "Tracker" at the Notes card. */
+  id: string;
   title: string;
   tagline: string;
   description: string;
   image: string;
+  /**
+   * How the shot sits in the 16/10 card.
+   *
+   * "cover" is right for anything at or narrower than the card — it fills
+   * edge to edge and takes its crop from the bottom, where a screenshot
+   * trailing off reads as "there is more below". "contain" is for a shot
+   * WIDER than the card, where cover would crop the sides and cut content
+   * mid-word; it letterboxes top and bottom instead.
+   */
+  fit?: "cover" | "contain";
   highlights: string[];
-  needsCrop?: boolean;
 }[] = [
   {
+    id: "feature-search",
     title: "Search",
     tagline: "Find opportunities without searching everywhere.",
     description:
       "Search across jobs, internships, hackathons, scholarships, competitions and more with freshness, category, location, mode and skill filters.",
     image: "/search.png",
-    needsCrop: true,
     highlights: ["Fresh opportunities", "Powerful filters", "Multiple opportunity types"],
   },
   {
+    id: "feature-ai-search",
     title: "AI Search",
     tagline: "Find the opportunities that fit you.",
     description:
@@ -35,41 +48,64 @@ const features: {
     highlights: ["Resume-aware matching", "Personalized results", "AI-ranked opportunities"],
   },
   {
+    id: "feature-resume",
+    title: "AI Resume Optimizer",
+    tagline: "Turn your resume into the one they shortlist.",
+    description:
+      "Build or import a resume, score it against a real job description, and get gap-derived suggestions plus the certifications that close them.",
+    image: "/resume_optimizer.png",
+    highlights: ["Real ATS score", "Gap-derived suggestions", "Career insights"],
+  },
+  {
+    id: "feature-tracker",
     title: "Application Tracker",
     tagline: "Know exactly where every application stands.",
     description:
       "Track opportunities from saved and applied through interviewing, offers and completed outcomes in one visual workflow.",
     image: "/application_tracker.png",
-    needsCrop: true,
     highlights: ["Kanban workflow", "Application stages", "Deadline visibility"],
   },
   {
+    id: "feature-notes",
+    title: "Notes",
+    tagline: "Keep every detail of your search in one place.",
+    description:
+      "Capture interview prep, company research and revision notes in colour-coded folders, with pinning, sharing, attachments and full-text search.",
+    image: "/notes.png",
+    highlights: ["Colour-coded folders", "Pin, share and archive", "Search across notes"],
+  },
+  {
+    id: "feature-command-center",
     title: "Command Center",
     tagline: "Know what deserves your attention next.",
     description:
       "Bring career progress, saved opportunities, applications, interviews and urgent actions into one focused control center.",
     image: "/command_center.png",
-    needsCrop: true,
     highlights: ["Priority actions", "Career overview", "Urgent alerts"],
   },
   {
+    id: "feature-certifications",
     title: "Certifications",
     tagline: "Build the skills your opportunities demand.",
     description:
       "Discover relevant courses and certifications using filters for price, level, duration and provider.",
     image: "/certification.png",
-    needsCrop: true,
     highlights: ["Skill discovery", "Provider filters", "Structured learning options"],
   },
   {
+    id: "feature-ai-interview",
     title: "AI Interview",
     tagline: "Practice before the real interview.",
     description:
       "Simulate a live interview with an AI interviewer, respond in real time and build confidence before speaking with recruiters.",
     image: "/ai_interview.png",
+    // 1.92 against the card's 1.60 — cover would slice 17% off the width and
+    // cut the transcript text mid-sentence on both edges.
+    fit: "contain",
     highlights: ["Live AI interviewer", "Real-time transcript", "Interview practice"],
   },
   {
+    id: "feature-global-chat",
     title: "Global Chat",
     tagline: "You are not building your career alone.",
     description:
@@ -86,14 +122,19 @@ export default function SceneThree() {
   const rightTextsRef = useRef<(HTMLDivElement | null)[]>([]);
   const titlesRef = useRef<(HTMLDivElement | null)[]>([]);
 
+  /** Hand-offs between cards — one fewer than the number of cards. */
+  const segmentCount = features.length - 1;
+
   useGSAP(
     () => {
-      // We want to scrub through 6 segments
+      // One segment per hand-off between cards, derived from the list rather
+      // than hardcoded — this was `6` and `+=700%` for seven features, so
+      // adding one silently left the last card unreachable.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: containerRef.current,
           start: "top top",
-          end: "+=700%", // Slightly longer for smoother transitions
+          end: `+=${features.length * 100}%`,
           scrub: true,
         },
       });
@@ -146,8 +187,8 @@ export default function SceneThree() {
         });
       });
 
-      // Add animations for each segment (0 to 5)
-      for (let s = 0; s < 6; s++) {
+      // Add animations for each segment
+      for (let s = 0; s < segmentCount; s++) {
         features.forEach((_, i) => {
           const d = i - (s + 1); // distance of card i from active position
           
@@ -238,25 +279,19 @@ export default function SceneThree() {
     { scope: containerRef }
   );
 
-  const featureIds = [
-    "feature-search",
-    "feature-ai-search",
-    "feature-tracker",
-    "feature-command-center",
-    "feature-certifications",
-    "feature-ai-interview",
-    "feature-global-chat"
-  ];
-
   return (
-    <section ref={containerRef} className="relative w-full h-[800vh] bg-transparent">
+    <section
+      ref={containerRef}
+      className="relative w-full bg-transparent"
+      style={{ height: `${(features.length + 1) * 100}vh` }}
+    >
       {/* Navigation Anchors for Footer Links */}
-      {features.map((_, i) => (
-        <div 
-          key={`anchor-${i}`} 
-          id={featureIds[i]} 
-          className="absolute w-full h-px pointer-events-none" 
-          style={{ top: `${(i / 6) * 700}vh` }} 
+      {features.map((f, i) => (
+        <div
+          key={f.id}
+          id={f.id}
+          className="absolute w-full h-px pointer-events-none"
+          style={{ top: `${(i / segmentCount) * features.length * 100}vh` }}
         />
       ))}
 
@@ -329,12 +364,9 @@ export default function SceneThree() {
                   <img
                     src={feature.image}
                     alt={feature.title}
-                    className="w-full h-full object-contain bg-white"
-                    style={
-                      feature.needsCrop
-                        ? { transform: "scale(1.06)", transformOrigin: "center bottom" }
-                        : {}
-                    }
+                    className={`w-full h-full bg-white ${
+                      feature.fit === "contain" ? "object-contain" : "object-cover object-top"
+                    }`}
                   />
                 </div>
               ))}
