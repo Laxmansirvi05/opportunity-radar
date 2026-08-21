@@ -228,3 +228,54 @@ async function finalize(
 
   return report ?? null
 }
+
+/**
+ * DELETE /api/interview/:sessionId — remove one interview and its report.
+ *
+ * The ownership filter is the access control, as in GET above: the id alone
+ * proves nothing. interview_reports.session_id is ON DELETE CASCADE, so the
+ * report goes with the session and there is nothing to clean up separately.
+ *
+ * Requires the DELETE grant and policy added in
+ * 20260821090000_interview_sessions_delete.sql — this table shipped without
+ * either, so before that migration is applied every delete here matches zero
+ * rows and returns a 404 rather than appearing to succeed.
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ sessionId: string }> }
+) {
+  const { sessionId } = await params
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Please sign in.' } }, { status: 401 })
+  }
+
+  const { data: deleted, error } = await supabase
+    .from('interview_sessions')
+    .delete()
+    .eq('id', sessionId)
+    .eq('user_id', user.id)
+    .select('id')
+
+  if (error) {
+    console.error('[Interview] Failed to delete session:', error)
+    return NextResponse.json(
+      { error: { code: 'DELETE_FAILED', message: 'Could not delete this interview. Please try again.' } },
+      { status: 500 }
+    )
+  }
+
+  // No rows removed means it was already gone, never theirs, or the policy
+  // is not in place yet — none of which should read as success.
+  if (!deleted || deleted.length === 0) {
+    return NextResponse.json(
+      { error: { code: 'SESSION_NOT_FOUND', message: messageForCode('SESSION_NOT_FOUND') } },
+      { status: 404 }
+    )
+  }
+
+  return NextResponse.json({ success: true })
+}
