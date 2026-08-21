@@ -97,21 +97,39 @@ export function AtsResults({
               title="Matched Requirements"
               type="success"
               icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-              reqs={atsV2.score.requirements.filter(r => r.satisfaction === 'complete' || r.satisfaction === 'substantial')}
+              reqs={atsV2.score.requirements.filter(r => r.evaluated !== false && (r.satisfaction === 'complete' || r.satisfaction === 'substantial'))}
             />
             <RequirementsList
               title="Partial Matches"
               type="warning"
               icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
-              reqs={atsV2.score.requirements.filter(r => r.satisfaction === 'partial')}
+              reqs={atsV2.score.requirements.filter(r => r.evaluated !== false && r.satisfaction === 'partial')}
             />
             <RequirementsList
               title="Critical Gaps"
               type="error"
               icon={<XCircle className="h-4 w-4 text-red-500" />}
-              reqs={atsV2.score.requirements.filter(r => r.satisfaction === 'none' || r.satisfaction === 'insufficient')}
+              reqs={atsV2.score.requirements.filter(r => r.evaluated !== false && (r.satisfaction === 'none' || r.satisfaction === 'insufficient'))}
             />
           </div>
+
+          {/* Not assessed — surfaced rather than hidden. These are neither
+              matches nor gaps: the evaluator returned no result for them, so
+              the honest thing is to say so and leave them out of the score. */}
+          {atsV2.score.requirements.some(r => r.evaluated === false) && (
+            <div className="rounded-md border border-outline-variant bg-surface-container-low p-4 text-sm">
+              <p className="font-semibold text-on-background">
+                Not assessed ({atsV2.score.requirements.filter(r => r.evaluated === false).length})
+              </p>
+              <p className="text-on-surface-variant mt-1">
+                The evidence evaluator returned no result for these, so they are not counted as
+                gaps and do not affect your score. Re-running the check usually covers them.
+              </p>
+              <p className="text-on-surface-variant mt-2">
+                {atsV2.score.requirements.filter(r => r.evaluated === false).map(r => r.requirementName).join(' · ')}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

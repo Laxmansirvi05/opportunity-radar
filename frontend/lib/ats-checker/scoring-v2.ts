@@ -124,8 +124,17 @@ export function calculateAtsV2Score(
 
     const scored = scoreRequirement(req, ev)
     reqScores.push(scored)
-    totalWeightedScore += scored.weightedScore
-    totalMaxWeight += scored.maxWeightedScore
+
+    // Only requirements that were actually assessed move the score. A
+    // requirement the evaluator never returned used to land in the
+    // denominator at full weight with a zero numerator, so an evaluator that
+    // ran out of output tokens read as a resume missing everything it had not
+    // reached — the student was marked down for our truncation. It is still
+    // listed (as "not assessed") and still lowers the reported coverage.
+    if (ev) {
+      totalWeightedScore += scored.weightedScore
+      totalMaxWeight += scored.maxWeightedScore
+    }
   }
 
   const capabilityScore =

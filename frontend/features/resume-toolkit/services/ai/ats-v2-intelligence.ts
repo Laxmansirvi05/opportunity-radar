@@ -9,6 +9,7 @@ import {
 } from '../../lib/schema/resume/ats-v2'
 import { buildJDExtractionPrompt, buildATSv2EvidenceMatrixPrompt } from './ats-v2-prompts'
 import { sanitizeEvidenceMatrix } from './ats-v2-hallucination-guard'
+import { getJdRequirements } from '@/lib/ats-checker/jd-requirements'
 
 /** Caught values are `unknown`; surface a message without assuming an Error. */
 function errorMessage(error: unknown): string {
@@ -265,6 +266,16 @@ export async function evaluateResumeEvidence(
 ): Promise<IntelligenceResult<EvidenceMatrix>> {
   const { systemPrompt, userPrompt } = buildATSv2EvidenceMatrixPrompt(resume, structuredJd)
 
+  // One evaluation object — satisfaction, strength, evidence references with
+  // their quoted text, reasoning — runs to roughly 200 output tokens, so a
+  // flat 3500 silently truncated any job description with more than about a
+  // dozen requirements. Observed live: a 32-requirement backend JD came back
+  // with 14 evaluations (44% coverage), and because jsonrepair patches the
+  // cut-off JSON the loss looked like a resume missing 19 skills rather than
+  // a response that stopped early. Budget by the work actually asked for.
+  const requirementCount = getJdRequirements(structuredJd).length
+  const evidenceMaxTokens = Math.min(16000, Math.max(3500, 900 + requirementCount * 260))
+
   const validator = (responseContent: string) => {
     try {
       const repaired = jsonrepair(responseContent)
@@ -280,7 +291,7 @@ export async function evaluateResumeEvidence(
     {
       systemPrompt,
       userPrompt,
-      maxTokens: 3500,
+      maxTokens: evidenceMaxTokens,
       temperature: 0.0,
       outputFormat: 'json',
     },

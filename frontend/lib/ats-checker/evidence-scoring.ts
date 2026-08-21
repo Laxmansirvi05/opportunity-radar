@@ -71,11 +71,13 @@ export function scoreRequirement(
       evidenceStrength: 'none',
       bestEvidenceType: null,
       hasQuantifiedImpact: false,
-      gapReason: 'No evaluation provided for this requirement.',
-      semanticReasoning: 'Unevaluated requirement defaulted to 0 score.',
+      gapReason: null,
+      semanticReasoning: 'Not assessed — the evidence evaluator returned no result for this requirement.',
+      evaluated: false,
     }
   }
 
+  // Everything below this point had a real evaluation to work from.
   const satFactor = SATISFACTION_FACTORS[evaluation.satisfaction] ?? 0
   const strFactor = STRENGTH_FACTORS[evaluation.evidenceStrength] ?? 0
 
@@ -126,5 +128,6 @@ export function scoreRequirement(
     hasQuantifiedImpact: hasImpact,
     gapReason: evaluation.gapReason || null,
     semanticReasoning: evaluation.semanticReasoning || '',
+    evaluated: true,
   }
 }

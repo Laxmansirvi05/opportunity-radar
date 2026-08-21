@@ -42,7 +42,13 @@ describe('scoreRequirement — no evaluation', () => {
     expect(result.rawScore).toBe(0)
     expect(result.weightedScore).toBe(0)
     expect(result.satisfaction).toBe('none')
-    expect(result.gapReason).toMatch(/no evaluation/i)
+    // gapReason is now null: a gap reason describes why the resume fell
+    // short, and nothing here fell short — it was never looked at. The
+    // distinction is carried by `evaluated`, which keeps these out of the
+    // Critical Gaps list and out of the score's denominator.
+    expect(result.gapReason).toBeNull()
+    expect(result.evaluated).toBe(false)
+    expect(result.semanticReasoning).toMatch(/not assessed/i)
   })
 })
 

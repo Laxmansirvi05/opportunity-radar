@@ -64,6 +64,15 @@ export const requirementScoreSchema = z.object({
   hasQuantifiedImpact: z.boolean(),
   gapReason: z.string().nullable().optional(),
   semanticReasoning: z.string(),
+  /**
+   * False when the evidence evaluator returned nothing for this requirement.
+   * "We did not assess this" and "the resume does not evidence this" are
+   * different findings, and showing the first as the second told students
+   * they were missing skills their resume actually listed. Optional so
+   * reports stored before this field existed still parse; treat a missing
+   * value as evaluated, which is what those older rows meant.
+   */
+  evaluated: z.boolean().optional(),
 });
 
 export const resumeQualityScoreSchema = z.object({

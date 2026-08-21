@@ -151,3 +151,69 @@ describe('ATS V2 Deterministic Scoring Engine', () => {
     expect(['exceptional', 'strong', 'moderate', 'partial', 'weak', 'poor']).toContain(score.band)
   })
 })
+
+/**
+ * The evidence evaluator can return fewer evaluations than there are
+ * requirements — most often because its output was truncated. Observed live:
+ * a 32-requirement backend JD came back with 14 evaluations, and every
+ * requirement the model never reached was scored as a hard zero *inside the
+ * denominator*. The resume was marked down for our truncation, and the
+ * untouched requirements were then listed to the student as Critical Gaps.
+ */
+describe('calculateAtsV2Score — requirements the evaluator never returned', () => {
+  const twoRequirements: StructuredJD = {
+    roleTitle: 'Backend Engineer',
+    requirements: [
+      { id: 'req_react', name: 'React', category: 'technical_capability', importance: 'critical', provenance: { exactQuote: 'React', context: null } },
+      { id: 'req_redis', name: 'Redis', category: 'technical_capability', importance: 'critical', provenance: { exactQuote: 'Redis', context: null } },
+    ],
+  } as StructuredJD
+
+  /** Only the first requirement comes back, and it is fully satisfied. */
+  const halfEvaluated: EvidenceMatrix = {
+    evaluations: [
+      {
+        capabilityId: 'req_react',
+        satisfaction: 'complete',
+        evidenceStrength: 'strong',
+        evidenceReferences: [
+          {
+            evidenceId: 'e1',
+            sourceSection: 'experience',
+            exactText: 'Built scalable UI components in React',
+            evidenceType: 'professional_experience',
+            quantifiedImpact: null,
+            recency: null,
+            confidence: 0.9,
+          },
+        ],
+        confidence: 0.9,
+        semanticReasoning: 'Demonstrated in professional experience.',
+      },
+    ],
+  } as EvidenceMatrix
+
+  it('does not let an unevaluated requirement drag the capability score down', () => {
+    const result = calculateAtsV2Score(twoRequirements, halfEvaluated, mockResume)
+    // One of two requirements was assessed, and it was fully met. Scoring the
+    // unassessed one as a zero would roughly halve this.
+    expect(result.capabilityScore).toBeGreaterThan(80)
+  })
+
+  it('marks the unevaluated requirement so it is not shown as a gap', () => {
+    const result = calculateAtsV2Score(twoRequirements, halfEvaluated, mockResume)
+    const redis = result.requirements.find((r) => r.requirementId === 'req_redis')
+    expect(redis?.evaluated).toBe(false)
+    // A gap reason would be a claim about the resume that was never checked.
+    expect(redis?.gapReason).toBeNull()
+
+    const react = result.requirements.find((r) => r.requirementId === 'req_react')
+    expect(react?.evaluated).toBe(true)
+  })
+
+  it('still reports the shortfall as reduced coverage', () => {
+    const result = calculateAtsV2Score(twoRequirements, halfEvaluated, mockResume)
+    expect(result.confidence.evaluationCoverage).toBe(0.5)
+    expect(result.confidence.unevaluatedRequirements).toContain('req_redis')
+  })
+})
