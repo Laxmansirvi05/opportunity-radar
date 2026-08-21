@@ -11,7 +11,7 @@ import type { AIProvider } from '@/types/ai'
  */
 const KEY_ENV_VARS: Record<AIProvider, string[]> = {
   gemini: ['GOOGLE_GENERATIVE_AI_API_KEY', 'GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_API_KEY_3', 'GEMINI_API_KEY_4'],
-  groq: ['GROQ_API_KEY', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'],
+  groq: ['GROQ_API_KEY', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4', 'GROQ_API_KEY_5'],
   openrouter: ['OPENROUTER_API_KEY', 'OPENROUTER_API_KEY_2', 'OPENROUTER_API_KEY_3', 'OPENROUTER_API_KEY_4'],
   ollama: ['OLLAMA_API_KEY', 'OLLAMA_API_KEY_2'],
   cloudflare: ['CLOUDFLARE_API_TOKEN'],

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import {
   getSession,
   triggerScore,
@@ -253,7 +254,56 @@ export async function DELETE(
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Please sign in.' } }, { status: 401 })
   }
 
-  const { data: deleted, error } = await supabase
+  // Ownership is settled first, through the USER's client, so the row has to
+  // survive interview_sessions' own SELECT policy before anything is removed.
+  // This is the real access check — not the id, which is unguessable but not
+  // ownership-bound (same reasoning as the GET handler above).
+  const { data: owned, error: lookupError } = await supabase
+    .from('interview_sessions')
+    .select('id')
+    .eq('id', sessionId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (lookupError) {
+    console.error('[Interview] Failed to load session before delete:', lookupError)
+    return NextResponse.json(
+      { error: { code: 'DELETE_FAILED', message: 'Could not delete this interview. Please try again.' } },
+      { status: 500 }
+    )
+  }
+
+  if (!owned) {
+    return NextResponse.json(
+      { error: { code: 'SESSION_NOT_FOUND', message: messageForCode('SESSION_NOT_FOUND') } },
+      { status: 404 }
+    )
+  }
+
+  // The delete itself runs service-side.
+  //
+  // interview_sessions shipped with SELECT/INSERT/UPDATE policies and grants
+  // but nothing for DELETE, so the same statement issued through the user's
+  // client is refused by the grant (500) or matches zero rows for want of a
+  // policy (404) — either way the row survives and the button appears broken.
+  // supabase/migrations/20260821090000_interview_sessions_delete.sql fixes
+  // that properly and should still be applied; this path is what makes the
+  // feature work on a database where it has not been.
+  //
+  // Safe because the ownership check above already passed under RLS, and the
+  // filter below is still scoped to this user — never widen it to id alone.
+  const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceUrl || !serviceKey) {
+    console.error('[Interview] Cannot delete session: service credentials are not configured')
+    return NextResponse.json(
+      { error: { code: 'DELETE_FAILED', message: 'Could not delete this interview. Please try again.' } },
+      { status: 500 }
+    )
+  }
+
+  const admin = createServiceClient(serviceUrl, serviceKey)
+  const { data: deleted, error } = await admin
     .from('interview_sessions')
     .delete()
     .eq('id', sessionId)
@@ -268,8 +318,8 @@ export async function DELETE(
     )
   }
 
-  // No rows removed means it was already gone, never theirs, or the policy
-  // is not in place yet — none of which should read as success.
+  // interview_reports.session_id is ON DELETE CASCADE, so the report went with
+  // it. Zero rows here would mean it vanished between the check and the delete.
   if (!deleted || deleted.length === 0) {
     return NextResponse.json(
       { error: { code: 'SESSION_NOT_FOUND', message: messageForCode('SESSION_NOT_FOUND') } },

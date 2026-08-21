@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { denyIfNotCron } from '@/lib/cron-auth';
 import { verifySchema, formatReport } from '@/lib/schema-guard';
+import { checkAgents } from '@/lib/agent-health';
 
 export async function GET(request: Request) {
   // Security: Protect health endpoint with same Bearer token used by other cron routes
@@ -27,6 +28,16 @@ export async function GET(request: Request) {
       console.error(formatReport(schema));
     }
 
+    // External agents. The schema guard covers the database; these two
+    // services are the other half of what the AI features need, and nothing
+    // was watching them.
+    const agents = await checkAgents();
+    if (!agents.healthy) {
+      for (const p of agents.probes.filter((x) => !x.reachable)) {
+        console.error(`[AgentHealth] ${p.name}: ${p.detail}`);
+      }
+    }
+
     // Fetch the most recent run from ingestion logs
     const { data: recentLogs, error } = await supabase
       .from('ingestion_logs')
@@ -41,6 +52,11 @@ export async function GET(request: Request) {
     // Schema drift is reported on every path, and it alone can turn the
     // endpoint 'degraded' — ingestion can look perfectly healthy while a
     // missing table has three features dead.
+    const agentBlock = {
+      healthy: agents.healthy,
+      probes: agents.probes,
+    };
+
     const schemaBlock = {
       healthy: schema.healthy,
       checked: schema.checks.length,
@@ -51,12 +67,13 @@ export async function GET(request: Request) {
 
     if (!recentLogs || recentLogs.length === 0) {
       return NextResponse.json({
-        status: schema.healthy ? 'healthy' : 'degraded',
+        status: schema.healthy && agents.healthy ? 'healthy' : 'degraded',
         last_refresh_timestamp: null,
         provider_count: 0,
         last_ingestion_status: 'No runs recorded',
         schema: schemaBlock,
-      }, { status: schema.healthy ? 200 : 503 });
+        agents: agentBlock,
+      }, { status: schema.healthy && agents.healthy ? 200 : 503 });
     }
 
     // Determine when the last run started (grouping by closest timestamp)
@@ -76,12 +93,13 @@ export async function GET(request: Request) {
     const hasFailures = recentBatch.some(log => log.status === 'FAILED');
 
     return NextResponse.json({
-      status: schema.healthy ? 'healthy' : 'degraded',
+      status: schema.healthy && agents.healthy ? 'healthy' : 'degraded',
       last_refresh_timestamp: latestTimestamp,
       provider_count: uniqueProviders.size,
       last_ingestion_status: hasFailures ? 'Failed (Partial)' : 'Success',
       schema: schemaBlock,
-    }, { status: schema.healthy ? 200 : 503 });
+      agents: agentBlock,
+    }, { status: schema.healthy && agents.healthy ? 200 : 503 });
 
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
