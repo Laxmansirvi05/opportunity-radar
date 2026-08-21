@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { RotateCcw, Lightbulb, Rocket, CheckCircle2, AlertTriangle, XCircle, ShieldAlert, GraduationCap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { AtsCheckResponse, AtsCategoryScore, AtsV2Score, RequirementScore } from "../../lib/schema/resume/ats-check"
+import { RecommendedCertifications } from './recommended-certifications'
 
 export function AtsResults({
   result,
@@ -152,6 +153,15 @@ export function AtsResults({
           what's missing for the same resume + job description. */}
       {suggestions.length > 0 && (
         <SuggestionsCard suggestions={suggestions} title={targetRole ? `Closing the gap for ${targetRole}` : 'Suggested improvements'} />
+      )}
+
+      {/* Real certifications from the catalogue, matched to the gaps above.
+          Renders nothing when no genuine match exists. */}
+      {suggestions.length > 0 && (
+        <RecommendedCertifications
+          suggestions={suggestions}
+          score={atsV2 ? atsV2.score.overallScore : readiness.score}
+        />
       )}
 
       {coaching && coaching.powerWords.length > 0 && (
