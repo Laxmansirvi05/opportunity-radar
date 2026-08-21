@@ -23,6 +23,27 @@ export async function loginAction(formData: FormData) {
 
   if (error) {
     if (error.message.includes('Invalid login credentials')) {
+      // Supabase returns this same error for a wrong password AND for an
+      // account that only has a social login (no password was ever set), to
+      // avoid leaking which. That dead-ends our Google-first users: their
+      // account exists but password login can never succeed. Ask the database
+      // which case this is — only after the password attempt has already
+      // failed — so we can point them back to Google instead.
+      const { data: hint } = await supabase.rpc('login_hint_for_email', {
+        p_email: email,
+      })
+      if (hint === 'google') {
+        return {
+          error:
+            'This email is registered with Google. Use the “Continue with Google” button above to sign in.',
+        }
+      }
+      if (hint === 'oauth') {
+        return {
+          error:
+            'This email is registered through a social login. Use the social sign-in option above.',
+        }
+      }
       return { error: 'Invalid email or password. Please try again.' }
     } else if (error.message.includes('rate limit')) {
       return { error: 'Too many attempts. Please try again later.' }
