@@ -287,7 +287,23 @@ export function InterviewSession({ sessionId, personaId }: { sessionId: string; 
   }
 
   if (phase === 'live' && liveKit) {
-    return <LiveRoom token={liveKit.token} serverUrl={liveKit.url} personaId={personaId} onEnded={handleEnded} />
+    // The live room takes the whole viewport rather than sitting inside the
+    // page's centred max-w-4xl column: a call UI wants the screen, and on a
+    // laptop the two-pane layout is cramped at 896px. Fixed rather than a
+    // width override because the clamp lives in the parent server component,
+    // which cannot know the phase.
+    return (
+      <div className="fixed inset-0 z-50 bg-surface p-2 sm:p-3 md:p-4">
+        <LiveRoom
+          token={liveKit.token}
+          serverUrl={liveKit.url}
+          personaId={personaId}
+          roleTitle={meta.role}
+          company={meta.company}
+          onEnded={handleEnded}
+        />
+      </div>
+    )
   }
 
   if (phase === 'scoring') {
