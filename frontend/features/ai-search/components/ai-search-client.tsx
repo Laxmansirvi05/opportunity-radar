@@ -11,6 +11,7 @@ import {
   type AgentResult,
   type AgentOpportunity,
 } from '@/lib/ai-search/agent-client'
+import { matchLevelForScore } from '../lib/match-label'
 
 const POLL_MS = 15_000
 
@@ -432,6 +433,7 @@ function OpportunityCard({ o }: { o: AgentOpportunity }) {
   // gets a placeholder.
   const location = o.location?.display?.trim() || null
   const chips = [o.employment_type, o.work_mode, location].filter(Boolean) as string[]
+  const matchLevel = matchLevelForScore(o.score)
 
   return (
     <article className="ai-result-card flex h-full flex-col gap-3 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm transition-all duration-300 ease-note hover:border-primary/50 hover:shadow-md">
@@ -447,10 +449,15 @@ function OpportunityCard({ o }: { o: AgentOpportunity }) {
           <h3 className="font-bold text-on-background leading-snug">{o.title}</h3>
           <p className="text-sm text-on-surface-variant mt-0.5">{o.company}</p>
         </div>
-        <div className="shrink-0 text-right">
-          <div className="text-lg font-bold text-primary leading-none">{o.score}</div>
-          <div className="text-[10px] text-on-surface-variant uppercase tracking-wide font-semibold mt-1">Match</div>
-        </div>
+        {/* A band, not the raw score — see matchLevelForScore for why a
+            number overstated the precision of what is a model's judgement.
+            Ordering still comes from the score, so stronger matches stay on
+            top even when two cards read the same. */}
+        <span
+          className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide ${matchLevel.className}`}
+        >
+          {matchLevel.label}
+        </span>
       </div>
 
       {chips.length > 0 && (
