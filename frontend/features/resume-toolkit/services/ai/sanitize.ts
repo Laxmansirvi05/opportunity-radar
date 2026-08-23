@@ -543,7 +543,10 @@ export function sanitizeAndParseResumeJson(resultText: string): ResumeSanitizati
 		};
 
 		const repairedJson = jsonrepair(jsonString);
-		console.log("[AI_DEBUG] RAW_JSON_STRING: ", jsonString.slice(0, 500));
+		// Guard: never echo raw résumé content to the console in production.
+		if (process.env.NODE_ENV !== "production") {
+			console.log("[AI_DEBUG] RAW_JSON_STRING: ", jsonString.slice(0, 500));
+		}
 
 		const parsedJson = JSON.parse(repairedJson);
 		console.log("[AI_DEBUG] PARSED_JSON_ROOT_KEYS: ", Object.keys(parsedJson));
@@ -571,7 +574,7 @@ export function sanitizeAndParseResumeJson(resultText: string): ResumeSanitizati
 		console.log("[AI_DEBUG] SUMMARY_CONTENT:", typeof (normalizedData.summary as Record<string, unknown>)?.content === "string" ? "present" : "missing");
 		console.log("[AI_DEBUG] BASICS_HEADLINE:", (normalizedData.basics as Record<string, unknown>)?.headline || "missing");
 
-		if (diagnostics.droppedSectionItems.length > 0) {
+		if (diagnostics.droppedSectionItems.length > 0 && process.env.NODE_ENV !== "production") {
 			console.warn("[AI_DEBUG] DROPPED_ITEMS:", JSON.stringify(diagnostics.droppedSectionItems));
 		}
 

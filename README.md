@@ -1,487 +1,246 @@
+<div align="center">
+
 # 🚀 Opportunity Radar
 
-> **A Student Should Never Miss an Opportunity**
+### A student should never miss an opportunity.
 
-Opportunity Radar is a centralized opportunity aggregation platform that helps students discover internships, jobs, hackathons, workshops, scholarships, competitions, open-source programs, and career opportunities from multiple sources through a single unified platform.
+Opportunity Radar is a full-stack, AI-powered platform that helps students **discover, apply to, and prepare for** internships and early-career roles — internships, jobs, hackathons, scholarships, open-source programs and more — from many sources, in one place.
 
----
+It goes beyond aggregation: an **agentic AI Search** matches openings to your résumé, a real-time **voice Mock Interview** rehearses you and scores you out of 100, a **résumé toolkit** builds and ATS-checks your CV, and 20,000+ **certifications** help you close skill gaps.
 
-# 📌 Problem Statement
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-live-000000?logo=vercel)](https://opportunity-radar-six.vercel.app)
+[![License](https://img.shields.io/badge/License-Educational-4338CA.svg)](#-license)
 
-Students often miss valuable opportunities because information is scattered across multiple platforms.
+**[Live Demo](https://opportunity-radar-six.vercel.app)** · [Features](#-features) · [Architecture](#️-architecture) · [Getting Started](#-getting-started) · [Author](#-author)
 
-A typical student may need to browse:
-
-* Internshala
-* Unstop
-* Amazon Jobs
-* Devfolio
-* Outreachy
-* GSoC
-* Y Combinator
-* Greenhouse
-* Hack2Skill
-* LFX
-
-every day to stay updated.
-
-This process is:
-
-* Time-consuming
-* Repetitive
-* Inefficient
-* Prone to missed deadlines
-
-Opportunity Radar solves this problem by aggregating opportunities from multiple trusted sources into one searchable platform.
+</div>
 
 ---
 
-# 🎯 Vision
-
-Create a single platform where students can discover, track, and manage opportunities without visiting dozens of websites.
+![Opportunity Radar — AI Search matching internships to your résumé](frontend/public/ai_search.png)
 
 ---
 
-# ✨ Key Features
+## 📌 The problem
 
-## 🔍 Smart Opportunity Search
+Opportunities are scattered across dozens of platforms — Internshala, Unstop, Amazon Jobs, Devfolio, Outreachy, GSoC, Y Combinator, Greenhouse, LFX, Hack2Skill — and checking each one every day is slow, repetitive, and error-prone. Students miss deadlines simply because the information never reached them in time.
 
-Search across thousands of opportunities instantly.
-
-Supports:
-
-* Job titles
-* Skills
-* Companies
-* Categories
-* Keywords
-* Locations
+**Opportunity Radar solves this** by aggregating opportunities from trusted sources into one searchable platform, then layering AI on top to match, prepare, and apply.
 
 ---
 
-## 🏢 Company Pages
+## ✨ Features
 
-View opportunities grouped by company.
+Opportunity Radar is a complete student career platform — 31 pages and 50+ API routes. The headline pieces:
 
-Examples:
+### 🤖 AI Search — résumé → matched internships
+Upload a résumé and an agentic pipeline runs a multi-source web search, extracts real postings (never listing pages), scores each against your skills and experience, and returns a ranked, geographically-tiered list — **every result carries a working apply link**. Powered by a dedicated agent backend ([`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent)).
 
-* Amazon
-* Microsoft
-* Google
-* Meta
-* Startups
-* Research Organizations
+### 🎙️ Voice Mock Interview
+A real-time, voice-first mock interview with an AI recruiter — live speech-to-text, streaming captions, and a natural back-and-forth — followed by a **/100 score, model answers, and a saved report you can revisit**. Built on LiveKit with Deepgram STT, Gemini, and self-hosted Kokoro TTS.
 
----
+![Live voice mock interview with real-time transcript and scoring](frontend/public/ai_interview.png)
 
-## 📌 Bookmark System
+### 📄 Résumé Toolkit
+Build a résumé from scratch, import an existing one, run an **ATS check**, and get **AI optimisation** suggestions — an integrated, template-driven builder with live PDF export.
 
-Save opportunities for later review.
+![Résumé optimiser and ATS toolkit](frontend/public/resume_optimizer.png)
 
-Students can:
+### 🔎 Smart Opportunity Search
+Full-text PostgreSQL search across thousands of live opportunities with RPC optimisation and a rich filter rail — source, category, skills, location, remote, and company.
 
-* Bookmark opportunities
-* Manage saved items
-* Track interesting opportunities
+![Opportunity search with advanced filters](frontend/public/search.png)
 
----
+### 📊 Application Tracker
+A Kanban board (drag-and-drop across Interested → Applied → Interview → Offer → Rejected) with optimistic updates, per-application notes, bookmark sync, and a live response-rate stat.
 
-## 📊 Application Tracker
+![Kanban application tracker](frontend/public/application_tracker.png)
 
-Track application progress.
+### 🎓 Certifications Library
+**20,000+ certifications** from 138 providers — every one with a working URL and logo — with price, level, duration and provider filters, GIN-indexed full-text search, infinite scroll, and a weekly refresh + daily dead-link sweep.
 
-Possible statuses:
+![Certifications library](frontend/public/certification.png)
 
-* Interested
-* Applied
-* Interview
-* Offer
-* Rejected
+### 🧠 AI Assistant
+A grounded chat assistant that answers questions about your opportunities and applications — with an anti-fabrication guard that says "nothing matched" rather than inventing listings.
 
----
+### 📝 Notes
+A full notes workspace — folders, tags, pin/archive/trash, search, a rich editor, and public sharing.
 
-## ⏰ Deadline Tracking
+![Notes workspace](frontend/public/notes.png)
 
-Tracks:
+### 💬 Global Community Chat & Command Center
+A real-time community chat plus a personalised **Command Center** dashboard summarising your activity, deadlines, and next actions.
 
-* Published Opportunities
-* Closing Soon Opportunities
-* Expired Opportunities
+<p align="center">
+  <img src="frontend/public/command_center.png" width="49%" alt="Student Command Center dashboard" />
+  <img src="frontend/public/global_chat.png" width="49%" alt="Global community chat" />
+</p>
 
----
-
-## 🔐 Authentication
-
-Secure authentication using Supabase Auth.
-
-Supports:
-
-* Email Authentication
-* Google Authentication
+### 🔐 Authentication
+Secure Supabase Auth with email and Google sign-in, double-gated route protection (optimistic proxy + authoritative server layout), open-redirect-safe `?next=` handling, and server-side credential validation.
 
 ---
 
-## 🧠 Advanced Filtering
+## 🌐 Integrated sources
 
-Filter opportunities by:
-
-* Source
-* Category
-* Skills
-* Location
-* Remote
-* Company
-
----
-
-# 🌐 Integrated Sources
-
-Currently integrated:
-
-| Source       | Type                  |
-| ------------ | --------------------- |
-| Amazon       | Jobs                  |
-| Internshala  | Internships           |
-| Unstop       | Competitions & Jobs   |
-| Devfolio     | Hackathons            |
-| Outreachy    | Open Source Programs  |
-| GSoC         | Open Source Programs  |
-| Greenhouse   | Jobs                  |
-| LFX          | Open Source Programs  |
-| Hack2Skill   | Hackathons            |
-| Y Combinator | Startup Opportunities |
+| Source | Type |
+| --- | --- |
+| Amazon | Jobs |
+| Internshala | Internships |
+| Unstop | Competitions & Jobs |
+| Devfolio | Hackathons |
+| Outreachy | Open-source programs |
+| GSoC | Open-source programs |
+| Greenhouse | Jobs |
+| LFX | Open-source programs |
+| Hack2Skill | Hackathons |
+| Y Combinator | Startup opportunities |
 
 ---
 
-# 🏗️ System Architecture
+## 🏗️ Architecture
 
-## Frontend
+Opportunity Radar is a Next.js app backed by Supabase, with **two dedicated AI agent backends** running on Azure.
 
-Built using:
+```
+                          ┌─────────────────────────────┐
+                          │   Next.js app (Vercel)       │
+   Student ──browser────▶ │  31 pages · 50+ API routes   │
+                          │  SSR · RSC · Tailwind        │
+                          └──────┬───────────────┬───────┘
+                                 │               │
+                 ┌───────────────▼──┐      ┌─────▼──────────────────┐
+                 │  Supabase        │      │  AI agent backends     │
+                 │  Postgres + Auth │      │  (Azure VM)            │
+                 │  RLS on all      │      │  • AI Search agent     │
+                 │  tables · FTS    │      │  • Voice Interview     │
+                 └──────────────────┘      │    agent + LiveKit     │
+                                           └────────────────────────┘
+        ┌────────────────────────────────────────────┐
+        │  Ingestion pipeline (cron)                  │
+        │  Provider → extract → normalize → validate  │
+        │  → skill-extract → dedup → bulk upsert → DB │
+        └────────────────────────────────────────────┘
+```
 
-* Next.js
-* TypeScript
-* Tailwind CSS
+| Layer | Stack |
+| --- | --- |
+| **Frontend** | Next.js 15 (App Router, RSC), TypeScript (strict), Tailwind CSS |
+| **Backend** | Supabase (PostgreSQL + Auth), serverless API routes |
+| **AI Search** | Agentic pipeline ([separate repo](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent)) — n8n + Node services + Tavily |
+| **Voice Interview** | LiveKit · Deepgram (STT) · Gemini (LLM) · Kokoro (TTS) |
+| **Hosting** | Vercel (web) · Azure VM (agents) · Supabase Cloud (data) |
+| **Testing** | Vitest (unit) · Playwright (e2e) — 590+ tests passing |
 
-Responsibilities:
+### Ingestion & bulk upsert
 
-* UI Rendering
-* Search Interface
-* Dashboard
-* Tracker
-* Authentication UI
+Ingestion was redesigned from sequential inserts to **batched bulk upserts** with database-level dedup constraints:
 
----
+| Records | Old (sequential) | New (bulk upsert) |
+| --- | --- | --- |
+| 100 | ~2.3 min | ~1.8 sec |
+| 500 | ~11.6 min | ~4.4 sec |
+| 1,000 | ~23.3 min | ~8.6 sec |
 
-## Backend
-
-Built using:
-
-* Supabase
-* PostgreSQL
-* Serverless APIs
-
-Responsibilities:
-
-* Data Storage
-* Authentication
-* Search
-* Opportunity Management
-
----
-
-## Database
-
-PostgreSQL via Supabase.
-
-Core entities:
-
-* Opportunities
-* Companies
-* Users
-* Bookmarks
-* Application Tracker
-* Notifications
+**~160× faster**, with 0 duplicates and 0 missing apply URLs in production.
 
 ---
 
-## Hosting
+## 🛡️ Security
 
-| Component      | Platform      |
-| -------------- | ------------- |
-| Frontend       | Vercel        |
-| Backend        | Supabase      |
-| Database       | PostgreSQL    |
-| Authentication | Supabase Auth |
+- **Row-Level Security on every table**, with per-user ownership policies on all user-data tables.
+- `SECURITY DEFINER` functions locked down and `search_path` pinned.
+- Protected cron routes with secret validation; no hardcoded secrets (everything reads `process.env`).
+- Server-side input validation and open-redirect-safe auth redirects.
 
 ---
 
-# ⚙️ Opportunity Ingestion Pipeline
+## 🚀 Getting Started
 
-The ingestion architecture automatically imports opportunities from external providers.
+> The app lives in [`frontend/`](frontend). It targets **Next.js 15 / Node 20+**.
 
-## Flow
+```bash
+# 1. Clone
+git clone https://github.com/Laxmansirvi05/opportunity-radar.git
+cd opportunity-radar/frontend
 
-Provider
+# 2. Install
+npm install
 
-↓
+# 3. Configure — copy the example and fill in your keys
+cp .env.example .env.local
+#   Required: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+#             SUPABASE_SERVICE_ROLE_KEY, and the AI agent endpoints/secrets
 
-Data Extraction
+# 4. Run
+npm run dev            # http://localhost:3000
+```
 
-↓
+Useful scripts:
 
-Normalization
+```bash
+npm run build          # production build
+npm run type-check     # tsc --noEmit (project is type-clean)
+npm run test           # vitest
+npm run lint           # eslint
+```
 
-↓
-
-Validation
-
-↓
-
-Skill Extraction
-
-↓
-
-Deduplication
-
-↓
-
-Bulk Upsert
-
-↓
-
-Database
-
-↓
-
-Frontend Search
+The AI Search agent backend has its own setup — see
+[`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent).
 
 ---
 
-# 🔄 Bulk Upsert Architecture
+## 📈 Production snapshot
 
-Initially, opportunities were inserted sequentially.
-
-This caused:
-
-* Slow ingestion
-* Network bottlenecks
-* Vercel timeout risks
-
-The architecture was redesigned using:
-
-* Batch Processing
-* Bulk Upserts
-* Database Constraints
-
-Result:
-
-| Records | Old Time  | New Time |
-| ------- | --------- | -------- |
-| 100     | ~2.3 min  | ~1.8 sec |
-| 500     | ~11.6 min | ~4.4 sec |
-| 1000    | ~23.3 min | ~8.6 sec |
-
-Performance improvement:
-
-**160x+ faster**
+- **4,700+** live opportunities · **0** duplicates · **0** missing apply URLs
+- **20,000+** certifications across 138 providers
+- **10** active ingestion sources with weekly refresh + daily link-sweep
+- **590+** automated tests passing · TypeScript-clean
 
 ---
 
-# 📈 Current Production Metrics
+## 🧭 Repository layout
 
-## Opportunities
-
-* Total Opportunities: **4,757**
-* Duplicate Records: **0**
-* Missing Apply URLs: **0**
-* Missing Posted Dates: **0**
-* Missing Ingest Dates: **0**
-
-## Sources
-
-* Active Sources: **10**
-
-## Data Quality
-
-* Source Validation Enabled
-* Deduplication Enabled
-* Expiration Cleanup Enabled
+| Path | What |
+| --- | --- |
+| `frontend/` | The Next.js application (pages, API routes, features, tests) |
+| `frontend/features/` | Feature modules — résumé toolkit, command palette, etc. |
+| `supabase/` | Database migrations and configuration |
+| `docs/` | Architecture, PRD, security plan, audits, integration guides |
+| `designs/` | Screen designs and UI reference |
 
 ---
 
-# 🔍 Search Architecture
+## 🗺️ Roadmap
 
-Search supports:
-
-* Keywords
-* Company Names
-* Skills
-* Categories
-* Locations
-
-Features:
-
-* PostgreSQL Full Text Search
-* RPC Search Optimization
-* Fallback Search Logic
-* Pagination
+- Personalised AI opportunity recommendations from activity history
+- Smart deadline & matching-role notifications
+- Native mobile apps (Android / iOS)
+- An analytics dashboard for application insights
 
 ---
 
-# 🛡️ Security
+## 👨‍💻 Author
 
-Security measures include:
+**Laxman Sirvi** — [@Laxmansirvi05](https://github.com/Laxmansirvi05)
 
-## Authentication
-
-* Supabase Auth
-
-## API Protection
-
-* Protected Cron Routes
-* Secret Validation
-
-## Database
-
-* Row Level Security (RLS)
-* Input Validation
-* Deduplication Constraints
+Opportunity Radar was built to help students discover opportunities faster and eliminate the problem of scattered information across dozens of platforms.
 
 ---
 
-# 📊 Database Quality Audit
+## 📜 License
 
-Comprehensive audit performed before deployment.
-
-Results:
-
-✅ 4,757 opportunities stored
-
-✅ 0 duplicate records
-
-✅ 0 missing apply URLs
-
-✅ 0 missing posting dates
-
-✅ Backup snapshot created
-
-✅ Freshness tracking implemented
+Released for **educational and portfolio** purposes.
 
 ---
 
-# 🚧 Technical Challenges Solved
+<div align="center">
 
-## Challenge 1
+⭐ **If this project helped you, consider starring the repo.**
 
-Duplicate Opportunities
-
-### Solution
-
-Unique source constraints and deduplication engine.
-
----
-
-## Challenge 2
-
-Slow Ingestion
-
-### Solution
-
-Bulk Upsert Architecture.
-
----
-
-## Challenge 3
-
-Freshness Tracking
-
-### Solution
-
-Introduced:
-
-* posted_at
-* ingested_at
-
-to separate actual posting dates from ingestion dates.
-
----
-
-## Challenge 4
-
-Search Scalability
-
-### Solution
-
-Optimized search architecture using PostgreSQL search capabilities and RPC-based querying.
-
----
-
-# 📚 Project Learnings
-
-This project provided experience in:
-
-* Full Stack Development
-* Database Design
-* API Integration
-* Authentication Systems
-* Search Systems
-* Data Engineering
-* Performance Optimization
-* Production Deployment
-
----
-
-# 🚀 Future Scope
-
-Planned enhancements:
-
-## AI Recommendations
-
-Recommend opportunities based on:
-
-* Skills
-* Interests
-* Past activity
-
-## Resume Matching
-
-Match opportunities against uploaded resumes.
-
-## Smart Notifications
-
-Notify users about:
-
-* New opportunities
-* Closing deadlines
-* Matching roles
-
-## Mobile Application
-
-Dedicated Android and iOS applications.
-
-## Analytics Dashboard
-
-Advanced reporting and insights.
-
----
-
-# 👨‍💻 Author
-
-**Laxman Sirvi**
-
-First Year Engineering Student
-
-Opportunity Radar was built to help students discover opportunities faster and eliminate the problem of scattered information across multiple platforms.
-
----
-
-# 📜 License
-
-This project is intended for educational and portfolio purposes.
-
----
-
-## ⭐ If you like this project
-
-Consider starring the repository and sharing feedback.
+</div>
