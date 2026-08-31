@@ -9,7 +9,23 @@ import { headers } from 'next/headers'
 async function verifyTurnstileToken(token: string | null) {
   if (!token) return false
   const secret = process.env.TURNSTILE_SECRET_KEY
-  if (!secret) return true // Bypass if not configured in environment
+
+  // Fail closed on misconfiguration — match the pattern in lib/cron-auth.ts.
+  // In development the Turnstile widget is not rendered (no site key), so a
+  // normal form submission never carries a token and the `!token` check above
+  // already returns false. The bypass below only fires for dev convenience
+  // when a tool or test sends a synthetic token string directly.
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        '[Auth] REFUSED — TURNSTILE_SECRET_KEY is not set on this deployment. ' +
+          'Set it in the Vercel project so Turnstile verification can run.'
+      )
+      return false
+    }
+    // Development / test — allow through so local auth is not blocked.
+    return true
+  }
 
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {

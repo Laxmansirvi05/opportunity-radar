@@ -95,7 +95,15 @@ export default async function DashboardPage() {
   const displayName = profile?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student'
 
   // 3. Compute Intelligence
-  const isProfileComplete = profile && profile.university && profile.skills && profile.skills.length > 0
+  // Calculate profile completeness dynamically based on fields present
+  let profileCompleteness = 0
+  if (profile) {
+    if (profile.name) profileCompleteness += 20
+    if (profile.university) profileCompleteness += 20
+    if (profile.skills && profile.skills.length > 0) profileCompleteness += 30
+    if (profile.resume_name) profileCompleteness += 30
+  }
+  const isProfileComplete = profileCompleteness === 100
   const hasResume = profile && profile.resume_name
 
   const recommendations = []
@@ -201,7 +209,7 @@ export default async function DashboardPage() {
             <span className="material-symbols-outlined text-[18px]">bolt</span>
             Apply Now
           </Link>
-          <button className="w-10 h-10 rounded-xl bg-surface border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors shadow-sm cursor-pointer">
+          <button aria-label="Notifications" className="w-10 h-10 rounded-xl bg-surface border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors shadow-sm cursor-pointer">
             <span className="material-symbols-outlined">notifications</span>
           </button>
         </div>
@@ -220,7 +228,7 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30 text-center">
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Profile</p>
-                <p className={`font-bold ${isProfileComplete ? 'text-primary' : 'text-error'}`}>{isProfileComplete ? '100%' : '50%'}</p>
+                <p className={`font-bold ${isProfileComplete ? 'text-primary' : 'text-error'}`}>{profileCompleteness}%</p>
               </div>
               <div className="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/30 text-center">
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-1">Resume</p>
