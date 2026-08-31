@@ -1,0 +1,15 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Opportunity Radar — Project Submission Report",
+      "x": 0,
+      "y": 0,
+      "w": 820,
+      "h": 1160,
+      "print": "flow",
+      "expand": "fill"
+    }
+  ],
+  "launch": { "view": "focused", "file": "Main.dc.html" }
+}
