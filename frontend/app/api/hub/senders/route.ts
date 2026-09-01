@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { filterToHubParticipants, parseSenderIds } from '@/features/hub/lib/hub-participants'
 
 export const runtime = 'nodejs'
 
 /**
  * GET /api/hub/senders?ids=uuid1,uuid2,...
  *
- * Resolves the public-facing profile fields (name, avatar, email, LinkedIn)
- * for a batch of user ids. `profiles` SELECT RLS is `auth.uid() = id`, so
- * the browser's own Supabase client can only ever read the viewer's own
- * row — it can never resolve who sent someone else's message. This route
- * exists so client code (the realtime subscription, specifically) has a
- * safe, authenticated way to resolve OTHER members' public info without
- * ever holding the service-role key itself.
+ * Resolves the public-facing profile fields for a batch of user ids.
+ * `profiles` SELECT RLS is `auth.uid() = id`, so the browser's own Supabase
+ * client can only ever read the viewer's own row — it can never resolve who
+ * sent someone else's message. This route exists so client code (the realtime
+ * subscription, specifically) has a safe, authenticated way to resolve OTHER
+ * members' public info without ever holding the service-role key itself.
+ *
+ * The service-role read is bounded to ids that have actually posted in the Hub.
+ * It was not: a signed-in caller could pass any hundred uuids per request and
+ * read back name, avatar, LinkedIn and email for each, which made this an email
+ * harvesting endpoint for the whole user base rather than a way to label the
+ * messages already on screen.
  */
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -22,14 +28,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  const idsParam = req.nextUrl.searchParams.get('ids') ?? ''
-  // Filters to actual UUIDs, not just non-empty strings: a caller passing
-  // through a stray JS `undefined` (encodeURIComponent(undefined) silently
-  // becomes the string "undefined") used to reach the `.in('id', ids)` query
-  // below, which Postgres then 500'd on as an invalid uuid literal — turning
-  // one bad client-side value into a hard failure instead of an empty result.
-  const ids = [...new Set(idsParam.split(',').map((s) => s.trim()).filter((s) => UUID_RE.test(s)))].slice(0, 100)
+  const requested = parseSenderIds(req.nextUrl.searchParams.get('ids') ?? '')
+  if (requested.length === 0) {
+    return NextResponse.json({ senders: {} })
+  }
+
+  // Checked with the caller's own client, so it reflects what they can see.
+  let ids: string[]
+  try {
+    ids = await filterToHubParticipants(supabase, requested)
+  } catch {
+    return NextResponse.json({ error: 'Failed to resolve senders' }, { status: 500 })
+  }
   if (ids.length === 0) {
     return NextResponse.json({ senders: {} })
   }
