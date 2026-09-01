@@ -1,29 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { denyIfNotCron } from '@/lib/cron-auth'
 
 /**
- * POST /api/cron/sweep-interviews — marks stale in-progress interview sessions
+ * GET /api/cron/sweep-interviews — marks stale in-progress interview sessions
  * as abandoned.
  *
- * Mirrors the ai_search_jobs pattern: any session stuck in `in_progress` for
- * longer than STALE_THRESHOLD_MINUTES is almost certainly a disconnected
- * browser or a crashed agent. Marking it `abandoned` lets the student see
- * an honest status instead of `in_progress` forever.
+ * Any session stuck in `in_progress` for longer than STALE_THRESHOLD_MINUTES is
+ * almost certainly a disconnected browser or a crashed agent. Marking it
+ * `abandoned` lets the student see an honest status instead of `in_progress`
+ * forever.
  *
- * Protected by CRON_SECRET — Vercel Cron Jobs (or any external scheduler)
- * must send this header. Without it the route 401s.
+ * This exported POST, not GET. Vercel Cron invokes with GET, so the scheduled
+ * job in vercel.json had been hitting a 405 since the day it was added and no
+ * session had ever been swept in production.
  *
- * Wire this up in vercel.json as a cron with schedule "every 15 minutes".
+ * Authorised by the shared denyIfNotCron guard, which fails closed. The check
+ * here used to be `if (cronSecret && header !== ...)`, and that `cronSecret &&`
+ * meant an unset CRON_SECRET skipped authorisation altogether — leaving an
+ * unauthenticated request able to mass-update sessions to `abandoned` with the
+ * service-role key.
+ *
+ * Scheduled daily in vercel.json. It is NOT every 15 minutes, whatever the
+ * comment here used to say: the Hobby plan allows once-daily crons only, and a
+ * fifteen-minute schedule in vercel.json fails the build.
  */
 
 const STALE_THRESHOLD_MINUTES = 30
 
-export async function POST(req: NextRequest) {
-  // Vercel Cron protection — same pattern used by sweep-jobs
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+// The update is one round trip, but the preceding scan grows with the table.
+export const maxDuration = 60
+
+export async function GET(req: NextRequest) {
+  const denied = denyIfNotCron(req)
+  if (denied) return denied
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
