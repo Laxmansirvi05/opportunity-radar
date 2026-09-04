@@ -204,6 +204,20 @@ The AI Search agent backend has its own setup — see
 
 ---
 
+## 🧑‍💻 Development workflow
+
+For day-to-day development, keep changes focused and verify the project before pushing:
+
+1. Run `npm run type-check` to catch TypeScript errors.
+2. Run `npm run lint` for static checks.
+3. Run `npm run test` for unit coverage.
+4. Run the relevant Playwright tests when changing user-facing flows.
+5. Keep secrets in local environment files; never commit `.env` or credentials.
+
+The AI Search backend is maintained separately in [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent), so changes to the search pipeline should be validated in both repositories when their contracts interact.
+
+---
+
 ## 🧭 Repository layout
 
 | Path | What |
