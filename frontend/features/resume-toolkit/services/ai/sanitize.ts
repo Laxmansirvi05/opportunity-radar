@@ -11,6 +11,18 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Résumé-parser tracing. Every call site here handles the user's own résumé, so
+ * some of the values are personal content (a headline, a summary, the raw model
+ * JSON). Route all of it through this helper rather than `console.log` directly:
+ * an earlier fix guarded only the first of six calls, which left the parsed
+ * headline going to production logs.
+ */
+function debugLog(...args: unknown[]): void {
+	if (process.env.NODE_ENV === "production") return;
+	console.log(...args);
+}
+
 export function generateId(): string {
 	return uuidv4();
 }
@@ -543,16 +555,13 @@ export function sanitizeAndParseResumeJson(resultText: string): ResumeSanitizati
 		};
 
 		const repairedJson = jsonrepair(jsonString);
-		// Guard: never echo raw résumé content to the console in production.
-		if (process.env.NODE_ENV !== "production") {
-			console.log("[AI_DEBUG] RAW_JSON_STRING: ", jsonString.slice(0, 500));
-		}
+		debugLog("[AI_DEBUG] RAW_JSON_STRING: ", jsonString.slice(0, 500));
 
 		const parsedJson = JSON.parse(repairedJson);
-		console.log("[AI_DEBUG] PARSED_JSON_ROOT_KEYS: ", Object.keys(parsedJson));
+		debugLog("[AI_DEBUG] PARSED_JSON_ROOT_KEYS: ", Object.keys(parsedJson));
 
 		const mappedJson = mapAiParserVariations(parsedJson as Record<string, unknown>);
-		console.log(
+		debugLog(
 			"[AI_DEBUG] MAPPED_JSON_SECTIONS: ",
 			Object.keys((mappedJson.sections as Record<string, unknown>) || {}),
 		);
@@ -570,9 +579,9 @@ export function sanitizeAndParseResumeJson(resultText: string): ResumeSanitizati
 				}
 			}
 		}
-		console.log("[AI_DEBUG] SECTION_ITEM_COUNTS:", sectionCounts);
-		console.log("[AI_DEBUG] SUMMARY_CONTENT:", typeof (normalizedData.summary as Record<string, unknown>)?.content === "string" ? "present" : "missing");
-		console.log("[AI_DEBUG] BASICS_HEADLINE:", (normalizedData.basics as Record<string, unknown>)?.headline || "missing");
+		debugLog("[AI_DEBUG] SECTION_ITEM_COUNTS:", sectionCounts);
+		debugLog("[AI_DEBUG] SUMMARY_CONTENT:", typeof (normalizedData.summary as Record<string, unknown>)?.content === "string" ? "present" : "missing");
+		debugLog("[AI_DEBUG] BASICS_HEADLINE:", (normalizedData.basics as Record<string, unknown>)?.headline || "missing");
 
 		if (diagnostics.droppedSectionItems.length > 0 && process.env.NODE_ENV !== "production") {
 			console.warn("[AI_DEBUG] DROPPED_ITEMS:", JSON.stringify(diagnostics.droppedSectionItems));

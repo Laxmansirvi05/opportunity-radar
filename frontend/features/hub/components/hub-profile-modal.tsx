@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import type { HubSender } from '../types'
 import { getPublicProfile } from '../actions/get-public-profile'
+import { safeExternalUrl } from '@/lib/safe-url'
 
 interface HubProfileModalProps {
   senderId: string
@@ -56,17 +57,13 @@ export function HubProfileModal({ senderId, sender, onClose }: HubProfileModalPr
   const initial = displayName.charAt(0).toUpperCase()
   const avatarUrl = profile?.avatar_url ?? sender.avatar_url
 
-  const renderSocialUrl = (url: string | null | undefined, prefix: string = '') => {
-    if (!url) return null
-    const trimmed = url.trim()
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed
-    }
-    return `https://${prefix}${trimmed}`
-  }
-
-  const linkedinUrl = renderSocialUrl(profile?.linkedin_url ?? sender.linkedin_url)
-  const githubUrl = renderSocialUrl(profile?.github_url, 'github.com/')
+  // Every URL here belongs to *another* user and is free text they typed, so it
+  // is an XSS sink until proven otherwise. `safeExternalUrl` replaces a local
+  // `renderSocialUrl` that forced an `https://` prefix onto anything without one
+  // — safe against `javascript:` only by accident, and it applied to these two
+  // while `credential_url` below went into an `href` completely raw.
+  const linkedinUrl = safeExternalUrl(profile?.linkedin_url ?? sender.linkedin_url)
+  const githubUrl = safeExternalUrl(profile?.github_url, 'github.com/')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -165,12 +162,17 @@ export function HubProfileModal({ senderId, sender, onClose }: HubProfileModalPr
                 <div>
                   <h3 className="text-xs font-semibold text-on-surface mb-1.5 uppercase tracking-wider opacity-70">Projects & Certifications</h3>
                   <div className="flex flex-col gap-2">
-                    {profile.achievements.map((achievement) => (
+                    {profile.achievements.map((achievement) => {
+                      // Checked at render as well as on save, because rows
+                      // written before validation existed are still in the table
+                      // and cannot be cleaned from here.
+                      const credentialUrl = safeExternalUrl(achievement.credential_url)
+                      return (
                       <div key={achievement.id} className="flex flex-col bg-surface-container-lowest p-2.5 rounded-xl border border-outline-variant/30">
                         <div className="flex justify-between items-start mb-0.5">
                           <span className="font-medium text-[13px] leading-tight text-on-surface">{achievement.title}</span>
-                          {achievement.credential_url && (
-                            <a href={achievement.credential_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-[10px] flex items-center gap-0.5">
+                          {credentialUrl && (
+                            <a href={credentialUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-[10px] flex items-center gap-0.5">
                               Link <span className="material-symbols-outlined text-[10px]">open_in_new</span>
                             </a>
                           )}
@@ -179,7 +181,8 @@ export function HubProfileModal({ senderId, sender, onClose }: HubProfileModalPr
                           {achievement.organization} {achievement.date_year ? `• ${achievement.date_year}` : ''}
                         </span>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

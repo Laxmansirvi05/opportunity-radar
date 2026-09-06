@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { loginAction, signupAction, oauthLoginAction } from '@/features/auth/actions/auth-actions'
+import { loginAction, signupAction, oauthLoginAction, resendVerificationEmailAction } from '@/features/auth/actions/auth-actions'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { safeNextPath } from '@/lib/auth/safe-next-path'
 import { setPendingVerificationEmail } from '@/features/auth/lib/pending-verification'
 import Link from 'next/link'
 import { AuthRadar } from './auth-radar'
+import { Turnstile } from '@marsidev/react-turnstile'
 
 export function AuthExperience() {
   const searchParams = useSearchParams()
@@ -27,6 +28,8 @@ export function AuthExperience() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showSignupPassword, setShowSignupPassword] = useState(false)
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null)
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
   const router = useRouter()
 
   async function handleLogin(formData: FormData) {
@@ -51,9 +54,13 @@ export function AuthExperience() {
     setIsLoading(true)
     setError(null)
     setSuccessMessage(null)
+    setUnconfirmedEmail(null)
     try {
       const result = await signupAction(formData)
-      if (result?.error) {
+      if (result?.error === 'already_registered_unconfirmed') {
+        setUnconfirmedEmail((result as any).email || (formData.get('email') as string))
+        setError('This email is already registered but not confirmed.')
+      } else if (result?.error) {
         setError(result.error)
       } else if (result?.needsEmailConfirmation) {
         // Hand the address to /verify-email so it can offer a real resend,
@@ -142,8 +149,35 @@ export function AuthExperience() {
 
           <div className="relative z-10">
             {error && (
-              <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center border border-red-100">
-                {error}
+              <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium text-center border border-red-100 flex flex-col items-center gap-2">
+                <p>{error}</p>
+                {unconfirmedEmail && (
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      setIsLoading(true);
+                      setError(null);
+                      setSuccessMessage(null);
+                      try {
+                        const fd = new FormData();
+                        fd.append('email', unconfirmedEmail);
+                        const res = await resendVerificationEmailAction(fd);
+                        if (res.error) setError(res.error);
+                        else {
+                          setSuccessMessage('Verification email sent! Check your inbox.');
+                          setUnconfirmedEmail(null);
+                        }
+                      } catch {
+                        setError('Failed to resend email.');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    className="mt-2 text-xs font-bold bg-red-100 text-red-800 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    Resend Verification Email
+                  </button>
+                )}
               </div>
             )}
 
@@ -225,6 +259,11 @@ export function AuthExperience() {
                     </button>
                   </div>
                 </div>
+                {turnstileSiteKey && (
+                  <div className="flex justify-center my-4">
+                    <Turnstile siteKey={turnstileSiteKey} />
+                  </div>
+                )}
                 <button disabled={isLoading} type="submit" className="w-full h-12 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-[0.98] mt-4 flex items-center justify-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed">
                   {isLoading ? <span className="material-symbols-outlined animate-spin text-[18px]">sync</span> : 'Sign In'}
                 </button>
@@ -257,6 +296,11 @@ export function AuthExperience() {
                     </button>
                   </div>
                 </div>
+                {turnstileSiteKey && (
+                  <div className="flex justify-center my-4">
+                    <Turnstile siteKey={turnstileSiteKey} />
+                  </div>
+                )}
                 <button disabled={isLoading} type="submit" className="w-full h-12 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-[0.98] mt-4 flex items-center justify-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed">
                   {isLoading ? <span className="material-symbols-outlined animate-spin text-[18px]">sync</span> : 'Create Account'}
                 </button>

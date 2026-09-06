@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useMemo, useCallback, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { safeExternalUrl } from '@/lib/safe-url'
 
 export type Achievement = {
   id: string
@@ -16,17 +17,17 @@ export type Achievement = {
 
 interface AchievementsSectionProps {
   userId: string
-  isEditingProfile: boolean
 }
 
-export function AchievementsSection({ userId, isEditingProfile }: AchievementsSectionProps) {
+export function AchievementsSection({ userId }: AchievementsSectionProps) {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [isPending, startTransition] = useTransition()
-  
+
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -36,25 +37,44 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
   })
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  // `createClient()` builds a fresh browser client per call, so it has to be
+  // memoized to be usable as a hook dependency below.
+  const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    fetchAchievements()
-  }, [])
-
-  const fetchAchievements = async () => {
+  const fetchAchievements = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { data, error: fetchError } = await supabase
       .from('achievements')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      
-    if (!error && data) {
-      setAchievements(data)
+
+    // This used to be `if (!error && data)` with no else, so a failed read left
+    // `achievements` empty and the component rendered "No achievements added
+    // yet" — reporting a broken query as an empty list, and inviting the user to
+    // re-add records that are still there.
+    if (fetchError) {
+      console.error('[Achievements] load failed:', fetchError)
+      setLoadFailed(true)
+    } else {
+      setAchievements(data ?? [])
+      setLoadFailed(false)
     }
     setLoading(false)
-  }
+  }, [supabase, userId])
+
+  // Declared above the effect that calls it, and listed as a dependency: the
+  // effect used to reach backwards to a `const` defined below it with an empty
+  // dependency array, so it never refetched when `userId` changed.
+  useEffect(() => {
+    // Defer the initial asynchronous read so React finishes committing this
+    // client component before the loading state changes.
+    const loadId = window.setTimeout(() => {
+      void fetchAchievements()
+    }, 0)
+
+    return () => window.clearTimeout(loadId)
+  }, [fetchAchievements])
 
   const resetForm = () => {
     setFormData({ title: '', description: '', date_year: '', organization: '', credential_url: '' })
@@ -81,23 +101,42 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
       return
     }
 
+    // The `type="url"` input below is not inside a `<form>` and this is an
+    // `onClick` rather than a submit, so the browser never runs its own
+    // constraint validation — and the write goes straight to Postgres from the
+    // client, so there is no server check either. Nothing validated this field
+    // at all, while `hub-profile-modal.tsx` renders it as an `href` to other
+    // members: a `javascript:` value here was stored XSS in their sessions.
+    const credentialUrl = formData.credential_url.trim()
+      ? safeExternalUrl(formData.credential_url)
+      : null
+    if (formData.credential_url.trim() && !credentialUrl) {
+      setError('Credential URL must be a valid http:// or https:// address.')
+      return
+    }
+
     startTransition(async () => {
       setError(null)
-      const payload = {
-        user_id: userId,
+      const fields = {
         title: formData.title,
         description: formData.description || null,
         date_year: formData.date_year || null,
         organization: formData.organization || null,
-        credential_url: formData.credential_url || null,
+        credential_url: credentialUrl,
       }
 
       if (editingId) {
         const { error: updateError } = await supabase
           .from('achievements')
-          .update(payload)
+          // `user_id` is deliberately not in the update payload: it is not the
+          // user's to change, and sending it was an ownership rewrite that only
+          // RLS's `with check` was stopping. The `user_id` filter is the house
+          // defence-in-depth rule — RLS scopes this too, but every mutation
+          // carries the explicit filter.
+          .update(fields)
           .eq('id', editingId)
-          
+          .eq('user_id', userId)
+
         if (updateError) {
           setError(updateError.message)
         } else {
@@ -107,8 +146,8 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
       } else {
         const { error: insertError } = await supabase
           .from('achievements')
-          .insert([payload])
-          
+          .insert([{ ...fields, user_id: userId }])
+
         if (insertError) {
           if (insertError.message.includes('relation "public.achievements" does not exist')) {
             setError('The achievements table does not exist. Please run the SQL migration.')
@@ -125,13 +164,14 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this achievement?')) return
-    
+
     startTransition(async () => {
       const { error: deleteError } = await supabase
         .from('achievements')
         .delete()
         .eq('id', id)
-        
+        .eq('user_id', userId)
+
       if (deleteError) {
         setError(deleteError.message)
       } else {
@@ -250,10 +290,26 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
               </button>
             </div>
           </div>
+        ) : loadFailed ? (
+          <div className="text-center py-8 bg-surface/30 rounded-xl border border-outline-variant/30 border-dashed">
+            <span className="material-symbols-outlined text-[32px] text-error/70 mb-3">error</span>
+            <p className="font-semibold text-on-surface text-[15px]">Achievements could not be loaded</p>
+            <p className="text-[13px] text-on-surface-variant mt-1">Your saved records have not been changed.</p>
+            <button
+              onClick={fetchAchievements}
+              className="mt-4 px-4 py-2 border border-outline-variant rounded-full text-sm font-semibold text-on-surface hover:bg-surface-variant transition-colors"
+            >
+              Try again
+            </button>
+          </div>
         ) : (
           achievements.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {achievements.map((achievement) => (
+              {achievements.map((achievement) => {
+                // Guarded at render too: rows written before the save-time check
+                // existed are still in the table.
+                const credentialUrl = safeExternalUrl(achievement.credential_url)
+                return (
                 <div key={achievement.id} className="group relative flex flex-col sm:flex-row sm:items-start justify-between gap-4 p-4 rounded-xl hover:bg-surface-variant/30 transition-colors border border-transparent hover:border-outline-variant/30">
                   <div className="flex gap-4">
                     <div className="w-10 h-10 rounded-full bg-surface border border-outline-variant/50 flex items-center justify-center shrink-0">
@@ -273,10 +329,10 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
                           {achievement.description}
                         </p>
                       )}
-                      {achievement.credential_url && (
-                        <a 
-                          href={achievement.credential_url} 
-                          target="_blank" 
+                      {credentialUrl && (
+                        <a
+                          href={credentialUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-sm font-semibold text-primary mt-3 hover:underline"
                         >
@@ -304,7 +360,8 @@ export function AchievementsSection({ userId, isEditingProfile }: AchievementsSe
                     </button>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-8 bg-surface/30 rounded-xl border border-outline-variant/30 border-dashed">

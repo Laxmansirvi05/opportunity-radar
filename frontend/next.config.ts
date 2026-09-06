@@ -27,7 +27,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
+  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https:;
   font-src 'self' data: https://fonts.gstatic.com;
@@ -35,6 +35,7 @@ const cspHeader = `
   worker-src 'self' blob:;
   media-src 'self' blob: data:;
   frame-ancestors 'none';
+  frame-src 'self' https://challenges.cloudflare.com;
   object-src 'none';
   base-uri 'self';
   form-action 'self';
