@@ -48,7 +48,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/opportunity-radar.git
+git clone https://github.com/Laxmansirvi05/opportunity-radar.git
 cd opportunity-radar/frontend
 
 # 2. Install dependencies
@@ -101,6 +101,9 @@ npm run test:watch
 
 # Coverage report
 npm run test:coverage
+
+# Run lint, type-check, and unit tests together
+npm run check
 ```
 
 Tests cover:
@@ -166,9 +169,9 @@ See [.env.example](.env.example) for all required variables.
 ### Required Vercel Secrets (GitHub Actions)
 
 ```
-VERCEL_TOKEN       → Your Vercel API token
-VERCEL_ORG_ID      → Your Vercel team/org ID
-VERCEL_PROJECT_ID  → Your Vercel project ID
+VERCEL_TOKEN       → Your GitHub Actions secret for the Vercel API token
+VERCEL_ORG_ID      → Your GitHub Actions secret for the Vercel team/org ID
+VERCEL_PROJECT_ID  → Your GitHub Actions secret for the Vercel project ID
 ```
 
 ---
