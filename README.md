@@ -185,10 +185,13 @@ Useful scripts:
 
 ```bash
 npm run build          # production build
-npm run type-check     # tsc --noEmit (project is type-clean)
+npm run type-check     # tsc --noEmit
 npm run test           # vitest
 npm run lint           # eslint
+npm run check          # lint + type-check + unit tests
 ```
+
+For a pre-commit verification pass, prefer `npm run check` because it exercises the same lint, TypeScript, and unit-test commands used individually above.
 
 The AI Search agent backend has its own setup — see
 [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent).
@@ -211,8 +214,9 @@ For day-to-day development, keep changes focused and verify the project before p
 1. Run `npm run type-check` to catch TypeScript errors.
 2. Run `npm run lint` for static checks.
 3. Run `npm run test` for unit coverage.
-4. Run the relevant Playwright tests when changing user-facing flows.
-5. Keep secrets in local environment files; never commit `.env` or credentials.
+4. Run `npm run check` before opening a pull request to run all three checks together.
+5. Run the relevant Playwright tests when changing user-facing flows.
+6. Keep secrets in local environment files; never commit `.env` or credentials.
 
 The AI Search backend is maintained separately in [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent), so changes to the search pipeline should be validated in both repositories when their contracts interact.
 
