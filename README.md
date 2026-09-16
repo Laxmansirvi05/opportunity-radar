@@ -189,9 +189,12 @@ npm run type-check     # tsc --noEmit
 npm run test           # vitest
 npm run lint           # eslint
 npm run check          # lint + type-check + unit tests
+npm run test:e2e       # Playwright end-to-end tests
+npm run test:e2e:ui    # Playwright interactive UI runner
+npm run check:all      # all static checks, unit tests, then e2e tests
 ```
 
-For a pre-commit verification pass, prefer `npm run check` because it exercises the same lint, TypeScript, and unit-test commands used individually above.
+For a pre-commit verification pass, use `npm run check`. For a broader local validation pass that also exercises browser flows, use `npm run check:all`.
 
 The AI Search agent backend has its own setup — see
 [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent).
@@ -215,8 +218,9 @@ For day-to-day development, keep changes focused and verify the project before p
 2. Run `npm run lint` for static checks.
 3. Run `npm run test` for unit coverage.
 4. Run `npm run check` before opening a pull request to run all three checks together.
-5. Run the relevant Playwright tests when changing user-facing flows.
-6. Keep secrets in local environment files; never commit `.env` or credentials.
+5. Run `npm run test:e2e` when changing user-facing flows.
+6. Use `npm run check:all` when you want the full local verification pass.
+7. Keep secrets in local environment files; never commit `.env` or credentials.
 
 The AI Search backend is maintained separately in [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent), so changes to the search pipeline should be validated in both repositories when their contracts interact.
 
