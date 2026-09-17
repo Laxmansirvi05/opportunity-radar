@@ -8,7 +8,7 @@ Opportunity Radar is a full-stack, AI-powered platform that helps students **dis
 
 It goes beyond aggregation: an **agentic AI Search** matches openings to your résumé, a real-time **voice Mock Interview** rehearses you and scores you out of 100, a **résumé toolkit** builds and ATS-checks your CV, and 20,000+ **certifications** help you close skill gaps.
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -130,7 +130,7 @@ Opportunity Radar is a Next.js app backed by Supabase, with **two dedicated AI a
 
 | Layer | Stack |
 | --- | --- |
-| **Frontend** | Next.js 15 (App Router, RSC), TypeScript (strict), Tailwind CSS |
+| **Frontend** | Next.js 16 (App Router, RSC), TypeScript (strict), Tailwind CSS |
 | **Backend** | Supabase (PostgreSQL + Auth), serverless API routes |
 | **AI Search** | Agentic pipeline ([separate repo](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent)) — n8n + Node services + Tavily |
 | **Voice Interview** | LiveKit · Deepgram (STT) · Gemini (LLM) · Kokoro (TTS) |
@@ -162,7 +162,7 @@ Ingestion was redesigned from sequential inserts to **batched bulk upserts** wit
 
 ## 🚀 Getting Started
 
-> The app lives in [`frontend/`](frontend). It targets **Next.js 15 / Node 20+**.
+> The app lives in [`frontend/`](frontend). It targets **Next.js 16 / Node 20+**.
 
 ```bash
 # 1. Clone
