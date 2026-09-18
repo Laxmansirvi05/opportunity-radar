@@ -164,7 +164,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Slice before filtering/mapping so an oversized request cannot make the
+    // server inspect thousands of stale messages when only the latest 20 are
+    // ever sent to the AI gateway.
     const safeMessages = messages
+      .slice(-20)
       .filter(
         (message): message is { role: "user" | "ai"; content: string } =>
           message &&
@@ -172,7 +176,6 @@ export async function POST(req: NextRequest) {
           typeof message.content === "string" &&
           message.content.trim().length > 0
       )
-      .slice(-20)
       .map((message) => ({
         role: message.role,
         // Keep the gateway request bounded without mutating the saved chat.
