@@ -104,7 +104,24 @@ npm run test:coverage
 
 # Run lint, type-check, and unit tests together
 npm run check
+
+# Run the Playwright end-to-end suite
+npm run test:e2e
+
+# Open Playwright's interactive test runner
+npm run test:e2e:ui
+
+# Run E2E tests with a visible browser window
+npm run test:e2e:headed
+
+# Pause execution with Playwright Inspector for debugging
+npm run test:e2e:debug
+
+# Run unit checks followed by E2E tests
+npm run check:all
 ```
+
+For E2E tests, the default base URL is `http://localhost:3000`. Set `PLAYWRIGHT_BASE_URL` when testing another local port or a deployed test environment.
 
 Tests cover:
 - ATS Engine scoring (all components + edge cases)
