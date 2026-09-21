@@ -117,6 +117,9 @@ npm run test:e2e:headed
 # Pause execution with Playwright Inspector for debugging
 npm run test:e2e:debug
 
+# Open the HTML report from the most recent Playwright run
+npm run test:e2e:report
+
 # Run unit checks followed by E2E tests
 npm run check:all
 ```
