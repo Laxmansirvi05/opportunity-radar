@@ -124,7 +124,7 @@ npm run test:e2e:report
 npm run check:all
 ```
 
-For E2E tests, the default base URL is `http://localhost:3000`. Set `PLAYWRIGHT_BASE_URL` when testing another local port or a deployed test environment.
+The Playwright configuration automatically starts `npm run dev` when `PLAYWRIGHT_BASE_URL` is not set. Set `PLAYWRIGHT_BASE_URL` when testing an already-running server, another local port, or a deployed test environment; in that case Playwright will not start a second server.
 
 Tests cover:
 - ATS Engine scoring (all components + edge cases)
