@@ -147,3 +147,14 @@ describe('AI Gateway Task-Based Routing (Phase 2.7)', () => {
     expect(sequence[0].provider).toBe('gemini')
   })
 })
+
+describe('assistant provider order', () => {
+  it('leads with the fast providers and keeps Gemini direct as a fallback', async () => {
+    const { getProviderSequence } = await import('@/lib/ai-gateway')
+    const order = getProviderSequence('assistant').map((c) => c.provider)
+    expect(order[0]).toBe('openrouter')
+    expect(order[1]).toBe('groq')
+    expect(order).toContain('gemini')
+    expect(order.indexOf('gemini')).toBeGreaterThan(order.indexOf('groq'))
+  })
+})

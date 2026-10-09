@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { callAI } from '@/lib/ai-gateway'
 import { resetProviderHealth } from '@/lib/ai-gateway/health'
 import { callGemini } from '@/lib/ai-gateway/providers/gemini'
+import { callOpenRouter } from '@/lib/ai-gateway/providers/openrouter'
 import type { AIRequest, AIFeature } from '@/types/ai'
 
 /**
@@ -40,6 +41,8 @@ describe('AI Gateway default rate limit', () => {
     vi.clearAllMocks()
     resetProviderHealth()
     vi.mocked(callGemini).mockResolvedValue(mockSuccess)
+    // The assistant chain leads with OpenRouter (see getProviderSequence).
+    vi.mocked(callOpenRouter).mockResolvedValue({ ...mockSuccess, provider: 'openrouter' })
   })
 
   it('caps a feature with no explicit RATE_LIMITS entry instead of allowing it unlimited', async () => {

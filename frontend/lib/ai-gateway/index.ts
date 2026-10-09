@@ -130,6 +130,20 @@ export function getProviderSequence(feature: string): ProviderConfig[] {
         ...STRONG_MODELS,
         { provider: 'groq', model: 'llama-3.3-70b-versatile' }
       ]
+    case 'assistant':
+      // Interactive chat: lead with the providers that answer quickly.
+      // Measured on production (ai_usage_log, 9 Oct 2026): Gemini called
+      // directly took 4s, 41s and 64s; the same model through OpenRouter took
+      // 0.9s to 16s. With Gemini first, a slow call burned its whole timeout
+      // before anything else was tried, and two of three chat requests ran
+      // out of time.
+      return [
+        { provider: 'openrouter', model: 'google/gemini-2.5-flash' },
+        { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+        { provider: 'gemini', model: 'gemini-flash-latest' },
+        { provider: 'mistral', model: 'mistral-small-latest' },
+        { provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct' },
+      ]
     default:
       return STRONG_MODELS
   }
@@ -165,7 +179,8 @@ async function logUsage(result: AIResult, context: GatewayContext): Promise<void
     tokens_total:   isAIResponse(result) ? result.tokensUsed.total : 0,
     latency_ms:     result.latencyMs,
     success:        result.success,
-    failure_reason: !result.success ? result.reason : null,
+    // all_failed alone says nothing about why; keep what each provider said.
+    failure_reason: !result.success ? (result.attempts ? `${result.reason} [${result.attempts}]`.slice(0, 300) : result.reason) : null,
     estimated_cost: costUsd,
   })
 }
@@ -292,6 +307,7 @@ export async function callAI(
 
   const sequence = getProviderSequence(context.feature)
   let totalLatency = 0
+  const attempts: string[] = []
   const startedAt = Date.now()
   // Below this much remaining budget an attempt cannot realistically finish.
   const MIN_ATTEMPT_MS = 4_000
@@ -364,6 +380,7 @@ export async function callAI(
 
       console.warn(`[AI Gateway] Failed: ${provider} (${model}) key ...${keyId ?? 'default'} - Reason: ${!result.success ? result.reason : 'provider_error'}`)
       recordProviderFailure(provider, model, !result.success ? result.reason : 'provider_error', undefined, keyId)
+      attempts.push(`${provider}:${!result.success ? result.reason : 'provider_error'}`)
 
       // A timeout is about the provider being slow, not about this key.
       // Retrying it with each sibling key spent up to four full timeouts on
@@ -378,6 +395,7 @@ export async function callAI(
     provider:  'all',
     reason:    'all_failed',
     latencyMs: totalLatency,
+    attempts:  attempts.length > 0 ? attempts.join(', ') : 'no provider attempted (all in health backoff or over budget)',
   }
   await logUsage(allFailed, context)
   return allFailed
