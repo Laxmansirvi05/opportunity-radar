@@ -66,7 +66,8 @@ export async function startOptimizationRun(input: StartRunInput): Promise<StartR
         input.userId,
         input.resumeId ?? null,
         input.jobDescription,
-        input.resumeUpdatedAt ?? null
+        input.resumeUpdatedAt ?? null,
+        input.resume
       )
     : null
 

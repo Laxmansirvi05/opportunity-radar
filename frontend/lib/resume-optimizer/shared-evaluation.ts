@@ -32,6 +32,51 @@ function normalizeJd(jd: string): string {
   return jd.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
+/**
+ * Order-independent fingerprint of a resume's content.
+ *
+ * A check run from "Upload PDF" has no saved resume, so `resumeId` is null
+ * for every such run. Matching on `resumeId` alone therefore treated ALL
+ * uploaded resumes as the same resume: a second, different upload against the
+ * same job description within 24h was handed the first one's evidence. Seen
+ * live on 9 Oct 2026 — a backend resume that scored 90 was re-scored 19 six
+ * seconds later with the suggestions written for an unrelated marketing
+ * resume. For runs without an id the content itself is the identity.
+ */
+export function resumeFingerprint(resume: unknown): string | null {
+  if (resume === null || resume === undefined || typeof resume !== 'object') return null
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical)
+    if (value && typeof value === 'object') {
+      return Object.keys(value as Record<string, unknown>)
+        .sort()
+        .reduce<Record<string, unknown>>((acc, key) => {
+          acc[key] = canonical((value as Record<string, unknown>)[key])
+          return acc
+        }, {})
+    }
+    return typeof value === 'string' ? value.trim() : value
+  }
+  return JSON.stringify(canonical(resume))
+}
+
+/**
+ * Whether a stored evaluation was computed from the resume now being checked.
+ *
+ *   - Both have a saved-resume id  -> the ids must match.
+ *   - Neither has one (uploads)    -> the content must match.
+ *   - Anything else                -> not the same resume.
+ */
+export function isSameResume(
+  candidate: { resumeId: string | null; resumeFingerprint: string | null },
+  resumeId: string | null,
+  fingerprint: string | null
+): boolean {
+  if (resumeId !== null) return candidate.resumeId === resumeId
+  if (candidate.resumeId !== null) return false
+  return fingerprint !== null && candidate.resumeFingerprint === fingerprint
+}
+
 /** The two row shapes this reads, named rather than cast through `any[]`. */
 interface CachedEvaluationPayload {
   structuredJd?: StructuredJD
@@ -40,6 +85,7 @@ interface CachedEvaluationPayload {
 
 interface AtsReportRow {
   resume_id: string | null
+  source_resume: unknown
   target_job_description: string | null
   report_data: { atsV2?: CachedEvaluationPayload } | null
   created_at: string
@@ -55,6 +101,8 @@ interface OptimizationRow {
 interface Candidate {
   createdAt: string
   resumeId: string | null
+  /** Fingerprint of the resume the row was computed from, when it kept one. */
+  resumeFingerprint: string | null
   jobDescription: string
   structuredJd?: StructuredJD
   evidenceMatrix?: EvidenceMatrix
@@ -72,15 +120,18 @@ export async function findRecentAtsV2Evaluation(
   userId: string,
   resumeId: string | null,
   jobDescription: string,
-  resumeUpdatedAt?: string | null
+  resumeUpdatedAt?: string | null,
+  /** The resume being checked. Required for a cache hit when `resumeId` is null. */
+  resume?: unknown
 ): Promise<CachedAtsV2Evaluation | null> {
+  const fingerprint = resumeFingerprint(resume)
   const normalizedTarget = normalizeJd(jobDescription)
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
   const [atsRes, optRes] = await Promise.all([
     supabase
       .from('resume_ats_reports')
-      .select('resume_id, target_job_description, report_data, created_at')
+      .select('resume_id, source_resume, target_job_description, report_data, created_at')
       .eq('user_id', userId)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
@@ -102,6 +153,7 @@ export async function findRecentAtsV2Evaluation(
       candidates.push({
         createdAt: r.created_at,
         resumeId: r.resume_id ?? null,
+        resumeFingerprint: resumeFingerprint(r.source_resume),
         jobDescription: r.target_job_description ?? '',
         structuredJd: atsV2.structuredJd,
         evidenceMatrix: atsV2.evidenceMatrix,
@@ -115,6 +167,9 @@ export async function findRecentAtsV2Evaluation(
       candidates.push({
         createdAt: r.created_at,
         resumeId: r.original_resume_id ?? null,
+        // Optimisation rows keep no resume snapshot, so one without an id can
+        // never be proven to be the same resume and is never reused.
+        resumeFingerprint: null,
         jobDescription: r.job_description ?? '',
         structuredJd: baseline.structuredJd,
         evidenceMatrix: baseline.evidenceMatrix,
@@ -125,7 +180,7 @@ export async function findRecentAtsV2Evaluation(
   const resumeEditCutoff = resumeUpdatedAt ? new Date(resumeUpdatedAt).getTime() : null
 
   const match = candidates
-    .filter((c) => c.resumeId === resumeId && normalizeJd(c.jobDescription) === normalizedTarget)
+    .filter((c) => isSameResume(c, resumeId, fingerprint) && normalizeJd(c.jobDescription) === normalizedTarget)
     .filter((c) => resumeEditCutoff === null || new Date(c.createdAt).getTime() >= resumeEditCutoff)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
 

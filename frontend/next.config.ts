@@ -45,7 +45,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse'],
   experimental: {
     swcPlugins: [
-      ['@lingui/swc-plugin', {}],
+      // descriptorFields 'all' keeps each message's English text in the
+      // bundle. The default ('auto') strips it in production and leaves only
+      // the hashed id, on the assumption that a compiled catalogue supplies
+      // the text. This app ships no catalogue (libs/locale.ts loads `{}`), so
+      // with the default every label in the Resume Builder rendered as its id
+      // ("N0-GsR", "IagCbF") on production while looking correct in dev.
+      ['@lingui/swc-plugin', { descriptorFields: 'all' }],
     ],
   },
   turbopack: {
