@@ -74,6 +74,8 @@ export interface AIError {
   provider: AIProvider | 'all'
   reason: AIFailureReason
   latencyMs: number
+  /** For `all_failed`: what each provider answered, e.g. "gemini:timeout, openrouter:rate_limit". */
+  attempts?: string
 }
 
 export type AIResult = AIResponse | AIError
