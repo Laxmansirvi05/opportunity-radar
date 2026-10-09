@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -35,6 +36,21 @@ interface RelatedOpp {
   status?: string | null
   deadline?: string | null
   companies?: { name?: string | null } | null
+}
+
+/**
+ * "Software Engineer, Intern at Stripe | Opportunity Radar" in the tab and in
+ * history, instead of the bare site name every listing used to share.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const fallback = { title: 'Opportunity | Opportunity Radar' }
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return fallback
+  const supabase = await createClient()
+  const { data } = await supabase.from('opportunities').select('title, company_name').eq('id', id).maybeSingle()
+  if (!data?.title) return fallback
+  const company = data.company_name ? ` at ${data.company_name}` : ''
+  return { title: `${data.title}${company} | Opportunity Radar` }
 }
 
 export default async function OpportunityDetailsPage({
