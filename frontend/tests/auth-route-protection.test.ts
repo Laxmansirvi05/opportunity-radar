@@ -4,6 +4,7 @@ import path from 'node:path'
 import {
   PROTECTED_ROUTES,
   AUTH_ROUTES,
+  PUBLIC_ROUTE_EXCEPTIONS,
   isProtectedRoute,
   isAuthRoute,
 } from '@/lib/auth/protected-routes'
@@ -53,6 +54,21 @@ describe('protected route coverage', () => {
     const stale = PROTECTED_ROUTES.filter((route) => !existing.has(route.replace(/^\//, '')))
     expect(stale).toEqual([])
   })
+
+  /**
+   * Each exception punches a hole in a protected prefix, so a stale one is a
+   * hole with nothing behind it. The page must exist, and it must live outside
+   * the protected route groups — a page inside `(protected)` re-verifies the
+   * session in its layout, so excepting it here would only strip the `?next=`
+   * from the redirect while still requiring a login.
+   */
+  it('excepts only public pages that exist on disk', () => {
+    for (const route of PUBLIC_ROUTE_EXCEPTIONS) {
+      expect(existsSync(path.join(APP_DIR, route))).toBe(true)
+      expect(existsSync(path.join(APP_DIR, '(protected)', route))).toBe(false)
+      expect(existsSync(path.join(APP_DIR, '(protected-fullscreen)', route))).toBe(false)
+    }
+  })
 })
 
 describe('isProtectedRoute', () => {
@@ -66,9 +82,34 @@ describe('isProtectedRoute', () => {
   })
 
   it('does not match public routes', () => {
-    for (const route of ['/', '/login', '/privacy', '/terms', '/notes/shared/abc']) {
-      expect(isProtectedRoute(route)).toBe(route === '/notes/shared/abc')
+    for (const route of ['/', '/login', '/privacy', '/terms']) {
+      expect(isProtectedRoute(route)).toBe(false)
     }
+  })
+
+  /**
+   * `/notes/shared/<slug>` is the read-only page behind "anyone with the link
+   * can view". It lives outside every protected route group and documents itself
+   * as deliberately unauthenticated, but the `/notes` entry claimed it by prefix
+   * and Proxy bounced anonymous visitors to `/login?next=…` — so share links
+   * worked only for people who were already signed in, which is the one audience
+   * that does not need them.
+   *
+   * This assertion previously read `expect(isProtectedRoute(route)).toBe(route
+   * === '/notes/shared/abc')`, pinning the bug in place as if it were intended.
+   */
+  it('does not protect the public shared-note page', () => {
+    expect(isProtectedRoute('/notes/shared/abc')).toBe(false)
+    expect(isProtectedRoute('/notes/shared')).toBe(false)
+  })
+
+  it('still protects the owner-facing notes routes', () => {
+    expect(isProtectedRoute('/notes')).toBe(true)
+    expect(isProtectedRoute('/notes/some-note-id')).toBe(true)
+    // Only the `/notes/shared` prefix is excepted, not anything merely
+    // resembling it.
+    expect(isProtectedRoute('/notes/sharedagain')).toBe(true)
+    expect(isProtectedRoute('/notes/shared-drafts')).toBe(true)
   })
 
   it('does not match a route that merely shares a prefix', () => {

@@ -15,19 +15,26 @@ interface Notification {
   is_read: boolean
   created_at: string
   related_opportunity_id: string | null
-  opportunities?: { title: string; company_name: string } | null
 }
 
 export function NotificationsClient() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
+  // `fetch` only rejects on a network fault, so none of these calls can rely on
+  // try/catch alone: a 500 resolves normally and used to fall through to the
+  // "You're all caught up!" empty state, reporting a server error as an empty
+  // inbox. Every call site checks `res.ok` explicitly.
   const fetchNotifications = async () => {
     try {
       const res = await fetch('/api/notifications')
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`)
       const json = await res.json()
-      if (json.data) setNotifications(json.data)
-    } catch (e) {
+      setNotifications(json.data ?? [])
+      setLoadFailed(false)
+    } catch {
+      setLoadFailed(true)
       toast.error('Failed to load notifications')
     } finally {
       setLoading(false)
@@ -48,11 +55,12 @@ export function NotificationsClient() {
     const original = [...notifications]
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     try {
-      await fetch('/api/notifications', {
+      const res = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_read', notificationId: id })
       })
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`)
       window.dispatchEvent(new Event('notifications-updated'))
     } catch {
       setNotifications(original)
@@ -64,11 +72,12 @@ export function NotificationsClient() {
     const original = [...notifications]
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     try {
-      await fetch('/api/notifications', {
+      const res = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_all_read' })
       })
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`)
       window.dispatchEvent(new Event('notifications-updated'))
     } catch {
       setNotifications(original)
@@ -82,7 +91,8 @@ export function NotificationsClient() {
     const original = [...notifications]
     setNotifications(prev => prev.filter(n => n.id !== id))
     try {
-      await fetch(`/api/notifications/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/notifications/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`)
       window.dispatchEvent(new Event('notifications-updated'))
     } catch {
       setNotifications(original)
@@ -111,6 +121,28 @@ export function NotificationsClient() {
   }
 
   const unreadCount = notifications.filter(n => !n.is_read).length
+
+  // A failed load is not an empty inbox. Say so, and offer the retry rather
+  // than leaving the reader to guess whether they really have no notifications.
+  if (loadFailed) {
+    return (
+      <div className="bg-surface border border-outline-variant rounded-2xl p-12 shadow-sm flex flex-col items-center justify-center text-center min-h-[400px]">
+        <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mb-4">
+          <XCircle className="w-8 h-8 text-error" />
+        </div>
+        <h3 className="text-xl font-bold text-on-background mb-2">Couldn&apos;t load your notifications</h3>
+        <p className="text-on-surface-variant max-w-md mx-auto mb-6">
+          Something went wrong reaching the server. Your notifications are safe — this is only a display problem.
+        </p>
+        <button
+          onClick={() => { setLoading(true); fetchNotifications() }}
+          className="px-5 py-2.5 rounded-full bg-primary text-on-primary font-medium text-sm hover:bg-primary/90 transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { callAI, getProviderSequence } from '@/lib/ai-gateway/index'
-import { resetProviderHealth, isProviderHealthy, recordProviderFailure } from '@/lib/ai-gateway/health'
+import { resetProviderHealth } from '@/lib/ai-gateway/health'
 import { callGemini } from '@/lib/ai-gateway/providers/gemini'
 import { callGroq } from '@/lib/ai-gateway/providers/groq'
 import { callOpenRouter } from '@/lib/ai-gateway/providers/openrouter'

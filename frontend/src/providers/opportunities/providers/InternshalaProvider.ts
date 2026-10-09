@@ -8,6 +8,7 @@ import * as cheerio from 'cheerio';
 const INDIA_CITIES = ['bangalore', 'hyderabad', 'pune', 'delhi', 'ncr', 'mumbai', 'chennai', 'remote'];
 
 export class InternshalaProvider extends OpportunityProvider {
+  readonly providerName = 'InternshalaProvider';
   async fetchListPages(): Promise<QueuePayload[]> {
     try {
       const payloads: QueuePayload[] = [];

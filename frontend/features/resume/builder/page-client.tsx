@@ -6,7 +6,6 @@ linguiI18n.load({ en: {} });
 linguiI18n.activate("en");
 
 import { useEffect } from "react";
-import { sampleResumeData } from "@reactive-resume/schema/resume/sample";
 import { BuilderLayoutShell, getBuilderLayout } from "./layout-shell";
 import { PreviewPage } from "./components/preview-page";
 import {

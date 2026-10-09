@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { structuredJDSchema, jdRequirementSchema } from '../features/resume-toolkit/lib/schema/resume/ats-v2'
+import { structuredJDSchema } from '../features/resume-toolkit/lib/schema/resume/ats-v2'
 
 describe('ATS V2 JD Extraction Schema Validation', () => {
   it('validates a correct structured JD payload', () => {

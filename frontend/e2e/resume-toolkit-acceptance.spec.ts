@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import path from 'path'
 
 test.describe('Resume Toolkit Full Acceptance', () => {
   test('Dashboard loads properly and protects unauthenticated access', async ({ page }) => {

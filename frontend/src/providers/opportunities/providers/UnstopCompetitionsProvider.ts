@@ -161,6 +161,7 @@ async function getPage(type: string, page: number): Promise<UnstopItem[] | null>
 }
 
 export class UnstopCompetitionsProvider extends OpportunityProvider {
+  readonly providerName = 'UnstopCompetitionsProvider';
   /** Pages per type. Open listings top out around 1200 for the largest type. */
   private readonly maxPages: number;
 

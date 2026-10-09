@@ -1,5 +1,4 @@
 import { type Messages } from "@lingui/core";
-import { setupI18n } from "@lingui/core";
 import { enUS as en } from "date-fns/locale";
 
 import { i18n } from "@lingui/core";

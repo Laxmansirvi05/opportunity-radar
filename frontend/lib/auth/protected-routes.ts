@@ -41,11 +41,29 @@ export const PROTECTED_ROUTES = [
  */
 export const AUTH_ROUTES = ['/login', '/signup'] as const
 
+/**
+ * Public paths that sit underneath a protected prefix.
+ *
+ * `matches()` below is prefix-based, so a listed route also claims everything
+ * nested under it. That is what makes `/opportunities/<id>` protected without
+ * enumerating ids — and it is also how `/notes` came to claim
+ * `/notes/shared/<slug>`, the read-only page behind "anyone with the link can
+ * view". That page lives outside every protected route group and documents
+ * itself as deliberately unauthenticated, but Proxy was redirecting anonymous
+ * visitors to `/login?next=…`, so share links worked for exactly the audience
+ * that did not need them and failed for everyone they were meant for.
+ *
+ * Checked before the protected list, and matched as a prefix so the `[slug]`
+ * segment is covered.
+ */
+export const PUBLIC_ROUTE_EXCEPTIONS = ['/notes/shared'] as const
+
 function matches(routes: readonly string[], pathname: string): boolean {
   return routes.some((route) => pathname === route || pathname.startsWith(route + '/'))
 }
 
 export function isProtectedRoute(pathname: string): boolean {
+  if (matches(PUBLIC_ROUTE_EXCEPTIONS, pathname)) return false
   return matches(PROTECTED_ROUTES, pathname)
 }
 

@@ -1,11 +1,11 @@
 import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
-import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 
 const INDIA_CITIES = ['bangalore', 'bengaluru', 'hyderabad', 'pune', 'delhi', 'ncr', 'new delhi', 'gurgaon', 'noida', 'mumbai', 'chennai', 'india', 'remote'];
 
 export class UnstopProvider extends OpportunityProvider {
+  readonly providerName = 'UnstopProvider';
   async fetchListPages(): Promise<QueuePayload[]> {
     try {
       const payloads: QueuePayload[] = [];

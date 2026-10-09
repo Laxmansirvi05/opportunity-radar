@@ -1,0 +1,587 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=Source+Sans+3:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #ffffff; }
+    a { color: #004ac6; text-decoration: none; }
+    a:hover { color: #003a9e; text-decoration: underline; }
+  </style>
+</helmet>
+
+<div style="width: 820px; background: #ffffff; font-family: 'Source Sans 3', system-ui, sans-serif; color: #191b23; padding: 0 0 72px 0;">
+
+  <!-- ═══════════ COVER ═══════════ -->
+  <div style="padding: 96px 72px 56px 72px; border-bottom: 3px solid #004ac6;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 48px;">
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: #004ac6; display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+      </div>
+      <span style="font-size: 15px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #434655;">Opportunity Radar</span>
+    </div>
+
+    <p style="font-family: 'Source Sans 3', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #006f64; margin: 0 0 18px 0;">Project Submission Report</p>
+
+    <h1 style="font-family: Newsreader, Georgia, serif; font-size: 52px; font-weight: 600; line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 20px 0; color: #191b23; text-wrap: pretty;">
+      A Unified Career-Readiness Platform for Students
+    </h1>
+
+    <p style="font-family: Newsreader, Georgia, serif; font-size: 21px; font-style: italic; line-height: 1.5; color: #434655; margin: 0 0 44px 0; max-width: 620px;">
+      Bringing opportunity discovery, résumé intelligence, interview practice and application tracking into a single evidence-based system.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 40px; max-width: 620px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #737686;">Submitted by</span>
+        <span style="font-size: 16px; color: #191b23;">[YOUR NAME]</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #737686;">Enrolment number</span>
+        <span style="font-size: 16px; color: #191b23;">[YOUR ENROLMENT NO.]</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #737686;">Programme &amp; institution</span>
+        <span style="font-size: 16px; color: #191b23;">[YOUR COURSE / COLLEGE]</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #737686;">Guided by</span>
+        <span style="font-size: 16px; color: #191b23;">[FACULTY NAME]</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 1. ABSTRACT ═══════════ -->
+  <div style="padding: 48px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">1 · Abstract</p>
+    <div style="border-left: 3px solid #6df5e1; padding-left: 22px;">
+      <p style="font-family: Newsreader, Georgia, serif; font-size: 19px; line-height: 1.62; color: #191b23; margin: 0;">
+        Opportunity Radar is a full-stack web platform that closes the distance between a student
+        <em>looking</em> for work and a student <em>ready</em> for it. It aggregates live internships,
+        jobs, hackathons and scholarships into one searchable catalogue; scores a résumé against a
+        specific job description using measured evidence rather than keyword counting; runs a real
+        spoken mock interview through a voice AI agent and returns a graded report; and tracks every
+        application through to its outcome. The system is deployed and operational, comprising a
+        Next.js 16 application, a Supabase Postgres backend with row-level security on every table,
+        and two Python AI services running on a dedicated cloud host.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════ 2. PROBLEM STATEMENT ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">2 · Problem Statement</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px 0; color: #191b23;">The preparation gap</h2>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 18px 0;">
+      A student applying for their first technical role faces a problem that is not a shortage of
+      information but an excess of it, scattered across incompatible tools. Openings live on a dozen
+      portals with no common format. Résumé feedback, where it exists at all, is generic advice
+      untethered from the specific role being applied for. Interview practice requires another
+      person&#39;s time. Applications are tracked, if at all, in a spreadsheet that answers no
+      useful question about how the process is going.
+    </p>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 22px 0;">
+      The consequence is a preparation gap: students apply widely but not well. They cannot see which
+      of their skills a particular employer actually asked for, which are genuinely evidenced on their
+      own résumé, or what specific work would close the difference. Four distinct needs go unmet:
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px;">
+        <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0 0 6px 0;">Fragmented discovery</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #434655; margin: 0;">Relevant openings are spread across many sources with no single, filterable view.</p>
+      </div>
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px;">
+        <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0 0 6px 0;">Unmeasured résumés</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #434655; margin: 0;">Students cannot tell how a given résumé reads against a given role until it is rejected.</p>
+      </div>
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px;">
+        <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0 0 6px 0;">Inaccessible practice</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #434655; margin: 0;">Spoken interview rehearsal depends on another person being available to conduct it.</p>
+      </div>
+      <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px;">
+        <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0 0 6px 0;">No feedback loop</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #434655; margin: 0;">Nothing connects an application&#39;s outcome back to what should be improved next.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 3. SOLUTION ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">3 · Proposed Solution</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px 0; color: #191b23;">One system, one continuous loop</h2>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 20px 0;">
+      Opportunity Radar treats these four needs as one workflow rather than four products. A student
+      discovers a role, measures their résumé against it, receives a specific and actionable list of
+      gaps, closes those gaps with recommended certifications and projects, rehearses the interview
+      aloud, and tracks the application to its result — each stage feeding the next.
+    </p>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 22px 0;">
+      Three design principles govern the system throughout, and account for most of its engineering:
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; gap: 18px; align-items: flex-start;">
+        <span style="flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: #dbe1ff; color: #004ac6; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">I</span>
+        <div>
+          <p style="font-size: 16px; font-weight: 700; color: #191b23; margin: 0 0 4px 0;">Evidence over keywords</p>
+          <p style="font-size: 15px; line-height: 1.65; color: #434655; margin: 0;">A skill counts when the résumé demonstrates it. The scoring engine weighs a shipped project above a listed keyword, and every requirement carries the exact quoted text that satisfied it.</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 18px; align-items: flex-start;">
+        <span style="flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: #dbe1ff; color: #004ac6; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">II</span>
+        <div>
+          <p style="font-size: 16px; font-weight: 700; color: #191b23; margin: 0 0 4px 0;">Never present a number the system did not compute</p>
+          <p style="font-size: 15px; line-height: 1.65; color: #434655; margin: 0;">Where a value is unknown, the interface says so. A missing field is omitted rather than filled with a plausible placeholder, so a student can trust what is shown.</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 18px; align-items: flex-start;">
+        <span style="flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; background: #dbe1ff; color: #004ac6; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;">III</span>
+        <div>
+          <p style="font-size: 16px; font-weight: 700; color: #191b23; margin: 0 0 4px 0;">Defence in depth on every record</p>
+          <p style="font-size: 15px; line-height: 1.65; color: #434655; margin: 0;">Row-level security is enabled on all database tables, and every read and write additionally carries an explicit ownership filter, so a single misconfiguration cannot expose another student&#39;s data.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 4. ARCHITECTURE ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">4 · System Architecture</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 18px 0; color: #191b23;">Three tiers, clearly separated</h2>
+
+    <div style="border: 1px solid #E2E8F0; border-radius: 12px; padding: 26px; background: #fbfbff;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+
+        <div style="border: 1px solid #c9d4f5; border-radius: 10px; background: #ffffff; padding: 16px 18px;">
+          <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #004ac6; margin: 0 0 6px 0;">Presentation tier · Vercel</p>
+          <p style="font-size: 15px; color: #191b23; margin: 0; line-height: 1.55;">Next.js 16 App Router · React 19 · Tailwind CSS v4 — 31 pages and 53 server route handlers, rendered on the server by default.</p>
+        </div>
+
+        <div style="display: flex; justify-content: center; color: #737686;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        </div>
+
+        <div style="border: 1px solid #b8ecdf; border-radius: 10px; background: #ffffff; padding: 16px 18px;">
+          <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #006f64; margin: 0 0 6px 0;">Data tier · Supabase (managed Postgres)</p>
+          <p style="font-size: 15px; color: #191b23; margin: 0; line-height: 1.55;">Authentication, Postgres, object storage and realtime channels. Row-level security on every table; 65 timestamped SQL migrations hold the schema history.</p>
+        </div>
+
+        <div style="display: flex; justify-content: center; color: #737686;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        </div>
+
+        <div style="border: 1px solid #f0cdbb; border-radius: 10px; background: #ffffff; padding: 16px 18px;">
+          <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #943700; margin: 0 0 6px 0;">Intelligence tier · Cloud VM (systemd + Caddy TLS)</p>
+          <p style="font-size: 15px; color: #191b23; margin: 0; line-height: 1.55;">Two independent Python services — the AI Search agent and the Voice Interview agent — each behind TLS and gated by a shared internal secret. The browser never calls them directly; only the application server does.</p>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size: 15px; line-height: 1.68; color: #434655; margin: 18px 0 0 0;">
+      The separation is deliberate. Long-running AI work — a web-search agent that runs for minutes, a
+      live voice session that holds a WebRTC connection — does not belong in a serverless request.
+      Isolating it on a dedicated host lets each tier be scaled, restarted and reasoned about
+      independently, while the internal-secret gate ensures those services answer only to the
+      application server.
+    </p>
+  </div>
+
+  <!-- ═══════════ 5. FEATURES ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">5 · Feature Catalogue</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 20px 0; color: #191b23;">What the system does</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+
+      <sc-for list="{{features}}" as="f" hint-placeholder-count="10">
+        <div style="border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: #f8f8ff; border-bottom: 1px solid #E2E8F0;">
+            <span style="width: 30px; height: 30px; border-radius: 7px; background: {{f.tint}}; color: {{f.ink}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{f.icon}}"/></svg>
+            </span>
+            <h3 style="font-family: Newsreader, Georgia, serif; font-size: 21px; font-weight: 600; color: #191b23; margin: 0; flex: 1;">{{f.name}}</h3>
+            <span style="font-size: 12px; color: #737686; font-family: ui-monospace, monospace;">{{f.route}}</span>
+          </div>
+          <div style="padding: 16px 20px;">
+            <p style="font-size: 15px; line-height: 1.65; color: #434655; margin: 0 0 12px 0;">{{f.what}}</p>
+            <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #737686; margin: 0 0 6px 0;">How it works</p>
+            <p style="font-size: 15px; line-height: 1.65; color: #191b23; margin: 0;">{{f.how}}</p>
+          </div>
+        </div>
+      </sc-for>
+
+    </div>
+  </div>
+
+  <!-- ═══════════ 6. TECHNOLOGY ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">6 · Technology Stack</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 18px 0; color: #191b23;">Components and versions</h2>
+
+    <div style="border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden;">
+      <div style="display: grid; grid-template-columns: 168px 1fr 108px; gap: 0; padding: 11px 18px; background: #f8f8ff; border-bottom: 1px solid #E2E8F0;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #737686;">Layer</span>
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #737686;">Technology</span>
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #737686;">Version</span>
+      </div>
+      <sc-for list="{{stack}}" as="s" hint-placeholder-count="14">
+        <div style="display: grid; grid-template-columns: 168px 1fr 108px; gap: 0; padding: 11px 18px; border-bottom: 1px solid #f0f0f8; align-items: baseline;">
+          <span style="font-size: 14px; color: #737686;">{{s.layer}}</span>
+          <span style="font-size: 14px; color: #191b23; font-weight: 600;">{{s.tech}}</span>
+          <span style="font-size: 13px; color: #434655; font-family: ui-monospace, monospace;">{{s.version}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ═══════════ 7. CONFIGURATION ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">7 · Service Configuration</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 14px 0; color: #191b23;">External services and credentials</h2>
+
+    <p style="font-size: 15px; line-height: 1.68; color: #434655; margin: 0 0 18px 0;">
+      All credentials are supplied through environment variables and are never committed to the
+      repository — the version-controlled tree carries only a template file listing the required
+      names. The table below states which service each credential belongs to and what it enables.
+      <strong style="color: #191b23;">Key values are intentionally omitted from this document.</strong>
+    </p>
+
+    <div style="border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden;">
+      <div style="display: grid; grid-template-columns: 190px 1fr; padding: 11px 18px; background: #f8f8ff; border-bottom: 1px solid #E2E8F0;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #737686;">Service</span>
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #737686;">Purpose in the system</span>
+      </div>
+      <sc-for list="{{services}}" as="k" hint-placeholder-count="9">
+        <div style="display: grid; grid-template-columns: 190px 1fr; padding: 12px 18px; border-bottom: 1px solid #f0f0f8; align-items: baseline;">
+          <span style="font-size: 14px; color: #191b23; font-weight: 600;">{{k.name}}</span>
+          <span style="font-size: 14px; color: #434655; line-height: 1.55;">{{k.purpose}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <p style="font-size: 14px; line-height: 1.65; color: #434655; margin: 16px 0 0 0; padding: 14px 18px; background: #f3f3fe; border-radius: 10px;">
+      <strong style="color: #191b23;">On the language-model providers.</strong> The system does not
+      depend on any single AI vendor. An internal gateway holds a pool of provider keys and rotates
+      through them, falling back to the next provider when one is rate-limited or unavailable. This
+      keeps the AI features running on free and low-cost tiers, and means no single provider outage
+      takes a feature offline.
+    </p>
+  </div>
+
+  <!-- ═══════════ 8. INSTALLATION ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">8 · Installation and Setup</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 8px 0; color: #191b23;">Running the project locally</h2>
+    <p style="font-size: 14px; color: #737686; margin: 0 0 20px 0;">Prerequisites: Node.js 20 or newer, npm, Git, and a Supabase project.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <sc-for list="{{steps}}" as="st" hint-placeholder-count="6">
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <span style="flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #004ac6; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;">{{st.n}}</span>
+          <div style="flex: 1; min-width: 0;">
+            <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0 0 5px 0;">{{st.title}}</p>
+            <p style="font-size: 14px; line-height: 1.6; color: #434655; margin: 0 0 8px 0;">{{st.detail}}</p>
+            <pre style="margin: 0; padding: 11px 14px; background: #191b23; color: #e8eaf6; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.55; overflow-x: auto; white-space: pre-wrap;">{{st.code}}</pre>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ═══════════ 9. DATABASE ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">9 · Data Model and Security</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px 0; color: #191b23;">How student data is protected</h2>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 18px 0;">
+      Every table in the database has row-level security enabled, and every table holding student data
+      carries per-user ownership policies covering select, insert, update and delete. A query issued
+      on behalf of one student is constrained by the database itself, not by application logic that
+      could be bypassed.
+    </p>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 20px 0;">
+      Application code then adds a second, independent layer: every read and write also carries an
+      explicit ownership filter. Either layer alone would be sufficient; requiring both means a future
+      change to one cannot silently expose data. Schema changes are made only through timestamped
+      migration files, giving a complete and reproducible history of the database.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{dataStats}}" as="d" hint-placeholder-count="4">
+        <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; text-align: center;">
+          <p style="font-family: Newsreader, Georgia, serif; font-size: 27px; font-weight: 600; color: #004ac6; margin: 0 0 3px 0;">{{d.value}}</p>
+          <p style="font-size: 12px; color: #434655; margin: 0; line-height: 1.4;">{{d.label}}</p>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ═══════════ 10. QUALITY ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">10 · Engineering Quality</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px 0; color: #191b23;">Verification and discipline</h2>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 20px 0;">
+      The project is held to gates that run on every change: an automated test suite, a full
+      TypeScript type-check across the entire codebase, static analysis, and a production build.
+      Business logic is deliberately extracted from user-interface components into pure, independently
+      testable functions — the scoring engine, the application-funnel statistics, the search-filter
+      builders and the redirect validators are all covered this way.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{quality}}" as="q" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 14px; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px 18px;">
+          <span style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; background: #6df5e1; color: #006f64; display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+          </span>
+          <div>
+            <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0;">{{q.value}}</p>
+            <p style="font-size: 13px; color: #434655; margin: 1px 0 0 0;">{{q.label}}</p>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ═══════════ 11. DEPLOYMENT ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">11 · Deployment and Operations</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px 0; color: #191b23;">Live and self-maintaining</h2>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 18px 0;">
+      The application is deployed on Vercel with continuous delivery from version control: a push
+      builds and releases automatically. The two AI services run under systemd on a cloud virtual
+      machine, each behind a Caddy reverse proxy that terminates TLS and renews certificates without
+      intervention.
+    </p>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 18px 0;">
+      Eleven scheduled jobs keep the platform current without any manual work. Overnight tasks refresh
+      opportunities from each source; link-health sweeps verify that listings and certification links
+      still resolve and hide those that do not; further jobs generate deadline notifications and
+      retire stale interview sessions. Long-running routes declare explicit execution budgets scaled to
+      the work they perform, so AI operations complete rather than being cut short.
+    </p>
+
+    <div style="border-left: 3px solid #004ac6; padding: 4px 0 4px 22px;">
+      <p style="font-family: Newsreader, Georgia, serif; font-size: 18px; line-height: 1.6; color: #191b23; margin: 0; font-style: italic;">
+        The result is a platform that maintains its own catalogue: opportunities arrive, dead links
+        disappear, and deadlines reach students without anyone tending the system day to day.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════ 12. IMPACT ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">12 · Impact and Significance</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 18px 0; color: #191b23;">Why this matters</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <sc-for list="{{impact}}" as="i" hint-placeholder-count="5">
+        <div>
+          <p style="font-family: Newsreader, Georgia, serif; font-size: 20px; font-weight: 600; color: #191b23; margin: 0 0 6px 0;">{{i.title}}</p>
+          <p style="font-size: 15px; line-height: 1.7; color: #434655; margin: 0;">{{i.body}}</p>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ═══════════ 13. FUTURE SCOPE ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">13 · Future Scope</p>
+    <h2 style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px 0; color: #191b23;">Where it goes next</h2>
+
+    <p style="font-size: 16px; line-height: 1.72; color: #434655; margin: 0 0 18px 0;">
+      The architecture was built to extend. Several directions follow naturally from what already
+      exists:
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+      <sc-for list="{{future}}" as="fu" hint-placeholder-count="4">
+        <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 18px 20px;">
+          <p style="font-size: 15px; font-weight: 700; color: #191b23; margin: 0 0 6px 0;">{{fu.title}}</p>
+          <p style="font-size: 14px; line-height: 1.6; color: #434655; margin: 0;">{{fu.body}}</p>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ═══════════ 14. CONCLUSION ═══════════ -->
+  <div style="padding: 46px 72px 0 72px;">
+    <p style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #004ac6; margin: 0 0 10px 0;">14 · Conclusion</p>
+    <div style="background: #f3f3fe; border-radius: 12px; padding: 28px 30px;">
+      <p style="font-family: Newsreader, Georgia, serif; font-size: 19px; line-height: 1.66; color: #191b23; margin: 0 0 14px 0;">
+        Opportunity Radar demonstrates that the separate stages of career preparation — discovery,
+        assessment, skill-building, rehearsal and tracking — work better as one connected system than
+        as five disconnected tools. Every score it shows is derived from evidence it can quote; every
+        record it stores is protected at the database level as well as in code.
+      </p>
+      <p style="font-size: 16px; line-height: 1.7; color: #434655; margin: 0;">
+        The platform is deployed and operational, integrating a modern web application, a secured
+        relational backend, and two independently deployed AI services including real-time voice.
+        It stands as a complete, working answer to the problem it set out to solve.
+      </p>
+    </div>
+  </div>
+
+  <div style="padding: 40px 72px 0 72px;">
+    <div style="border-top: 1px solid #E2E8F0; padding-top: 16px; display: flex; justify-content: space-between; align-items: baseline;">
+      <span style="font-size: 12px; color: #737686;">Opportunity Radar · Project Submission Report</span>
+      <span style="font-size: 12px; color: #737686;">[YOUR NAME] · [DATE]</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":820,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const I = {
+      search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+      mic: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
+      doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
+      check: 'M9 11l3 3 6-6M4 4h16v16H4z',
+      wand: 'M15 4V2m0 20v-2M4 15H2m20 0h-2M5 5l14 14',
+      board: 'M4 4h16v16H4zM9 4v16M15 4v16',
+      cap: 'M12 4 2 9l10 5 10-5-10-5zM6 12v5c0 1 3 2 6 2s6-1 6-2v-5',
+      chat: 'M21 12a8 8 0 0 1-8 8H7l-4 3v-5a8 8 0 1 1 18-6z',
+      note: 'M5 3h14v18l-4-3-3 3-3-3-4 3zM9 8h6M9 12h6',
+      people: 'M16 20v-2a4 4 0 0 0-8 0v2M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6'
+    };
+
+    return {
+      features: [
+        { name: 'AI Search', route: '/ai-search', icon: I.search, tint: '#dbe1ff', ink: '#004ac6',
+          what: 'A student uploads a résumé and an autonomous agent searches the live web for openings that genuinely fit it, scores each against their actual experience, and explains why each one matched.',
+          how: 'A LangGraph agent runs a multi-step pipeline — search, de-duplicate, filter out low-quality listings, then score each remaining posting against the parsed résumé. Results are presented as ranked match bands rather than raw numbers, and the agent reports honestly when it found fewer results than expected.' },
+
+        { name: 'Voice Mock Interview', route: '/interview', icon: I.mic, tint: '#ffdbcd', ink: '#943700',
+          what: 'A spoken, real-time mock interview with an AI interviewer that listens, responds naturally, adapts its questions, and afterwards produces a graded report with a model answer for every question asked.',
+          how: 'A live audio pipeline: speech recognition transcribes the student, a language model generates the interviewer’s reply, and a self-hosted speech synthesiser voices it — carried over WebRTC with voice-activity detection and turn-taking so the conversation flows naturally. A scoring pass then grades each competency and writes the report.' },
+
+        { name: 'ATS Score Checker', route: '/resume/ats', icon: I.check, tint: '#dbe1ff', ink: '#004ac6',
+          what: 'Scores a résumé against a specific job description and returns a requirement-by-requirement evidence matrix showing exactly what is matched, partly matched, and still to be demonstrated.',
+          how: 'The job description is first structured into discrete requirements. Each is then evaluated against the résumé for the strength and type of evidence supporting it, with the quoted text that satisfied it. A deterministic engine converts those judgements into a score, weighting a shipped project above a listed keyword. Matching certifications from the catalogue are attached to the gaps found.' },
+
+        { name: 'AI Résumé Optimiser', route: '/resume/copilot', icon: I.wand, tint: '#e6e0ff', ink: '#5b3fc4',
+          what: 'Takes a résumé and a target role and produces both a polished rewrite and a fully role-aligned version, each downloadable as an ATS-safe PDF, alongside the gaps that drove the changes.',
+          how: 'It shares the exact scoring pipeline used by the ATS checker and reuses its evaluation for an identical résumé and job description, so the two features can never report different scores for the same input. Generated content is checked against the source résumé so nothing is invented on the student’s behalf.' },
+
+        { name: 'Résumé Builder and Toolkit', route: '/resume', icon: I.doc, tint: '#dbe1ff', ink: '#004ac6',
+          what: 'A structured résumé builder with live preview, undo and redo, full-width preview mode, PDF export, and an import path that converts an existing document into an editable résumé.',
+          how: 'Sections are edited through a guided panel with autosave; edits within a short window collapse into a single undo step so typing reverts as one action rather than character by character. Uploaded PDFs are parsed into structured data that every scoring feature can then read.' },
+
+        { name: 'Opportunity Discovery', route: '/search', icon: I.board, tint: '#6df5e1', ink: '#006f64',
+          what: 'A unified, filterable catalogue of internships, jobs, hackathons and scholarships aggregated from multiple sources, with full detail pages and company profiles.',
+          how: 'Search runs through an indexed database function combining full-text search with filters for category, mode, location, company and skill tags. Search state lives in the URL, so any result set can be shared or bookmarked exactly as seen.' },
+
+        { name: 'Application Tracker', route: '/tracker', icon: I.board, tint: '#dbe1ff', ink: '#004ac6',
+          what: 'A drag-and-drop kanban board moving each application through five stages, with live funnel statistics including a response rate computed from the student’s own history.',
+          how: 'Stage changes update optimistically and roll back if the write fails. The database enforces one tracker entry per student per opportunity and constrains the stage to the five valid values, so the board cannot drift into an invalid state. Saved opportunities and tracked applications stay in sync.' },
+
+        { name: 'Certifications Catalogue', route: '/certifications', icon: I.cap, tint: '#6df5e1', ink: '#006f64',
+          what: 'A browsable catalogue of more than twenty thousand certifications and courses from around a hundred providers — among them Coursera, Google, AWS, Microsoft Learn, the Linux Foundation, Harvard, Stanford and Cambridge — filterable by price, level, duration and provider.',
+          how: 'Search queries a dedicated full-text index spanning title, provider, description and topics, so a course is found by what it teaches rather than only by its name. A daily sweep verifies that links still resolve and hides those that do not, keeping the catalogue trustworthy.' },
+
+        { name: 'AI Career Assistant', route: '/assistant', icon: I.chat, tint: '#e6e0ff', ink: '#5b3fc4',
+          what: 'A conversational assistant for résumé, interview and career questions that can attach real opportunities from the platform directly into the conversation.',
+          how: 'When a message asks for listings, the assistant queries the opportunity database and attaches genuine results as interactive cards. It is explicitly constrained never to invent a listing, and when a search returns nothing it says so plainly or offers related results, clearly labelled as broader.' },
+
+        { name: 'Notes and Community Hub', route: '/notes · /hub', icon: I.note, tint: '#dbe1ff', ink: '#004ac6',
+          what: 'A rich note-taking workspace with folders, templates, file attachments, internal linking and shareable read-only links, plus a realtime community chat for students.',
+          how: 'Notes are stored as sanitised rich text through a strict allow-list, and shared links resolve only while sharing is active, are excluded from search engines, and stop working the moment sharing is revoked. The Hub delivers messages in realtime with the sender identity derived on the server rather than trusted from the client.' }
+      ],
+
+      stack: [
+        { layer: 'Framework', tech: 'Next.js (App Router, Turbopack)', version: '16.2.7' },
+        { layer: 'UI runtime', tech: 'React', version: '19.2.4' },
+        { layer: 'Language', tech: 'TypeScript', version: '5.x' },
+        { layer: 'Styling', tech: 'Tailwind CSS + Material 3 tokens', version: '4.x' },
+        { layer: 'Database', tech: 'Supabase (PostgreSQL)', version: '2.107' },
+        { layer: 'Authentication', tech: 'Supabase Auth', version: '2.107' },
+        { layer: 'Realtime voice', tech: 'LiveKit (WebRTC transport)', version: '2.21' },
+        { layer: 'Voice components', tech: 'LiveKit React components', version: '2.9' },
+        { layer: 'Validation', tech: 'Zod', version: '4.4' },
+        { layer: 'Data fetching', tech: 'TanStack Query', version: '5.101' },
+        { layer: 'Drag and drop', tech: 'dnd-kit', version: '6.3' },
+        { layer: 'Notifications', tech: 'Sonner', version: '2.0' },
+        { layer: 'Testing', tech: 'Vitest', version: '4.1' },
+        { layer: 'AI services', tech: 'Python · FastAPI · LangGraph', version: '—' },
+        { layer: 'Hosting', tech: 'Vercel · Cloud VM (systemd, Caddy)', version: '—' }
+      ],
+
+      services: [
+        { name: 'Supabase', purpose: 'Project URL, public client key and a server-only administrative key — database, authentication, file storage and realtime channels.' },
+        { name: 'Google Gemini', purpose: 'Primary language model for résumé evaluation, the career assistant and the interview questioner.' },
+        { name: 'Groq', purpose: 'High-speed inference provider in the rotation pool, used when low latency matters most.' },
+        { name: 'Mistral', purpose: 'Additional language-model provider in the fallback chain.' },
+        { name: 'OpenRouter', purpose: 'Aggregated access to further models, broadening the fallback chain.' },
+        { name: 'Ollama', purpose: 'Self-hosted model endpoint, giving the pool an option independent of any commercial provider.' },
+        { name: 'LiveKit', purpose: 'Server URL, API key and secret used to mint short-lived tokens for the voice interview room.' },
+        { name: 'Deepgram', purpose: 'Speech-to-text transcription for the live interview.' },
+        { name: 'Tavily', purpose: 'Web search used by the AI Search agent to discover live openings.' },
+        { name: 'Internal agent secrets', purpose: 'Shared secrets gating the two AI services, so they answer only to the application server.' },
+        { name: 'Cron secret', purpose: 'Authenticates the scheduled maintenance jobs against their endpoints.' }
+      ],
+
+      steps: [
+        { n: '1', title: 'Clone the repository', detail: 'Obtain the source and move into the application directory.', code: 'git clone https://github.com/Laxmansirvi05/opportunity-radar.git\ncd opportunity-radar/frontend' },
+        { n: '2', title: 'Install dependencies', detail: 'Installs all packages listed in the lock file at their exact versions.', code: 'npm install' },
+        { n: '3', title: 'Configure environment variables', detail: 'Copy the template and fill in the credentials for the services in Section 7.', code: 'cp .env.example .env.local\n# then edit .env.local with your own keys' },
+        { n: '4', title: 'Apply the database schema', detail: 'Run the migrations in supabase/migrations against your Supabase project, in filename order.', code: 'supabase db push' },
+        { n: '5', title: 'Start the development server', detail: 'The application becomes available at http://localhost:3000.', code: 'npm run dev' },
+        { n: '6', title: 'Verify the installation', detail: 'Runs the test suite, the type-checker and a production build.', code: 'npm run test\nnpx tsc --noEmit\nnpm run build' }
+      ],
+
+      dataStats: [
+        { value: '20,753', label: 'Certifications catalogued' },
+        { value: '3,560', label: 'Opportunities indexed' },
+        { value: '3,383', label: 'Company profiles' },
+        { value: '65', label: 'Schema migrations' }
+      ],
+
+      quality: [
+        { value: '614 automated tests', label: 'Across 66 test files, all passing' },
+        { value: 'Zero type errors', label: 'Full TypeScript check across the codebase' },
+        { value: '31 pages · 53 API routes', label: 'Organised into 19 feature modules' },
+        { value: 'Row-level security', label: 'Enabled on every database table' }
+      ],
+
+      impact: [
+        { title: 'It replaces guesswork with measurement',
+          body: 'A student can see, for one specific role, which requirements their résumé evidences and which it does not — with the supporting text quoted back. That turns "improve your résumé" from vague advice into a short, specific list of things to do.' },
+        { title: 'It makes interview practice available on demand',
+          body: 'Spoken rehearsal normally depends on another person’s time, which is exactly what a student preparing alone does not have. A voice agent that conducts a real conversation and returns a graded report removes that dependency entirely.' },
+        { title: 'It connects assessment to action',
+          body: 'Identifying a gap is only half the work. Because the certifications catalogue and the scoring engine are part of the same system, a missing skill can be answered immediately with a real course that teaches it — assessment and remedy in one place.' },
+        { title: 'It is honest by construction',
+          body: 'The system is built never to present a figure it did not compute. Unknown values are shown as unknown, requirements that could not be assessed are excluded from the score and reported as such, and generated résumé content is checked against the source. A student can act on what it tells them.' },
+        { title: 'It demonstrates production engineering, not a prototype',
+          body: 'Authentication, database-enforced authorisation, background job scheduling, third-party service integration, real-time media, automated testing and continuous deployment are all present and working together — the concerns of a system meant to be used, rather than demonstrated once.' }
+      ],
+
+      future: [
+        { title: 'Employer-side access', body: 'A recruiter view for posting openings directly and reviewing applicants already scored against the role.' },
+        { title: 'Peer mock interviews', body: 'The realtime infrastructure that carries the AI interview would equally carry two students interviewing each other.' },
+        { title: 'Institutional dashboards', body: 'Aggregate, anonymised placement-readiness views to help departments see where cohorts need support.' },
+        { title: 'Native mobile application', body: 'The API surface is already separated from the interface, so a mobile client can consume it without backend changes.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

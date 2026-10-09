@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import path from 'path'
 
 test.describe('ATS V2 Real Flow E2E Acceptance', () => {
   test('uploads PDF resume, inputs JD, and renders complete ATS V2 recruiter evaluation', async ({ page }) => {

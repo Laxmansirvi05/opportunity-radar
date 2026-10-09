@@ -1,0 +1,29 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Resume page — rearranged, nothing removed", "x": 0, "y": 0, "w": 1280, "h": 1240 }
+  ],
+  "annotations": [
+    {
+      "id": "what-changed",
+      "x": 1340,
+      "y": 0,
+      "w": 420,
+      "text": "ONE thing moved.\n\n\"Your Resumes\" came out of the 280px left rail and into the centre column, under the analysis card.\n\nThat is the whole rearrangement. It fixes both complaints at once: the résumé rows finally have width, so the name is readable and the icons stop colliding — and the empty centre-right area is now filled instead of blank."
+    },
+    {
+      "id": "still-here",
+      "x": 1340,
+      "y": 330,
+      "w": 420,
+      "text": "Everything still on the page, unchanged:\n\n· Workspace Tools — all 4 cards, left rail\n· AI Resume Optimizer header + AI Powered badge\n· Latest analysis card — score, match level, job title, Current gaps, Suggested Projects\n· All 4 analysis buttons — Continue in Optimiser, Run a new ATS check, Preview resume, Download PDF\n· Career Insights — Recent ATS Scores chart, Top Skills Detected (+N more), Market Demand\n· ATS Score History (Last 6 saved)\n· AI Optimizer History (Last 6 saved)\n\nSame cards, same colours, same spacing scale. Nothing was redesigned."
+    },
+    {
+      "id": "resume-row",
+      "x": 1340,
+      "y": 800,
+      "w": 420,
+      "text": "The résumé row itself:\n\nName is first and largest — that was the actual bug, the name had no room at all before.\n\nLast edited and ATS score get their own columns. Click any row to open its details and the six actions as labelled buttons, so a student reads \"Download PDF\" instead of guessing an icon.\n\nSame six actions as today — Preview, Download, Edit, ATS check, Optimise, Delete. Nothing added, nothing taken away."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

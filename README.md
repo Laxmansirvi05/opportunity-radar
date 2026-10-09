@@ -82,7 +82,7 @@ A real-time community chat plus a personalised **Command Center** dashboard summ
 </p>
 
 ### 🔐 Authentication
-Secure Supabase Auth with email and Google sign-in, double-gated route protection (optimistic proxy + authoritative server layout), open-redirect-safe `?next=` handling, and server-side credential validation.
+Secure Supabase Auth with email and Google sign-in, double-gated route protection (optimistic proxy + authoritative server layout), open-redirect-safe `?next=` handling, server-side credential validation, brute-force rate limiting (5 failed attempts per 15 min per email/IP), Cloudflare Turnstile bot protection on login and signup, server-side email resend cooldown, and tightened login-hint enumeration.
 
 ---
 

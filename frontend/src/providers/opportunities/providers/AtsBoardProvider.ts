@@ -71,6 +71,7 @@ async function getJson(url: string, timeoutMs = 20000): Promise<unknown | null> 
 }
 
 export class AtsBoardProvider extends OpportunityProvider {
+  readonly providerName = 'AtsBoardProvider';
   private db: RegistryDb | null;
   private overrides: RegistryEntry[] | null;
 

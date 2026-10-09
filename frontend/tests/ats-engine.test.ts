@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   normaliseSkill,
-  normaliseSkillArray,
   computeSkillScore,
   computeProjectScore,
   computeExperienceScore,
-  computeEducationScore,
   computeATSScore,
   computeImprovementScore,
   deriveStudentLevel,

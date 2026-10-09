@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -16,7 +16,8 @@ export async function GET(request: Request) {
     if (error) throw error
 
     return NextResponse.json({ unreadCount: count || 0 })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    console.error('[Notifications] unread count failed:', err)
+    return NextResponse.json({ error: 'Failed to load unread count' }, { status: 500 })
   }
 }

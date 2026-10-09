@@ -1,6 +1,7 @@
 # Opportunity Radar — Full Project Audit
 
 **Prepared:** 20 Aug 2026 · autonomous audit pass
+**Last updated:** 1 Sep 2026 · profile-link security remediation and Next.js 16 deployment verification
 **Scope:** entire Next.js app (31 pages, 53 API routes) + 2 agent backends (AI Search, Voice Interview) on Azure
 **Repo/branch:** `Laxmansirvi05/opportunity-radar` · `restore-june19-clean`
 
@@ -33,6 +34,8 @@
 | Databases | Supabase (cloud) + Postgres/Redis (VM) | ✅ |
 
 **Deployment issues found & resolved earlier this session:** Vercel Hobby cron limit (a `*/15` cron failed every prod build → set to daily); the "GitHub webhook broken" red herring (was actually the cron failure); Cartesia/ElevenLabs invalid TTS keys + Gemini TTS rate-limit (→ switched to self-hosted Kokoro).
+
+**1 Sep 2026 verification addendum:** Next.js 16 rejected the project because both `middleware.ts` and `proxy.ts` existed. The former was only an obsolete re-export, so it was removed and `proxy.ts` remains the single request-boundary entry point. A network-enabled production build then completed successfully, generating all 68 routes. The current change set is in draft PR [#2](https://github.com/Laxmansirvi05/opportunity-radar/pull/2): GitHub reports it `MERGEABLE` with a clean merge state, and its Vercel checks are successful. The draft has **not** changed `main`.
 
 ---
 
@@ -136,6 +139,9 @@ Reviewed because Notes is the largest un-audited surface (4,590 lines, 11 API ro
 ---
 
 ## 8. What I fixed during this audit
+
+- 🔧 **Profile and Hub: closed a stored external-link XSS path.** Achievement credential links are user-authored data that can be rendered in another member's Hub profile. Added one URL normalizer that permits only parsed `http:` and `https:` URLs, rejects obfuscated `javascript:`, `data:`, `vbscript:`, `file:`, and malformed values, and preserves the existing bare-host convenience for LinkedIn/GitHub. Validation now happens before achievement/profile saves and again at every affected `href` render, protecting both new input and legacy database rows. Achievement reads now refresh when the profile user changes, show a retryable load error instead of a false empty state, and update/delete calls include an explicit owner filter. **Verification:** 11 focused regression tests pass, TypeScript passes, and lint passes on every changed file.
+- 🔧 **Next.js 16 deployment blocker removed.** Deleted the obsolete `middleware.ts` re-export so Next.js no longer detects both deprecated Middleware and its replacement Proxy conventions. The production build passed after the fix, including all 68 generated routes.
 
 - 🔧 **Résumé builder: Download PDF implemented (was a dead button).** The control was `disabled` behind a "PDF Download available in Phase 2B" tooltip — yet `GET /api/resume/[id]/download` already existed, was authenticated and `user_id`-filtered, and the builder already saved to the exact column it reads (`resumes.parsed_data`); the shape conversion was even already unit-tested against the builder's format. Meanwhile the Support FAQ told users every résumé could be downloaded as an ATS-safe PDF — so the docs were ahead of the UI. Wired the button to that endpoint: it flushes pending edits first (the PDF renders server-side from the saved row, so a straight download would silently miss anything typed inside the 2s autosave debounce, and a never-saved résumé would have no row at all), then downloads a file named after the résumé title, with a spinner and a toast on failure.
 - 🔧 **Fixed a duplicate-résumé save bug** found while doing the above: the id of a newly created résumé was only copied into `idRef` by a `useEffect`, which does not run until after a render — so a save queued before then still saw a `null` id and **inserted a second résumé**. Now written to the ref synchronously. An explicit save also cancels the pending autosave timer instead of letting it fire a redundant second write. **5 unit tests** added for `save()`; the duplicate-insert case was verified to fail without the fix (`createResume` called twice). Suite: **502 → 507 tests**.

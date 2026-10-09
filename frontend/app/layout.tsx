@@ -18,6 +18,27 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Opportunity Radar",
   description: "The mission-control for students seeking world-class internships, fellowships, and early-career opportunities.",
+  openGraph: {
+    title: "Opportunity Radar",
+    description: "The mission-control for students seeking world-class internships, fellowships, and early-career opportunities.",
+    url: "https://opportunity-radar.com",
+    siteName: "Opportunity Radar",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Opportunity Radar",
+    description: "The mission-control for students seeking world-class internships, fellowships, and early-career opportunities.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
