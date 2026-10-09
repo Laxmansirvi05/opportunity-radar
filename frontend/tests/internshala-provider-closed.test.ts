@@ -46,3 +46,12 @@ describe('InternshalaProvider.fetchDetailPage', () => {
     expect(item.title).toBe('Backend Development Internship')
   })
 })
+
+describe('cleanCompanyName', () => {
+  it('drops the "Actively hiring" badge and collapses whitespace', async () => {
+    const { cleanCompanyName } = await import('@/src/providers/opportunities/providers/InternshalaProvider')
+    expect(cleanCompanyName('Crazy For Success Foundation                        \n      Actively hiring')).toBe('Crazy For Success Foundation')
+    expect(cleanCompanyName('  Acme   Labs  ')).toBe('Acme Labs')
+    expect(cleanCompanyName('Hiring Partners')).toBe('Hiring Partners')
+  })
+})
