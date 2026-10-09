@@ -7,6 +7,24 @@ import * as cheerio from 'cheerio';
 
 const INDIA_CITIES = ['bangalore', 'hyderabad', 'pune', 'delhi', 'ncr', 'mumbai', 'chennai', 'remote'];
 
+/** Pages read per category URL. Page 1-2 hold the newest listings. */
+const PAGES_PER_CATEGORY = 2;
+/** Unique listings handled per run, sized so storing them fits the function limit. */
+const MAX_LISTINGS = 350;
+/** Time allowed for list and detail fetching together. */
+const DETAIL_BUDGET_MS = 110_000;
+
+/**
+ * The company cell also carries a status badge: the text came through as
+ * "Acme\n        Actively hiring" and was stored as the company name.
+ */
+export function cleanCompanyName(raw: string): string {
+  return raw
+    .replace(/\s+/g, ' ')
+    .replace(/\s*(actively hiring|hiring actively)\s*$/i, '')
+    .trim();
+}
+
 export class InternshalaProvider extends OpportunityProvider {
   readonly providerName = 'InternshalaProvider';
   async fetchListPages(): Promise<QueuePayload[]> {
@@ -106,7 +124,7 @@ export class InternshalaProvider extends OpportunityProvider {
 
       // 1. Title and Company
       item.title = $detail('.profile_on_detail_page').text().trim();
-      item.company = $detail('.company_name').first().text().trim();
+      item.company = cleanCompanyName($detail('.company_name').first().text());
 
       // 2. Location & Stipend
       item.location = $detail('.location_link').map((i, e) => $detail(e).text().trim()).get().join(', ') || 'Remote';
@@ -168,6 +186,13 @@ export class InternshalaProvider extends OpportunityProvider {
   async fetch(): Promise<any[]> {
     try {
       const allData: any[] = [];
+      // One run has to fetch, enrich and store inside a 300s function. The
+      // old loop read 10 pages for each of 19 category URLs (2,054 listings,
+      // most of them the same internship under several categories) and took
+      // 257s before a single row was saved, so the scheduled job was killed
+      // every night and Internshala contributed nothing after 17 June.
+      const seenUrls = new Set<string>();
+      const startedAt = Date.now();
       // Fetch specifically from priority cities and keywords
       const urls = [
         // Software Development
@@ -196,7 +221,7 @@ export class InternshalaProvider extends OpportunityProvider {
       ];
 
       for (const baseUrl of urls) {
-        for (let page = 1; page <= 10; page++) {
+        for (let page = 1; page <= PAGES_PER_CATEGORY && allData.length < MAX_LISTINGS; page++) {
           const url = page === 1 ? baseUrl : `${baseUrl}page-${page}/`;
           try {
             const res = await fetchWithRetry(url, {
@@ -232,11 +257,12 @@ export class InternshalaProvider extends OpportunityProvider {
                  logoUrl = $(el).find('.internship_logo img').attr('data-src');
               }
 
-              if (title && company && apply_url) {
+              if (title && company && apply_url && !seenUrls.has(apply_url) && allData.length < MAX_LISTINGS) {
+                seenUrls.add(apply_url);
                 allData.push({
                   id: apply_url.split('/').pop() || String(Math.random()),
                   title,
-                  company,
+                  company: cleanCompanyName(company),
                   location: location || 'Remote',
                   apply_url,
                   salary_range: stipend,
@@ -257,8 +283,12 @@ export class InternshalaProvider extends OpportunityProvider {
       }
 
       // Fetch detail pages in batches of 5 to get full description, skills, and deadline
-      const batchSize = 5;
+      // Listings not reached before the budget keep their list-page data.
+      // They are still real, open internships; they only lack the long
+      // description and deadline, which the next run fills in.
+      const batchSize = 12;
       for (let i = 0; i < allData.length; i += batchSize) {
+        if (Date.now() - startedAt > DETAIL_BUDGET_MS) break;
         const batch = allData.slice(i, i + batchSize);
         await Promise.all(batch.map(async (item) => {
           try {

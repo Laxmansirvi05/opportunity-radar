@@ -15,6 +15,10 @@ import { denyIfNotCron } from '@/lib/cron-auth';
  *
  * Authorization: Bearer token matching the CRON_SECRET environment variable.
  */
+// Without this the route runs under the platform's default limit, which a
+// scrape plus a few hundred database writes does not fit in.
+export const maxDuration = 300;
+
 export async function GET(request: Request) {
   // ── Security ──────────────────────────────────────────────────────────────
   const denied = denyIfNotCron(request);

@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { denyIfNotCron } from '@/lib/cron-auth';
 
+// Without this the route runs under the platform's default limit, which a
+// scrape plus a few hundred database writes does not fit in.
+export const maxDuration = 300;
+
 export async function GET(request: Request) {
   const denied = denyIfNotCron(request);
   if (denied) return denied;
