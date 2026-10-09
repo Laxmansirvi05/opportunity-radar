@@ -1,44 +1,72 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
 const RECENT_KEY = 'opportunity-radar-recent-searches'
 const MAX_RECENT = 5
+const CHANGE_EVENT = 'opportunity-radar:recent-searches'
+const EMPTY = '[]'
+
+function readRaw(): string {
+  try {
+    return localStorage.getItem(RECENT_KEY) ?? EMPTY
+  } catch {
+    // Storage blocked (private mode, cleared site data): no history.
+    return EMPTY
+  }
+}
+
+function subscribe(onChange: () => void): () => void {
+  window.addEventListener('storage', onChange)
+  window.addEventListener(CHANGE_EVENT, onChange)
+  return () => {
+    window.removeEventListener('storage', onChange)
+    window.removeEventListener(CHANGE_EVENT, onChange)
+  }
+}
+
+function parse(raw: string): string[] {
+  try {
+    const value = JSON.parse(raw)
+    return Array.isArray(value) ? value.filter((q): q is string => typeof q === 'string') : []
+  } catch {
+    // A corrupt entry just means "no history".
+    return []
+  }
+}
+
+function write(next: string[]): void {
+  try {
+    if (next.length === 0) localStorage.removeItem(RECENT_KEY)
+    else localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+  } catch {
+    // Nothing to do if storage is unavailable.
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT))
+}
 
 /**
- * Hook for Recent Searches backed by localStorage.
+ * Recent searches, kept in localStorage.
+ *
+ * Read through useSyncExternalStore with an empty server snapshot. A
+ * 'use client' component is still rendered on the server, where there is no
+ * localStorage, so the earlier lazy useState initialiser produced an empty
+ * list on the server and a filled one in the browser. For anyone with search
+ * history that was a hydration mismatch (React error #418) on every visit to
+ * /search, which threw away the server-rendered results area.
  */
 export function useRecentSearches() {
-  // Read once in a lazy initialiser rather than an effect: this hook is
-  // client-only ('use client' above), so there is no server render to
-  // disagree with, and loading in an effect meant one render with an empty
-  // list before the stored searches appeared.
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const recent = localStorage.getItem(RECENT_KEY)
-      return recent ? (JSON.parse(recent) as string[]) : []
-    } catch {
-      // A corrupt entry just means "no history".
-      return []
-    }
-  })
+  const raw = useSyncExternalStore(subscribe, readRaw, () => EMPTY)
+  const recentSearches = useMemo(() => parse(raw), [raw])
 
-  // ── Track a recent search ─────────────────────────────────────────
   const addRecentSearch = useCallback((query: string) => {
     if (!query.trim()) return
-    setRecentSearches((prev) => {
-      const filtered = prev.filter((q) => q !== query)
-      const next = [query, ...filtered].slice(0, MAX_RECENT)
-      localStorage.setItem(RECENT_KEY, JSON.stringify(next))
-      return next
-    })
+    const filtered = parse(readRaw()).filter((q) => q !== query)
+    write([query, ...filtered].slice(0, MAX_RECENT))
   }, [])
 
-  // ── Clear recent searches ─────────────────────────────────────────
   const clearRecentSearches = useCallback(() => {
-    setRecentSearches([])
-    localStorage.removeItem(RECENT_KEY)
+    write([])
   }, [])
 
   return {
