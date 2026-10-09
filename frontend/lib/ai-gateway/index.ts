@@ -292,11 +292,19 @@ export async function callAI(
 
   const sequence = getProviderSequence(context.feature)
   let totalLatency = 0
+  const startedAt = Date.now()
+  // Below this much remaining budget an attempt cannot realistically finish.
+  const MIN_ATTEMPT_MS = 4_000
+  const remaining = () =>
+    context.budgetMs === undefined ? Number.POSITIVE_INFINITY : context.budgetMs - (Date.now() - startedAt)
 
   for (const config of sequence) {
     const provider = config.provider
     const model = config.model!
-    const timeout = TIMEOUTS[provider]
+    if (remaining() < MIN_ATTEMPT_MS) {
+      console.warn(`[AI Gateway] Budget exhausted for ${context.feature}; not attempting ${provider}.`)
+      break
+    }
 
     // Every configured key for this provider, primary first — a rate limit
     // on one demo-day key must not fall all the way through to a weaker
@@ -313,6 +321,9 @@ export async function callAI(
         console.warn(`[AI Gateway] Skipping ${provider} (${model}) key ...${keyId ?? 'default'} due to health backoff.`)
         continue
       }
+
+      if (remaining() < MIN_ATTEMPT_MS) break
+      const timeout = Math.min(TIMEOUTS[provider], remaining())
 
       console.log(`[AI Gateway] Attempting ${provider} (${model}) key ...${keyId ?? 'default'} for task: ${context.feature}`)
 
@@ -353,6 +364,11 @@ export async function callAI(
 
       console.warn(`[AI Gateway] Failed: ${provider} (${model}) key ...${keyId ?? 'default'} - Reason: ${!result.success ? result.reason : 'provider_error'}`)
       recordProviderFailure(provider, model, !result.success ? result.reason : 'provider_error', undefined, keyId)
+
+      // A timeout is about the provider being slow, not about this key.
+      // Retrying it with each sibling key spent up to four full timeouts on
+      // one unresponsive provider before trying the next one.
+      if (!result.success && result.reason === 'timeout') break
     }
   }
 
