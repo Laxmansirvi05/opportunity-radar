@@ -5,27 +5,58 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { validateLoginInput, validateSignupInput } from '@/lib/auth/credentials'
 import { headers } from 'next/headers'
+import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
 
+/**
+ * Service-role client for the auth helper functions.
+ *
+ * log_login_attempt, check_login_rate_limit, log_email_resend,
+ * check_email_resend_cooldown, check_user_confirmed and login_hint_for_email
+ * are granted to `service_role` only (migration 20261009120000). They used to
+ * be callable with the public anon key, which let anyone lock an account out
+ * by logging fake failures against its email.
+ *
+ * Returns null when the key is missing so auth degrades to "no rate limit"
+ * with a loud log line instead of refusing every login.
+ */
+function getAuthAdmin(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    console.error('[Auth] SUPABASE_SERVICE_ROLE_KEY is not set — login rate limiting is NOT active.')
+    return null
+  }
+  return createServiceClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
+}
+
+/**
+ * Turnstile is enforced only when it is configured.
+ *
+ *   both keys set   -> enforced; a missing or rejected token fails.
+ *   neither key set -> off. The widget is not rendered without a site key, so
+ *                      no submission can ever carry a token; enforcing here
+ *                      would refuse every login and signup on that deployment.
+ *   only one set    -> refused. That is a real misconfiguration (a widget with
+ *                      nothing to verify it, or a check nobody can pass).
+ */
 async function verifyTurnstileToken(token: string | null) {
-  if (!token) return false
   const secret = process.env.TURNSTILE_SECRET_KEY
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
-  // Fail closed on misconfiguration — match the pattern in lib/cron-auth.ts.
-  // In development the Turnstile widget is not rendered (no site key), so a
-  // normal form submission never carries a token and the `!token` check above
-  // already returns false. The bypass below only fires for dev convenience
-  // when a tool or test sends a synthetic token string directly.
-  if (!secret) {
+  if (!secret && !siteKey) {
     if (process.env.NODE_ENV === 'production') {
-      console.error(
-        '[Auth] REFUSED — TURNSTILE_SECRET_KEY is not set on this deployment. ' +
-          'Set it in the Vercel project so Turnstile verification can run.'
-      )
-      return false
+      console.warn('[Auth] Turnstile is not configured on this deployment — bot check skipped.')
     }
-    // Development / test — allow through so local auth is not blocked.
     return true
   }
+  if (!secret || !siteKey) {
+    console.error(
+      '[Auth] REFUSED — Turnstile is half configured. Set both TURNSTILE_SECRET_KEY and ' +
+        'NEXT_PUBLIC_TURNSTILE_SITE_KEY, or neither.'
+    )
+    return false
+  }
+  if (!token) return false
 
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -34,16 +65,25 @@ async function verifyTurnstileToken(token: string | null) {
       body: `secret=${encodeURIComponent(secret)}&response=${encodeURIComponent(token)}`
     })
     const data = await res.json()
-    return data.success
+    return data.success === true
   } catch (err) {
     console.error('Turnstile verification failed', err)
     return false
   }
 }
 
-async function getIpAddress() {
+/**
+ * Client IP, or null when it cannot be determined.
+ *
+ * x-forwarded-for is a comma-separated chain; the first entry is the client.
+ * Null rather than a placeholder address: the rate limiter matches on
+ * `ip_address = p_ip`, so a shared fallback value would pool every such
+ * request into one bucket and let one caller lock out all the others.
+ */
+async function getIpAddress(): Promise<string | null> {
   const headersList = await headers()
-  return headersList.get('x-forwarded-for') || '127.0.0.1'
+  const first = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+  return first || null
 }
 
 export async function loginAction(formData: FormData) {
@@ -62,11 +102,17 @@ export async function loginAction(formData: FormData) {
 
   const ip = await getIpAddress()
   const supabase = await createClient()
+  const admin = getAuthAdmin()
 
-  // Check brute-force rate limit
-  const { data: canLogin } = await supabase.rpc('check_login_rate_limit', { p_email: email, p_ip: ip })
-  if (canLogin === false) {
-    return { error: 'Too many attempts. Please try again later.' }
+  // Check brute-force rate limit. An RPC error is logged and treated as
+  // "allowed": refusing every login because the limiter is unreachable would
+  // turn a database blip into an outage.
+  if (admin) {
+    const { data: canLogin, error: limitError } = await admin.rpc('check_login_rate_limit', { p_email: email, p_ip: ip })
+    if (limitError) console.error('[Auth] check_login_rate_limit failed:', limitError.message)
+    if (canLogin === false) {
+      return { error: 'Too many attempts. Please try again later.' }
+    }
   }
 
   const { error } = await supabase.auth.signInWithPassword({
@@ -74,14 +120,16 @@ export async function loginAction(formData: FormData) {
     password,
   })
 
-  // Log attempt
-  await supabase.rpc('log_login_attempt', { p_email: email, p_ip: ip, p_success: !error })
+  if (admin) {
+    const { error: logError } = await admin.rpc('log_login_attempt', { p_email: email, p_ip: ip, p_success: !error })
+    if (logError) console.error('[Auth] log_login_attempt failed:', logError.message)
+  }
 
   if (error) {
     if (error.message.includes('Invalid login credentials')) {
-      const { data: hint } = await supabase.rpc('login_hint_for_email', {
-        p_email: email,
-      })
+      const { data: hint } = admin
+        ? await admin.rpc('login_hint_for_email', { p_email: email })
+        : { data: null }
       if (hint === 'google') {
         return {
           error:
@@ -137,7 +185,10 @@ export async function signupAction(formData: FormData) {
   if (error) {
     if (error.message.includes('already registered')) {
       // Check if unconfirmed
-      const { data: isConfirmed } = await supabase.rpc('check_user_confirmed', { p_email: email })
+      const admin = getAuthAdmin()
+      const { data: isConfirmed } = admin
+        ? await admin.rpc('check_user_confirmed', { p_email: email })
+        : { data: null }
       if (isConfirmed === false) {
         return { error: 'already_registered_unconfirmed', email }
       }
@@ -165,8 +216,11 @@ export async function resendVerificationEmailAction(formData: FormData) {
 
   const ip = await getIpAddress()
   const supabase = await createClient()
+  const admin = getAuthAdmin()
 
-  const { data: canResend } = await supabase.rpc('check_email_resend_cooldown', { p_email: email, p_ip: ip })
+  const { data: canResend } = admin
+    ? await admin.rpc('check_email_resend_cooldown', { p_email: email, p_ip: ip })
+    : { data: null }
   if (canResend === false) {
     return { error: 'Please wait a minute before requesting another email.' }
   }
@@ -182,7 +236,7 @@ export async function resendVerificationEmailAction(formData: FormData) {
 
   if (error) return { error: 'Failed to send verification email. Please try again.' }
 
-  await supabase.rpc('log_email_resend', { p_email: email, p_ip: ip })
+  if (admin) await admin.rpc('log_email_resend', { p_email: email, p_ip: ip })
   return { success: true }
 }
 
