@@ -262,6 +262,10 @@ final line: "Ask in the AI Assistant for the full version."`
       {
         feature: "assistant",
         userId: user.id,
+        // maxDuration is 60s. Without a budget a slow provider chain ran
+        // until the platform killed the function: the user saw "Network
+        // error" after a full minute and nothing was logged.
+        budgetMs: 45_000,
       }
     );
 

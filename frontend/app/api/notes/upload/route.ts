@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { contentMatchesType } from '@/lib/upload-signature'
 import { createClient } from '@/lib/supabase/server'
 import { NOTE_ATTACHMENT_BUCKET } from '@/features/notes/lib/delete-note-attachments'
 
@@ -82,6 +83,12 @@ export async function POST(req: NextRequest) {
   }
   if (file.size > MAX_SIZE) {
     return NextResponse.json({ error: 'Attachments must be under 20MB.' }, { status: 422 })
+  }
+  if (!(await contentMatchesType(file))) {
+    return NextResponse.json(
+      { error: 'That file does not match its type. Export it again and retry.' },
+      { status: 422 }
+    )
   }
 
   const extension = isImage ? IMAGE_TYPES[file.type] : FILE_TYPES[file.type]

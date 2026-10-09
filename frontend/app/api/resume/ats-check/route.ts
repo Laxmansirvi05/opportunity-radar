@@ -303,7 +303,7 @@ export async function POST(req: NextRequest) {
 
       const coachAiResult = await callAI(
         { systemPrompt, userPrompt, maxTokens: 800, temperature: 0.4, outputFormat: 'json' },
-        { feature: 'resume_ats_coaching', userId, validator: coachValidator }
+        { feature: 'resume_ats_coaching', userId, validator: coachValidator, budgetMs: 20_000 }
       )
 
       if (coachAiResult.success) {

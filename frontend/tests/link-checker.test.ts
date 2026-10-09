@@ -64,6 +64,7 @@ function makeChain(
   let mode: 'select' | 'update' = 'select'
   let payload: Record<string, unknown> = {}
 
+  let window: [number, number] | null = null
   const chain: QueryChain = {
     select: () => chain,
     update: (p) => { mode = 'update'; payload = p; return chain },
@@ -74,7 +75,16 @@ function makeChain(
     },
     order: () => chain,
     limit: () => chain,
-    then: (resolve) => resolve({ data: mode === 'select' ? rows : null, error: null }),
+    // The sweep reads in 1,000-row pages; serve the requested slice.
+    range: (from, to) => {
+      window = [from, to]
+      return chain
+    },
+    then: (resolve) => {
+      const data = mode === 'select' ? (window ? rows.slice(window[0], window[1] + 1) : rows) : null
+      window = null
+      resolve({ data, error: null })
+    },
   }
   return chain
 }
@@ -145,5 +155,49 @@ describe('sweepLinkHealth', () => {
 
     const result = await sweepLinkHealth(db, {})
     expect(result.checked).toBe(1)
+  })
+})
+
+describe('isSoftDeadRedirect', () => {
+  it('flags the Greenhouse "posting gone" redirect', async () => {
+    const { isSoftDeadRedirect } = await import('@/lib/ingestion/link-checker')
+    expect(
+      isSoftDeadRedirect('https://job-boards.greenhouse.io/gitlab/jobs/8613165002', 'https://job-boards.greenhouse.io/gitlab?error=true')
+    ).toBe(true)
+  })
+
+  it('flags a redirect from a posting to a generic careers page', async () => {
+    const { isSoftDeadRedirect } = await import('@/lib/ingestion/link-checker')
+    expect(
+      isSoftDeadRedirect('https://www.samsara.com/company/careers/roles/7625030?gh_jid=7625030', 'https://www.samsara.com/company/careers/roles')
+    ).toBe(true)
+    expect(
+      isSoftDeadRedirect('https://jobs.lever.co/acme/6aabe883-3771-4be4-90eb-734fd3336863', 'https://jobs.lever.co/acme')
+    ).toBe(true)
+  })
+
+  it('does not flag a redirect that keeps the posting id', async () => {
+    const { isSoftDeadRedirect } = await import('@/lib/ingestion/link-checker')
+    expect(
+      isSoftDeadRedirect('https://boards.greenhouse.io/applovin/jobs/4708449006?gh_jid=4708449006', 'https://job-boards.greenhouse.io/applovin/jobs/4708449006?gh_jid=4708449006')
+    ).toBe(false)
+    expect(
+      isSoftDeadRedirect('https://www.coursera.org/learn/python-basics-123456', 'https://www.coursera.org/projects/python-basics-123456')
+    ).toBe(false)
+  })
+
+  it('does not flag an unchanged URL, a missing final URL, or a URL with no id', async () => {
+    const { isSoftDeadRedirect } = await import('@/lib/ingestion/link-checker')
+    const url = 'https://jobs.lever.co/acme/6aabe883-3771-4be4-90eb-734fd3336863'
+    expect(isSoftDeadRedirect(url, url)).toBe(false)
+    expect(isSoftDeadRedirect(url, null)).toBe(false)
+    expect(isSoftDeadRedirect('https://hightouch.com/careers', 'https://hightouch.com/company/careers')).toBe(false)
+  })
+
+  it('does not flag a trailing-slash or query-only change', async () => {
+    const { isSoftDeadRedirect } = await import('@/lib/ingestion/link-checker')
+    expect(
+      isSoftDeadRedirect('https://unstop.com/hackathons/slay-ctf-1743206', 'https://unstop.com/hackathons/slay-ctf-1743206/?ref=x')
+    ).toBe(false)
   })
 })

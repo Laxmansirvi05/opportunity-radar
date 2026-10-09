@@ -230,6 +230,8 @@ export async function extractJDIntelligence(
     },
     {
       feature: 'jd_intelligence',
+      // The three ATS stages share a 180s function limit.
+      budgetMs: 45_000,
       userId,
       validator,
     }
@@ -297,6 +299,7 @@ export async function evaluateResumeEvidence(
     },
     {
       feature: 'evidence_evaluation',
+      budgetMs: 80_000,
       userId,
       validator,
     }

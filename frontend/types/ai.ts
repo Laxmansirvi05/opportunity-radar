@@ -90,6 +90,13 @@ export interface GatewayContext {
   userId?: string
   opportunityId?: string
   validator?: (response: string, provider?: string) => ValidationResult | Promise<ValidationResult>
+  /**
+   * Total time this call may spend across every provider and key, in ms.
+   * Set it below the route's maxDuration so the gateway gives up, logs the
+   * failure and returns an error the UI can show, instead of the platform
+   * killing the function mid-attempt with a bare 504.
+   */
+  budgetMs?: number
 }
 
 // ---------------------------------------------------------------------------

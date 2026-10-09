@@ -5,6 +5,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 export const runtime = 'nodejs'
 
 const MAX_LENGTH = 2000
+const RATE_WINDOW_MS = 60_000
+const RATE_MAX_MESSAGES = 12
 
 /**
  * POST /api/hub/send
@@ -44,7 +46,10 @@ export async function POST(req: NextRequest) {
   // in the hub-attachments bucket — otherwise a message could be crafted to
   // "attach" an arbitrary external image URL or another user's private path.
   const rawImageUrl = typeof body.image_url === 'string' ? body.image_url : null
-  const imageUrl = rawImageUrl && rawImageUrl.includes(`/hub-attachments/${user.id}/`) ? rawImageUrl : null
+  // Prefix match on this project's own storage origin. A substring match on
+  // `/hub-attachments/<id>/` also accepted https://anywhere.example/hub-attachments/<id>/x.png.
+  const ownPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/hub-attachments/${user.id}/`
+  const imageUrl = rawImageUrl && rawImageUrl.startsWith(ownPrefix) ? rawImageUrl : null
   const imageWidth = imageUrl && typeof body.image_width === 'number' ? Math.round(body.image_width) : null
   const imageHeight = imageUrl && typeof body.image_height === 'number' ? Math.round(body.image_height) : null
 
@@ -54,6 +59,18 @@ export async function POST(req: NextRequest) {
 
   if (content.length > MAX_LENGTH) {
     return NextResponse.json({ error: `Message exceeds ${MAX_LENGTH} characters` }, { status: 400 })
+  }
+
+  // The Hub is one shared room: a script posting in a loop reaches everyone.
+  // Allow a brisk human pace and no more.
+  const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString()
+  const { count: recentCount } = await supabase
+    .from('hub_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('sender_id', user.id)
+    .gte('created_at', windowStart)
+  if ((recentCount ?? 0) >= RATE_MAX_MESSAGES) {
+    return NextResponse.json({ error: 'You are sending messages too quickly. Please wait a moment.' }, { status: 429 })
   }
 
   // Validate reply_to_id exists if provided

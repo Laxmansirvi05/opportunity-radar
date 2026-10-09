@@ -77,8 +77,13 @@ export function HubMessageItem({
       // This IS the fix for the hydration mismatch described above, not the
       // bug the rule below is guarding against — toLocaleTimeString() has no
       // server-safe fallback to compute during render.
+      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // A bare "23:42" on a message from last week reads as today. Add the
+      // date for anything not sent today.
+      const sentToday = d.toDateString() === new Date().toDateString()
+      const day = d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) })
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTimeString(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+      setTimeString(sentToday ? time : `${day}, ${time}`)
     }
   }, [created_at])
 

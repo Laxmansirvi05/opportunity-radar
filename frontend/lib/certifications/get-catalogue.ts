@@ -57,6 +57,10 @@ async function fetchFirstPage(): Promise<{ items: Certification[]; total: number
     .from('certifications')
     .select(SELECT_COLUMNS, { count: 'exact' })
     .or(DEAD_LINK_FILTER)
+    // Courses their provider has marked deprecated. Sorted by title they
+    // led the catalogue: four of the first five cards were "[DEPRECATED]".
+    .not('title', 'ilike', '[deprecated]%')
+    .not('title', 'ilike', '[depricated]%')
     .order('is_free', { ascending: false })
     .order('title', { ascending: true })
     .order('id', { ascending: true })
@@ -77,7 +81,7 @@ async function fetchFirstPage(): Promise<{ items: Certification[]; total: number
   return { items: rows.map(stripLinkStatus), total: count ?? 0 }
 }
 
-export const getCertificationsFirstPage = unstable_cache(fetchFirstPage, ['certifications-first-page-v3'], {
+export const getCertificationsFirstPage = unstable_cache(fetchFirstPage, ['certifications-first-page-v4'], {
   revalidate: 900,
 })
 
@@ -89,33 +93,18 @@ export const getCertificationsFirstPage = unstable_cache(fetchFirstPage, ['certi
  */
 async function fetchTopProviders(): Promise<[string, number][]> {
   const supabase = anonClient()
-  const pageSize = 1000
-  const { count } = await supabase.from('certifications').select('id', { count: 'exact', head: true })
-  const totalPages = Math.max(1, Math.ceil((count ?? 0) / pageSize))
-
-  const pages = await Promise.all(
-    Array.from({ length: totalPages }, (_, i) =>
-      supabase
-        .from('certifications')
-        .select('provider')
-        .or(DEAD_LINK_FILTER)
-        .order('id', { ascending: true })
-        .range(i * pageSize, i * pageSize + pageSize - 1)
-    )
-  )
-
-  const counts = new Map<string, number>()
-  for (const { data, error } of pages) {
-    if (error) continue
-    for (const row of (data ?? []) as { provider: string }[]) {
-      counts.set(row.provider, (counts.get(row.provider) ?? 0) + 1)
-    }
+  // Counted in the database. This used to page through the provider column
+  // 1,000 rows at a time and tally in JavaScript, skipping any page that hit
+  // anon's 3s statement timeout, so the sidebar showed about half the real
+  // counts (Coursera 6,518 against 13,561).
+  const { data, error } = await supabase.rpc('certification_provider_counts', { p_limit: 24 })
+  if (error) {
+    // Throw so unstable_cache does not remember a failure as "no providers".
+    throw new Error(`certification_provider_counts failed: ${error.message}`)
   }
-  // Shown in full in the sidebar with no inner scroll, so this is a real cap
-  // on how many checkboxes render, not just a "top N" preview.
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 24)
+  return ((data ?? []) as { provider: string; total: number }[]).map((row) => [row.provider, Number(row.total)])
 }
 
-export const getTopCertificationProviders = unstable_cache(fetchTopProviders, ['certifications-top-providers-v2'], {
+export const getTopCertificationProviders = unstable_cache(fetchTopProviders, ['certifications-top-providers-v3'], {
   revalidate: 3600,
 })

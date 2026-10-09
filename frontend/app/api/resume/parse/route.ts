@@ -5,6 +5,7 @@ import { extractTextFromPDF, validatePDFBuffer } from '@/lib/resume-parser/pdf-e
 import { callAI } from '@/lib/ai-gateway'
 import { pdfParserSystemPrompt, pdfParserUserPrompt } from '@/features/resume-toolkit/services/ai/prompts'
 import { sanitizeAndParseResumeJson } from '@/features/resume-toolkit/services/ai/sanitize'
+import { isHollowResume } from '@/features/resume-toolkit/lib/hollow-resume'
 
 /** Caught values are `unknown`; surface a message without assuming an Error. */
 function errorMessage(error: unknown): string {
@@ -85,7 +86,15 @@ export async function POST(req: NextRequest) {
 
     const parserValidator = (content: string) => {
       try {
-        sanitizeAndParseResumeJson(content)
+        const { data } = sanitizeAndParseResumeJson(content)
+        // A résumé with real text but nothing extracted is a failed parse,
+        // not an empty résumé. Seen on production: a clean one-page PDF came
+        // back as name, email and phone only (the model's JSON was cut off
+        // and repaired into a near-empty object) and was returned as a 200.
+        // Rejecting it sends the request to the next provider.
+        if (isPdf && rawText.trim().length >= 300 && isHollowResume(data)) {
+          return { valid: false as const, reason: 'Parsed résumé has no experience, education, skills or projects' }
+        }
         return { valid: true as const }
       } catch (e: unknown) {
         return { valid: false as const, reason: `Sanitization Error: ${errorMessage(e)}` }
@@ -104,7 +113,7 @@ export async function POST(req: NextRequest) {
         outputFormat: 'json',
         media: isImage ? { data: Buffer.from(buffer).toString('base64'), mimeType: file.type } : undefined,
       },
-      { feature: 'resume_parser', userId: user.id, validator: parserValidator }
+      { feature: 'resume_parser', userId: user.id, validator: parserValidator, budgetMs: 100_000 }
     )
 
     if (!aiResult.success) {

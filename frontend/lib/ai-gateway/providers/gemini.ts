@@ -36,7 +36,12 @@ export async function callGemini(
   try {
     const tryModel = async (modelName: string) => {
       const targetModel = overrideModel || modelName;
-      const model = genAI.getGenerativeModel({ model: targetModel });
+      // requestOptions.timeout is what actually bounds the call. The
+      // AbortController above was created and armed but never handed to the
+      // SDK, so the 25s gateway timeout did nothing: Gemini calls were logged
+      // at 41s and 64s in production and pushed whole requests past their
+      // function limit.
+      const model = genAI.getGenerativeModel({ model: targetModel }, { timeout: timeoutMs });
       const fullPrompt = `${request.systemPrompt}\n\n${request.userPrompt}`;
       const result = await model.generateContent({
         contents: [{
@@ -51,7 +56,7 @@ export async function callGemini(
           temperature:     request.temperature ?? 0.3,
           ...(request.outputFormat === 'json' ? { responseMimeType: 'application/json' } : {}),
         },
-      });
+      }, { signal: controller.signal, timeout: timeoutMs });
       return result;
     };
 
@@ -74,6 +79,21 @@ export async function callGemini(
     const text    = result.response.text();
     const usage   = result.response.usageMetadata;
     const elapsed = Date.now() - start;
+
+    // A JSON answer cut off at the token limit is not an answer. This model
+    // spends output tokens on internal reasoning, so a structured response
+    // can stop mid-object; downstream JSON repair then "succeeds" on the
+    // fragment (a full résumé came back as name and email only). Fail here
+    // so the gateway moves to the next provider.
+    const finishReason = result.response.candidates?.[0]?.finishReason;
+    if (request.outputFormat === 'json' && String(finishReason) === 'MAX_TOKENS') {
+      return {
+        success:   false,
+        provider:  'gemini',
+        reason:    'invalid_response',
+        latencyMs: elapsed,
+      };
+    }
 
     if (!text || text.trim().length === 0) {
       return {

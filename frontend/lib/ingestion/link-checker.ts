@@ -32,13 +32,92 @@ export function classifyLinkStatus(status: number): LinkVerdict {
   return UNAMBIGUOUSLY_DEAD.has(status) ? 'dead' : 'ok'
 }
 
+/** Recorded for a link that answers 200 but no longer leads to the listing. */
+export const SOFT_DEAD_STATUS = 410
+
+/** The posting's own identifier inside its URL: a long number or a UUID. */
+function listingToken(url: string): string | null {
+  const uuid = url.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+  if (uuid) return uuid[0].toLowerCase()
+  const digits = url.match(/\d{6,}/)
+  return digits ? digits[0] : null
+}
+
+/**
+ * True when following the link ended somewhere that is not the listing.
+ *
+ * Job boards rarely answer 404 for a closed posting; they redirect to the
+ * company's board and answer 200. A status-only check therefore passed them:
+ * in a 63-link sample of "live" listings on 9 Oct 2026, 11 redirected this
+ * way (Greenhouse to `<board>?error=true`, others to a careers index).
+ *
+ * Deliberately narrow, because a false positive expires a real opportunity:
+ *   - Greenhouse's explicit `error=true` marker, or
+ *   - the original URL carried the posting's id and the final URL, on a
+ *     different path, does not.
+ * A redirect that keeps the id (a move to a new domain or a prettier slug)
+ * is not treated as dead.
+ */
+export function isSoftDeadRedirect(originalUrl: string, finalUrl: string | null | undefined): boolean {
+  if (!finalUrl || finalUrl === originalUrl) return false
+  let original: URL
+  let final: URL
+  try {
+    original = new URL(originalUrl)
+    final = new URL(finalUrl)
+  } catch {
+    return false
+  }
+  if (final.searchParams.get('error') === 'true' && original.searchParams.get('error') !== 'true') return true
+
+  const token = listingToken(original.pathname + original.search)
+  if (!token) return false
+  const samePath = original.pathname.replace(/\/+$/, '') === final.pathname.replace(/\/+$/, '')
+  if (samePath) return false
+  return !(final.pathname + final.search).toLowerCase().includes(token)
+}
+
+/** Hosts that answer 200 for an expired posting and say so only in the page. */
+const EXPIRED_IN_BODY: { host: RegExp; marker: RegExp }[] = [
+  { host: /(^|\.)smartrecruiters\.com$/i, marker: /this job has expired/i },
+]
+
+function expiredMarkerFor(url: string): RegExp | null {
+  try {
+    const host = new URL(url).hostname
+    return EXPIRED_IN_BODY.find((entry) => entry.host.test(host))?.marker ?? null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Checks one URL. Never throws — every failure mode collapses to `status: 0`
  * so a batch of thousands never stalls on one bad host.
+ *
+ * A link that answers 2xx but has demonstrably stopped being the listing
+ * (see isSoftDeadRedirect, EXPIRED_IN_BODY) is reported as SOFT_DEAD_STATUS.
  */
 export async function checkUrl(url: string, timeoutMs = 10_000): Promise<CheckResult> {
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+  }
+  const get = () => fetch(url, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(timeoutMs), headers })
+
+  const judge = async (res: Response, body: 'none' | 'available'): Promise<CheckResult> => {
+    if (res.status < 200 || res.status >= 300) return { status: res.status }
+    if (isSoftDeadRedirect(url, res.url)) return { status: SOFT_DEAD_STATUS }
+    const marker = expiredMarkerFor(url)
+    if (!marker) return { status: res.status }
+    try {
+      const page = body === 'available' ? res : await get()
+      if (page.status < 200 || page.status >= 300) return { status: page.status }
+      const text = (await page.text()).slice(0, 400_000)
+      return { status: marker.test(text) ? SOFT_DEAD_STATUS : page.status }
+    } catch {
+      // Could not read the page: keep the status we do know.
+      return { status: res.status }
+    }
   }
 
   try {
@@ -46,14 +125,12 @@ export async function checkUrl(url: string, timeoutMs = 10_000): Promise<CheckRe
     // Some hosts don't implement HEAD correctly (405/501) or return a
     // placeholder for it; a real GET is the only way to know for those.
     if (res.status === 405 || res.status === 501) {
-      const getRes = await fetch(url, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(timeoutMs), headers })
-      return { status: getRes.status }
+      return await judge(await get(), 'available')
     }
-    return { status: res.status }
+    return await judge(res, 'none')
   } catch {
     try {
-      const getRes = await fetch(url, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(timeoutMs), headers })
-      return { status: getRes.status }
+      return await judge(await get(), 'available')
     } catch {
       return { status: 0 }
     }
@@ -79,6 +156,7 @@ export interface QueryChain {
   in: (col: string, vals: readonly unknown[]) => QueryChain
   order: (col: string, opts?: { ascending?: boolean; nullsFirst?: boolean }) => QueryChain
   limit: (n: number) => QueryChain
+  range: (from: number, to: number) => QueryChain
   then: (resolve: (value: QueryResult) => void) => void
 }
 export interface Db {
@@ -147,18 +225,28 @@ export async function sweepLinkHealth(db: Db, options: SweepOptions = {}): Promi
   const now = options.now ?? (() => Date.now())
   const startedAt = now()
 
-  const { data, error } = await db
-    .from('opportunities')
-    .select('id, apply_url')
-    .in('status', ['Published', 'Closing Soon'])
-    .order('link_checked_at', { ascending: true, nullsFirst: true })
-    .limit(limit)
+  // Read in pages. PostgREST returns at most 1,000 rows per request whatever
+  // `.limit()` asks for, so the single query here silently swept 1,000
+  // listings a night and took three nights to cover the catalogue.
+  const PAGE = 1000
+  const rows: { id: string; apply_url: string }[] = []
+  for (let from = 0; from < limit; from += PAGE) {
+    const { data, error } = await db
+      .from('opportunities')
+      .select('id, apply_url')
+      .in('status', ['Published', 'Closing Soon'])
+      .order('link_checked_at', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
+      .range(from, Math.min(from + PAGE, limit) - 1)
 
-  if (error || !data) {
-    return { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: now() - startedAt }
+    if (error || !data) {
+      if (rows.length === 0) return { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: now() - startedAt }
+      break
+    }
+    const page = data as { id: string; apply_url: string }[]
+    rows.push(...page)
+    if (page.length < PAGE) break
   }
-
-  const rows = data as { id: string; apply_url: string }[]
 
   const result: SweepResult = { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: 0 }
   const toWrite: { id: string; status: number; checkedAt: string }[] = []
