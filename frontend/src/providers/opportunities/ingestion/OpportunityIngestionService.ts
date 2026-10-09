@@ -38,6 +38,43 @@ export type PipelineCompletedResult = IngestionStats & { status: 'completed' };
 
 export type PipelineResult = PipelineDisabledResult | PipelineCompletedResult;
 
+
+/** HTTP statuses the link sweep treats as a permanently dead apply URL. */
+const DEAD_LINK_STATUSES = new Set([404, 410]);
+
+/**
+ * Status to write when a source advertises a listing on this run.
+ *
+ * A sighting used to set `Published` unconditionally, which undid the
+ * maintenance and link-sweep jobs: a listing they had expired came straight
+ * back the next night if its source still carried it.
+ *
+ *   - Deadline already passed -> Expired, whatever the source says.
+ *   - We expired it because its apply URL is dead, and the source is still
+ *     handing us that same URL -> stays Expired. A changed URL is new
+ *     information and is allowed to republish.
+ *   - Otherwise -> Published.
+ */
+export function resolveStatusOnSighting(
+  incoming: { deadline?: string | null; apply_url: string },
+  existing: { status?: string | null; link_status?: number | null; apply_url?: string | null } | null | undefined,
+  now: Date = new Date()
+): 'Published' | 'Expired' {
+  if (incoming.deadline) {
+    const deadline = new Date(incoming.deadline);
+    if (!Number.isNaN(deadline.getTime()) && deadline < now) return 'Expired';
+  }
+  if (
+    existing?.status === 'Expired' &&
+    existing.link_status != null &&
+    DEAD_LINK_STATUSES.has(existing.link_status) &&
+    existing.apply_url === incoming.apply_url
+  ) {
+    return 'Expired';
+  }
+  return 'Published';
+}
+
 export function isPipelineDisabled(
   result: PipelineResult
 ): result is PipelineDisabledResult {
@@ -228,7 +265,8 @@ export class OpportunityIngestionService {
     for (const provider of this.providers) {
       const startTime = Date.now();
       const providerStats = { processed: 0, inserted: 0, updated: 0, skipped_dup: 0, errors: 0 };
-      const providerName = provider.constructor.name;
+      // Never constructor.name: it is minified in the production build.
+      const providerName = provider.providerName ?? provider.constructor.name;
       
       try {
         const rawData = await provider.fetch();
@@ -475,7 +513,7 @@ export class OpportunityIngestionService {
 
       const { data: existing, error: selectError } = await this.db
         .from('opportunities')
-        .select('id, posted_at')
+        .select('id, posted_at, status, link_status, apply_url')
         .eq('source', opportunity.source)
         .eq('source_id', opportunity.source_id)
         .maybeSingle();
@@ -506,7 +544,7 @@ export class OpportunityIngestionService {
         verified: opportunity.verified ?? null,
         experience_level: opportunity.experience_level || null,
         updated_at: new Date().toISOString(),
-        status: 'Published',
+        status: resolveStatusOnSighting(opportunity, existing),
         // Provenance: proves the source still advertises this listing on this
         // run. Reconciliation deletes anything a complete run did not stamp.
         last_seen_at: runStartedAt ?? new Date().toISOString(),

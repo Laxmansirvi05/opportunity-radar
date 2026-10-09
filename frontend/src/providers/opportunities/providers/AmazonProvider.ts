@@ -3,6 +3,7 @@ import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
 import { SkillExtractor } from '../utils/SkillExtractor';
 
 export class AmazonProvider extends OpportunityProvider {
+  readonly providerName = 'AmazonProvider';
   async fetchListPages(): Promise<QueuePayload[]> {
     return [];
   }

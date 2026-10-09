@@ -8,6 +8,15 @@ export interface QueuePayload {
 
 export abstract class OpportunityProvider {
   /**
+   * Stable name written to `ingestion_logs.provider`.
+   *
+   * Must be a string literal on the subclass. The log used to record
+   * `constructor.name`, which the production build minifies — every run since
+   * August is logged as "i" or "r" and cannot be attributed to a source.
+   */
+  readonly providerName?: string;
+
+  /**
    * Fast discovery pass. Scrapes ONLY list pages.
    * Returns bare URLs and high-level metadata to seed the queue.
    */
