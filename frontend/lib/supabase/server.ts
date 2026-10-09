@@ -20,11 +20,17 @@ export async function createClient() {
       },
       setAll(cookiesToSet) {
         try {
+          // Do NOT add `httpOnly` here. @supabase/ssr shares the session
+          // between the server and the browser client through these cookies:
+          // createBrowserClient() reads them with document.cookie. Marking
+          // them httpOnly hides the session from every client component, so
+          // a signed-in user is treated as signed out by bookmarks, profile
+          // edits, settings, avatar upload, password reset and the Hub's
+          // realtime channel. That is exactly what shipped on 9 Oct 2026.
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, {
               ...options,
               secure: process.env.NODE_ENV === 'production',
-              httpOnly: true,
               sameSite: 'lax',
             })
           )
