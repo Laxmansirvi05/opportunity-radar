@@ -5,8 +5,6 @@ import { callGroq } from '@/lib/ai-gateway/providers/groq'
 import { callGemini } from '@/lib/ai-gateway/providers/gemini'
 import { callOpenRouter } from '@/lib/ai-gateway/providers/openrouter'
 import { callMistral } from '@/lib/ai-gateway/providers/mistral'
-import { callCloudflare } from '@/lib/ai-gateway/providers/cloudflare'
-import { callOllama } from '@/lib/ai-gateway/providers/ollama'
 import type { AIRequest, GatewayContext, AIResult } from '@/types/ai'
 
 vi.mock('@/lib/ai-gateway/providers/gemini', () => ({ callGemini: vi.fn() }))

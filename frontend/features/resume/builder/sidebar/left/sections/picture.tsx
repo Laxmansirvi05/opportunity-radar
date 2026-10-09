@@ -2,7 +2,7 @@ import type z from "zod";
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { EyeIcon, EyeSlashIcon, TrashSimpleIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { pictureSchema } from "@reactive-resume/schema/resume/data";

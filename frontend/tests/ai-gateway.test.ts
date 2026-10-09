@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { estimateCostUsd, isAIResponse, isAIError } from '@/types/ai'
 import type { AIResult } from '@/types/ai'
 

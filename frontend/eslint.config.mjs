@@ -26,6 +26,12 @@ const eslintConfig = defineConfig([
       // (scraper payloads, test doubles). Kept visible as warnings so they can
       // be burned down, without failing every pull request until they are.
       "@typescript-eslint/no-explicit-any": "warn",
+      // A leading underscore marks a binding as deliberately unused, and a
+      // catch clause may ignore its error. Everything else still warns.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" },
+      ],
     },
   },
 ]);

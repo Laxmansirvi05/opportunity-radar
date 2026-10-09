@@ -1,6 +1,5 @@
 import { OpportunityProvider, QueuePayload } from '../base/OpportunityProvider';
 import { NormalizedOpportunity } from '../types/NormalizedOpportunity';
-import { OpportunityNormalizer } from '../normalization/OpportunityNormalizer';
 
 export class YCProvider extends OpportunityProvider {
   readonly providerName = 'YCProvider';

@@ -1,4 +1,4 @@
-import type { ATSAnalysisResult, ATSFallback, ATSResponse } from '@/types/ats'
+import type { ATSAnalysisResult, ATSFallback } from '@/types/ats'
 import type { ParsedResume }   from '@/types/resume'
 import type { Opportunity }    from '@/types/opportunity'
 import {
