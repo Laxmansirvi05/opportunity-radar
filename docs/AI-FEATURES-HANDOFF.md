@@ -2,7 +2,7 @@
 
 **Date:** 10 August 2026
 **Audience:** the engineer or coding agent who will make these two features work.
-**Companion document:** `docs/AUDIT-2026-08-10.md` (full system audit).
+**Companion document:** the 10 August 2026 system audit, removed from the tree on 9 October 2026 (recoverable from the `archive/pre-cleanup-2026-10-09` tag).
 
 ---
 

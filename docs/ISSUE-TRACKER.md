@@ -1,5 +1,7 @@
 # Issue Tracker — Opportunity Radar
 
+> **Note (9 Oct 2026):** entries below cite `docs/AUDIT-2026-08-10.md`, `docs/AUDIT-2026-08-16.md`, `HANDOFF.md`, `PROJECT_AUDIT.md` and several one-off files under `frontend/scripts/`. Those were removed in the October cleanup. They are still available from the Git tag `archive/pre-cleanup-2026-10-09`.
+
 Living record of every issue found in the 10 Aug 2026 audit and what has been done about it.
 Source of findings: [`AUDIT-2026-08-10.md`](./AUDIT-2026-08-10.md) · [`AUDIT-2026-08-16.md`](./AUDIT-2026-08-16.md) (Resume/AI Search/Deep Interview deep dive) · AI features: [`AI-FEATURES-HANDOFF.md`](./AI-FEATURES-HANDOFF.md)
 
