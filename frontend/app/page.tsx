@@ -5,8 +5,14 @@ import SceneTwo from '@/components/landing/scene-two'
 import SceneThree from '@/components/landing/scene-three'
 import FaqSection from '@/components/landing/habit-faq-scroller'
 import HoverFooter from '@/components/landing/hover-footer'
+import { getLandingStats, formatStat } from '@/lib/landing/stats'
 
-export default function HomePage() {
+// Re-read the catalogue counts hourly; the page stays statically served.
+export const revalidate = 3600
+
+export default async function HomePage() {
+  const stats = await getLandingStats()
+
   return (
     <KineticGrid>
       {/* Navigation */}
@@ -100,16 +106,23 @@ export default function HomePage() {
               gaps depended on which neighbour won. Spacing is now top-margin
               only, in one scale: 7 / 7 / 10 / 10. */}
           <div className="mt-10 flex flex-wrap items-center gap-6 sm:gap-8">
-            <div className="flex flex-col">
-              <span className="text-4xl font-extrabold text-slate-950">4,700+</span>
-              <span className="text-sm font-medium text-slate-500 mt-1">Opportunities</span>
-            </div>
-            <div className="hidden sm:block h-12 w-px bg-slate-900/10"></div>
-            <div className="flex flex-col">
-              <span className="text-4xl font-extrabold text-slate-950">1,700+</span>
-              <span className="text-sm font-medium text-slate-500 mt-1">Companies</span>
-            </div>
-            <div className="hidden sm:block h-12 w-px bg-slate-900/10"></div>
+            {/* Counted live from the catalogue (lib/landing/stats.ts). These were
+                hardcoded as 4,700+ / 1,700+ and had drifted well above the
+                real numbers. Omitted entirely if the count cannot be read. */}
+            {stats && (
+              <>
+                <div className="flex flex-col">
+                  <span className="text-4xl font-extrabold text-slate-950">{formatStat(stats.opportunities)}</span>
+                  <span className="text-sm font-medium text-slate-500 mt-1">Opportunities</span>
+                </div>
+                <div className="hidden sm:block h-12 w-px bg-slate-900/10"></div>
+                <div className="flex flex-col">
+                  <span className="text-4xl font-extrabold text-slate-950">{formatStat(stats.companies)}</span>
+                  <span className="text-sm font-medium text-slate-500 mt-1">Companies</span>
+                </div>
+                <div className="hidden sm:block h-12 w-px bg-slate-900/10"></div>
+              </>
+            )}
             <div className="flex flex-col">
               <span className="text-4xl font-extrabold text-slate-950">Daily</span>
               <span className="text-sm font-medium text-slate-500 mt-1">New opportunities</span>
