@@ -74,6 +74,10 @@ export async function fetchCertificationsPage(
   limit: number
 ): Promise<CertificationPageResult> {
   let q = supabase.from('certifications').select(SELECT_COLUMNS, { count: 'exact' }).or(DEAD_LINK_FILTER)
+    // Courses their provider has marked deprecated. Sorted by title they
+    // led the catalogue: four of the first five cards were "[DEPRECATED]".
+    .not('title', 'ilike', '[deprecated]%')
+    .not('title', 'ilike', '[depricated]%')
 
   const rawTerm = filters.query.trim()
   if (rawTerm) {

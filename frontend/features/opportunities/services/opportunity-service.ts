@@ -175,6 +175,38 @@ export async function getSearchStats(
   supabase: SupabaseClientType,
   filters: SearchFilters
 ): Promise<{ totalJobs: number; totalCompanies: number; newToday: number; postedToday: number; importedToday: number }> {
+  // Counted in the database with the same filters search itself applies.
+  // The client-side version below capped distinct companies at PostgREST's
+  // 1,000-row limit ("148 companies" for a catalogue of 291) and used older
+  // filter logic than search ("28 companies" beside 2 results).
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: statsRaw, error: statsError } = await supabase.rpc('search_opportunities_stats_rpc' as any, {
+    search_query: filters.q?.trim() || null,
+    filter_category: filters.category?.length ? filters.category : null,
+    filter_mode: filters.mode?.length ? filters.mode : null,
+    filter_is_paid: filters.is_paid !== undefined ? filters.is_paid : null,
+    filter_location: filters.location?.trim() || null,
+    filter_freshness_interval: (filters.fresh && getFreshnessInterval(filters.fresh)) ? `${getFreshnessInterval(filters.fresh)! / 1000} seconds` : null,
+    filter_deadline_min: filters.deadline ? new Date().toISOString() : null,
+    filter_deadline_max: filters.deadline && getDeadlineInterval(filters.deadline) ? new Date(Date.now() + getDeadlineInterval(filters.deadline)!).toISOString() : null,
+    filter_company: filters.company?.trim() || null,
+    filter_tags: filters.tags?.length ? filters.tags : null,
+    today_start: startOfToday.toISOString(),
+  })
+  const stats = statsRaw as { total: number; companies: number; posted_today: number; imported_today: number } | null
+  if (!statsError && stats) {
+    return {
+      totalJobs: 0, // Filled by caller from main query count
+      totalCompanies: Number(stats.companies) || 0,
+      newToday: (Number(stats.posted_today) || 0) + (Number(stats.imported_today) || 0),
+      postedToday: Number(stats.posted_today) || 0,
+      importedToday: Number(stats.imported_today) || 0,
+    }
+  }
+
+  // FALLBACK: client-side counts, for a database without the stats function.
   const [compIds, tagOpps, companyFilterIds, tagFilterOppIds] = await Promise.all([
     getMatchingCompanyIds(supabase, filters.q),
     getMatchingTagOpps(supabase, filters.q),
