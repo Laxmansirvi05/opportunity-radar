@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { contentMatchesType } from '@/lib/upload-signature'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest) {
   }
   if (file.size > MAX_SIZE) {
     return NextResponse.json({ error: 'Image must be under 8MB.' }, { status: 422 })
+  }
+  if (!(await contentMatchesType(file))) {
+    return NextResponse.json({ error: 'That file is not a valid image.' }, { status: 422 })
   }
 
   const extension = file.type === 'image/png' ? 'png'

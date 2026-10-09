@@ -78,7 +78,12 @@ export function HubMessageItem({
       // bug the rule below is guarding against — toLocaleTimeString() has no
       // server-safe fallback to compute during render.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTimeString(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // A bare "23:42" on a message from last week reads as today. Add the
+      // date for anything not sent today.
+      const sentToday = d.toDateString() === new Date().toDateString()
+      const day = d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) })
+      setTimeString(sentToday ? time : `${day}, ${time}`)
     }
   }, [created_at])
 

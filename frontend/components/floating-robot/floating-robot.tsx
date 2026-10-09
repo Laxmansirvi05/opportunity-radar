@@ -16,6 +16,9 @@ import { QuickAssistant } from './quick-assistant'
 // robot was smaller is pulled back inside the viewport on the next mount
 // rather than leaving it half off-screen.
 const ROBOT_SIZE = 120
+// On a phone the 120px robot covered card text and buttons on every page.
+const ROBOT_SIZE_COMPACT = 68
+const COMPACT_QUERY = '(max-width: 767px)'
 const LOAD_TIMEOUT_MS = 8000
 
 const RobotSceneInner = dynamic(() => import('./robot-scene-inner'), {
@@ -73,7 +76,15 @@ function useOpportunityContext() {
 }
 
 export function FloatingRobot() {
-  const { position, setPosition } = useRobotPosition(ROBOT_SIZE)
+  const [robotSize, setRobotSize] = useState(ROBOT_SIZE)
+  useEffect(() => {
+    const media = window.matchMedia(COMPACT_QUERY)
+    const apply = () => setRobotSize(media.matches ? ROBOT_SIZE_COMPACT : ROBOT_SIZE)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [])
+  const { position, setPosition } = useRobotPosition(robotSize)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isHovered, setIsHovered] = useState(false)
   const [isActivating, setIsActivating] = useState(false)
@@ -180,8 +191,8 @@ export function FloatingRobot() {
           position: 'fixed',
           top: 0,
           left: 0,
-          width: ROBOT_SIZE,
-          height: ROBOT_SIZE,
+          width: robotSize,
+          height: robotSize,
           transform: `translate(${position.x}px, ${position.y}px)`,
           touchAction: 'none',
         }}
@@ -210,7 +221,7 @@ export function FloatingRobot() {
 
       {isAssistantOpen && (
         <QuickAssistant
-          anchor={{ x: position.x, y: position.y, size: ROBOT_SIZE }}
+          anchor={{ x: position.x, y: position.y, size: robotSize }}
           onClose={() => {
             setIsAssistantOpen(false)
             wrapperRef.current?.focus()
@@ -220,7 +231,7 @@ export function FloatingRobot() {
 
       {isComposerOpen && (
         <QuickNoteComposer
-          anchor={{ x: position.x, y: position.y, size: ROBOT_SIZE }}
+          anchor={{ x: position.x, y: position.y, size: robotSize }}
           opportunityId={context.opportunityId}
           applicationId={context.applicationId}
           onClose={() => {

@@ -59,7 +59,7 @@ export function SettingsToggles({ initialEmailAlerts, initialPublicProfile }: Se
       <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/50 rounded-xl">
         <div>
           <h4 className="font-bold text-on-background">Email Alerts</h4>
-          <p className="text-sm text-on-surface-variant">Receive weekly opportunity matches.</p>
+          <p className="text-sm text-on-surface-variant">Save your preference for opportunity emails. Email delivery is not switched on yet, so nothing is sent today.</p>
         </div>
         <button 
           onClick={() => handleToggle('email', emailAlerts)}
@@ -74,7 +74,7 @@ export function SettingsToggles({ initialEmailAlerts, initialPublicProfile }: Se
       <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/50 rounded-xl">
         <div>
           <h4 className="font-bold text-on-background">Public Profile</h4>
-          <p className="text-sm text-on-surface-variant">Allow recruiters to view your resume.</p>
+          <p className="text-sm text-on-surface-variant">Reserved for a future public profile page. Your profile and resume stay private either way.</p>
         </div>
         <button 
           onClick={() => handleToggle('public', publicProfile)}
