@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
       // features run the identical pipeline, so re-asking the AI risks a
       // different answer to a question that already has one. See
       // shared-evaluation.ts.
-      const cached = await findRecentAtsV2Evaluation(supabase, userId, resumeId || null, trimmedJd, resumeUpdatedAt)
+      const cached = await findRecentAtsV2Evaluation(supabase, userId, resumeId || null, trimmedJd, resumeUpdatedAt, parsedResumeData)
 
       if (cached) {
         const score = scoreFromCachedEvaluation(cached, parsedResumeData)
