@@ -40,13 +40,11 @@ jobs:
       - run: npm test
 
   lint:
-    name: Lint (report only)
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # The tree currently carries 162 lint errors (mostly no-explicit-any and
-    # unused variables). Reported so the number is visible; not blocking until
-    # it has been brought to zero.
-    continue-on-error: true
+    # Blocking. Errors are at zero; the remaining findings are warnings
+    # (mostly no-explicit-any, see eslint.config.mjs).
     defaults:
       run:
         working-directory: frontend

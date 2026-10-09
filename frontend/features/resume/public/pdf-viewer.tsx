@@ -112,7 +112,6 @@ export function PdfViewer({ className, data }: PdfViewerProps) {
 
 		let isCancelled = false;
 		let animationFrameId = 0;
-		let resizeObserver: ResizeObserver | undefined;
 		const abortController = new AbortController();
 		let loadingTask: PDFDocumentLoadingTask | undefined;
 		let pdfDocument: PDFDocumentProxy | undefined;
@@ -149,7 +148,7 @@ export function PdfViewer({ className, data }: PdfViewerProps) {
 		eventBus.on("pagerendered", syncViewerHeight);
 		viewer.replaceChildren();
 		dispatch({ type: "viewerLoading" });
-		resizeObserver = new ResizeObserver(syncViewerHeight);
+		const resizeObserver = new ResizeObserver(syncViewerHeight);
 		resizeObserver.observe(viewer);
 
 		const loadDocument = async () => {
@@ -201,7 +200,7 @@ export function PdfViewer({ className, data }: PdfViewerProps) {
 			eventBus.off("pagerendered", syncViewerHeight);
 			abortController.abort();
 			window.cancelAnimationFrame(animationFrameId);
-			resizeObserver?.disconnect();
+			resizeObserver.disconnect();
 			if (pdfViewer) clearPdfViewerDocument(pdfViewer);
 			// One call: the loading task owns the document. This previously ran
 			// pdfDocument.destroy() first, which does not exist, so every
