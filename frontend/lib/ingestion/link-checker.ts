@@ -156,6 +156,7 @@ export interface QueryChain {
   in: (col: string, vals: readonly unknown[]) => QueryChain
   order: (col: string, opts?: { ascending?: boolean; nullsFirst?: boolean }) => QueryChain
   limit: (n: number) => QueryChain
+  range: (from: number, to: number) => QueryChain
   then: (resolve: (value: QueryResult) => void) => void
 }
 export interface Db {
@@ -224,18 +225,28 @@ export async function sweepLinkHealth(db: Db, options: SweepOptions = {}): Promi
   const now = options.now ?? (() => Date.now())
   const startedAt = now()
 
-  const { data, error } = await db
-    .from('opportunities')
-    .select('id, apply_url')
-    .in('status', ['Published', 'Closing Soon'])
-    .order('link_checked_at', { ascending: true, nullsFirst: true })
-    .limit(limit)
+  // Read in pages. PostgREST returns at most 1,000 rows per request whatever
+  // `.limit()` asks for, so the single query here silently swept 1,000
+  // listings a night and took three nights to cover the catalogue.
+  const PAGE = 1000
+  const rows: { id: string; apply_url: string }[] = []
+  for (let from = 0; from < limit; from += PAGE) {
+    const { data, error } = await db
+      .from('opportunities')
+      .select('id, apply_url')
+      .in('status', ['Published', 'Closing Soon'])
+      .order('link_checked_at', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
+      .range(from, Math.min(from + PAGE, limit) - 1)
 
-  if (error || !data) {
-    return { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: now() - startedAt }
+    if (error || !data) {
+      if (rows.length === 0) return { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: now() - startedAt }
+      break
+    }
+    const page = data as { id: string; apply_url: string }[]
+    rows.push(...page)
+    if (page.length < PAGE) break
   }
-
-  const rows = data as { id: string; apply_url: string }[]
 
   const result: SweepResult = { checked: 0, ok: 0, dead: 0, expired: 0, elapsedMs: 0 }
   const toWrite: { id: string; status: number; checkedAt: string }[] = []

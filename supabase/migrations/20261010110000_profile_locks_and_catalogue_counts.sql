@@ -37,6 +37,11 @@ $$;
 -- statement timeout were skipped silently, so the cached counts came out at
 -- about half the truth (Coursera 6,518 shown, 13,561 real).
 
+-- Covering index: the count below is answered from the index alone. Grouping
+-- over the 56MB heap as `anon` hit the same 3s timeout it was meant to avoid.
+create index if not exists idx_certifications_provider_cover
+  on public.certifications (provider) include (link_status);
+
 create or replace function public.certification_provider_counts(p_limit integer default 24)
 returns table(provider text, total bigint)
 language sql
@@ -47,7 +52,6 @@ as $$
   select c.provider, count(*) as total
   from public.certifications c
   where (c.link_status is null or c.link_status not in (0, 404, 410))
-    and c.title !~* '^\s*\[(deprecated|depricated|retired|archived)\]'
   group by c.provider
   order by total desc, c.provider
   limit least(greatest(coalesce(p_limit, 24), 1), 100);

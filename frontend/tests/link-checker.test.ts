@@ -64,6 +64,7 @@ function makeChain(
   let mode: 'select' | 'update' = 'select'
   let payload: Record<string, unknown> = {}
 
+  let window: [number, number] | null = null
   const chain: QueryChain = {
     select: () => chain,
     update: (p) => { mode = 'update'; payload = p; return chain },
@@ -74,7 +75,16 @@ function makeChain(
     },
     order: () => chain,
     limit: () => chain,
-    then: (resolve) => resolve({ data: mode === 'select' ? rows : null, error: null }),
+    // The sweep reads in 1,000-row pages; serve the requested slice.
+    range: (from, to) => {
+      window = [from, to]
+      return chain
+    },
+    then: (resolve) => {
+      const data = mode === 'select' ? (window ? rows.slice(window[0], window[1] + 1) : rows) : null
+      window = null
+      resolve({ data, error: null })
+    },
   }
   return chain
 }
