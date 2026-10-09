@@ -2,6 +2,7 @@ import { type Messages } from "@lingui/core";
 import { enUS as en } from "date-fns/locale";
 
 import { i18n } from "@lingui/core";
+import { compileMessage } from "@lingui/message-utils/compileMessage";
 
 export const locales = ["en"];
 
@@ -11,6 +12,12 @@ export const languageNames = {
 
 export const defaultLocale = "en";
 
+// No compiled catalogue ships with this app: each message carries its own
+// English text (next.config.ts keeps it in the bundle). Without a compiler
+// Lingui logs "Uncompiled message detected" for every label it renders, a
+// few hundred console warnings per Resume Builder page in production, and
+// plurals and interpolation would not be applied.
+i18n.setMessagesCompiler(compileMessage);
 i18n.load({ en: {} });
 i18n.activate(defaultLocale);
 
