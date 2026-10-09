@@ -8,7 +8,7 @@ Opportunity Radar is a full-stack, AI-powered platform that helps students **dis
 
 It goes beyond aggregation: an **agentic AI Search** matches openings to your résumé, a real-time **voice Mock Interview** rehearses you and scores you out of 100, a **résumé toolkit** builds and ATS-checks your CV, and 20,000+ **certifications** help you close skill gaps.
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -130,7 +130,7 @@ Opportunity Radar is a Next.js app backed by Supabase, with **two dedicated AI a
 
 | Layer | Stack |
 | --- | --- |
-| **Frontend** | Next.js 15 (App Router, RSC), TypeScript (strict), Tailwind CSS |
+| **Frontend** | Next.js 16 (App Router, RSC), TypeScript (strict), Tailwind CSS |
 | **Backend** | Supabase (PostgreSQL + Auth), serverless API routes |
 | **AI Search** | Agentic pipeline ([separate repo](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent)) — n8n + Node services + Tavily |
 | **Voice Interview** | LiveKit · Deepgram (STT) · Gemini (LLM) · Kokoro (TTS) |
@@ -162,7 +162,7 @@ Ingestion was redesigned from sequential inserts to **batched bulk upserts** wit
 
 ## 🚀 Getting Started
 
-> The app lives in [`frontend/`](frontend). It targets **Next.js 15 / Node 20+**.
+> The app lives in [`frontend/`](frontend). It targets **Next.js 16 / Node 20+**.
 
 ```bash
 # 1. Clone
@@ -185,10 +185,16 @@ Useful scripts:
 
 ```bash
 npm run build          # production build
-npm run type-check     # tsc --noEmit (project is type-clean)
+npm run type-check     # tsc --noEmit
 npm run test           # vitest
 npm run lint           # eslint
+npm run check          # lint + type-check + unit tests
+npm run test:e2e       # Playwright end-to-end tests
+npm run test:e2e:ui    # Playwright interactive UI runner
+npm run check:all      # all static checks, unit tests, then e2e tests
 ```
+
+For a pre-commit verification pass, use `npm run check`. For a broader local validation pass that also exercises browser flows, use `npm run check:all`.
 
 The AI Search agent backend has its own setup — see
 [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent).
@@ -201,6 +207,22 @@ The AI Search agent backend has its own setup — see
 - **20,000+** certifications across 138 providers
 - **10** active ingestion sources with weekly refresh + daily link-sweep
 - **590+** automated tests passing · TypeScript-clean
+
+---
+
+## 🧑‍💻 Development workflow
+
+For day-to-day development, keep changes focused and verify the project before pushing:
+
+1. Run `npm run type-check` to catch TypeScript errors.
+2. Run `npm run lint` for static checks.
+3. Run `npm run test` for unit coverage.
+4. Run `npm run check` before opening a pull request to run all three checks together.
+5. Run `npm run test:e2e` when changing user-facing flows.
+6. Use `npm run check:all` when you want the full local verification pass.
+7. Keep secrets in local environment files; never commit `.env` or credentials.
+
+The AI Search backend is maintained separately in [`opportunity-radar-ai-agent`](https://github.com/Laxmansirvi05/opportunity-radar-ai-agent), so changes to the search pipeline should be validated in both repositories when their contracts interact.
 
 ---
 

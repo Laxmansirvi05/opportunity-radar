@@ -48,7 +48,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/opportunity-radar.git
+git clone https://github.com/Laxmansirvi05/opportunity-radar.git
 cd opportunity-radar/frontend
 
 # 2. Install dependencies
@@ -101,7 +101,30 @@ npm run test:watch
 
 # Coverage report
 npm run test:coverage
+
+# Run lint, type-check, and unit tests together
+npm run check
+
+# Run the Playwright end-to-end suite
+npm run test:e2e
+
+# Open Playwright's interactive test runner
+npm run test:e2e:ui
+
+# Run E2E tests with a visible browser window
+npm run test:e2e:headed
+
+# Pause execution with Playwright Inspector for debugging
+npm run test:e2e:debug
+
+# Open the HTML report from the most recent Playwright run
+npm run test:e2e:report
+
+# Run unit checks followed by E2E tests
+npm run check:all
 ```
+
+The Playwright configuration automatically starts `npm run dev` when `PLAYWRIGHT_BASE_URL` is not set. Set `PLAYWRIGHT_BASE_URL` when testing an already-running server, another local port, or a deployed test environment; in that case Playwright will not start a second server.
 
 Tests cover:
 - ATS Engine scoring (all components + edge cases)
@@ -166,9 +189,9 @@ See [.env.example](.env.example) for all required variables.
 ### Required Vercel Secrets (GitHub Actions)
 
 ```
-VERCEL_TOKEN       → Your Vercel API token
-VERCEL_ORG_ID      → Your Vercel team/org ID
-VERCEL_PROJECT_ID  → Your Vercel project ID
+VERCEL_TOKEN       → Your GitHub Actions secret for the Vercel API token
+VERCEL_ORG_ID      → Your GitHub Actions secret for the Vercel team/org ID
+VERCEL_PROJECT_ID  → Your GitHub Actions secret for the Vercel project ID
 ```
 
 ---

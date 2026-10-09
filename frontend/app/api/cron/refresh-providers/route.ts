@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { denyIfNotCron } from '@/lib/cron-auth';
 
+// Provider ingestion can involve multiple network requests and database writes.
+// Keep the route alive for the full Vercel function window instead of relying
+// on the platform default timeout.
+export const maxDuration = 300;
+
 /**
  * GET /api/cron/refresh-providers
  *
@@ -52,8 +57,9 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ success: true, stats }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Cron job failed to initialize:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
